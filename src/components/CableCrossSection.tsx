@@ -2,6 +2,7 @@ import React from 'react';
 
 interface CrossSectionProps {
   cores: number;
+  earthingCores?: number;
   armorType: string;
   conductorType: string;
   standard: string;
@@ -12,6 +13,7 @@ interface CrossSectionProps {
 
 export default function CableCrossSection({ 
   cores, 
+  earthingCores = 0,
   armorType, 
   conductorType, 
   standard, 
@@ -19,139 +21,215 @@ export default function CableCrossSection({
   hasMgt = false,
   conductorMaterial = 'Cu'
 }: CrossSectionProps) {
-  const size = 120;
+  const size = 140;
   const center = size / 2;
-  const outerRadius = 55;
-  const armorRadius = 48;
-  const innerRadius = 42;
+  const outerRadius = 65;
+  const armorRadius = 58;
+  const innerRadius = 52;
   
   const isMV = standard === 'IEC 60502-2';
+  const isABC = standard.includes('NFA2X');
   const conductorColor = conductorMaterial === 'Cu' ? '#b45309' : '#e2e8f0';
   const screenColor = '#d97706'; // Copper color for screen
   const mgtColor = '#fbbf24'; // Gold/Amber for Mica
   
-  // Calculate core positions
-  const getCorePositions = () => {
-    const coreRadius = cores === 1 ? 30 : cores === 2 ? 18 : cores === 3 ? 16 : cores === 4 ? 14 : 12;
-    const distance = cores === 1 ? 0 : innerRadius - coreRadius - 3;
+  // Calculate core positions and radii based on core count
+  const getCoreLayout = () => {
+    let coreRadius = 0;
+    let distance = 0;
+    const positions: { x: number, y: number, r: number, angle: number, isEarth?: boolean }[] = [];
     
-    const positions = [];
-    for (let i = 0; i < cores; i++) {
-      const angle = (i * 360) / cores - 90; // Start at top
+    const totalCores = cores + earthingCores;
+
+    if (isABC) {
+      coreRadius = innerRadius * 0.45;
+      distance = innerRadius - coreRadius;
+    } else if (totalCores === 1) {
+      coreRadius = innerRadius - 5;
+      distance = 0;
+    } else if (totalCores === 2) {
+      coreRadius = innerRadius / 2 - 2;
+      distance = coreRadius + 1;
+    } else if (totalCores === 3) {
+      coreRadius = innerRadius * 0.46;
+      distance = innerRadius - coreRadius - 2;
+    } else if (totalCores === 4) {
+      coreRadius = innerRadius * 0.41;
+      distance = innerRadius - coreRadius - 2;
+    } else if (totalCores === 5) {
+      coreRadius = innerRadius * 0.35;
+      distance = innerRadius - coreRadius - 2;
+    } else {
+      coreRadius = innerRadius * 0.3;
+      distance = innerRadius - coreRadius - 2;
+    }
+
+    for (let i = 0; i < totalCores; i++) {
+      const angle = (i * 360) / totalCores - 90;
       const rad = (angle * Math.PI) / 180;
+      const isEarth = i >= cores;
+      
       positions.push({
         x: center + distance * Math.cos(rad),
         y: center + distance * Math.sin(rad),
-        r: coreRadius,
+        r: isEarth && isABC ? coreRadius * 1.1 : (isEarth ? coreRadius * 0.8 : coreRadius), // Messenger is often larger
+        angle: angle,
+        isEarth
       });
     }
-    return positions;
+    return { positions, coreRadius };
   };
 
-  const corePositions = getCorePositions();
+  const { positions: corePositions, coreRadius } = getCoreLayout();
   const outerSheathColor = isMV ? '#ef4444' : '#1e293b'; // Red for MV, Dark for others
 
   return (
     <div className="flex justify-center items-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-xl">
-        {/* Outer Sheath */}
-        <circle cx={center} cy={center} r={outerRadius} fill={outerSheathColor} />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl">
+        <defs>
+          <radialGradient id="sheathGradient" cx="40%" cy="40%" r="60%">
+            <stop offset="0%" stopColor={isMV ? '#ff6b6b' : '#334155'} />
+            <stop offset="100%" stopColor={outerSheathColor} />
+          </radialGradient>
+        </defs>
         
-        {/* Armor */}
-        {armorType !== 'Unarmored' && (
+        {/* Outer Sheath - Hidden for ABC */}
+        {!isABC && (
+          <>
+            <circle cx={center} cy={center} r={outerRadius} fill="url(#sheathGradient)" />
+            <circle cx={center} cy={center} r={outerRadius - 1} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+          </>
+        )}
+        
+        {/* Armor Section */}
+        {!isABC && armorType !== 'Unarmored' && (
           <g>
-            <circle cx={center} cy={center} r={armorRadius} fill="#94a3b8" />
-            {/* Armor texture */}
-            {Array.from({ length: 24 }).map((_, i) => (
-              <line
-                key={i}
-                x1={center + (armorRadius - 4) * Math.cos((i * 15 * Math.PI) / 180)}
-                y1={center + (armorRadius - 4) * Math.sin((i * 15 * Math.PI) / 180)}
-                x2={center + armorRadius * Math.cos((i * 15 * Math.PI) / 180)}
-                y2={center + armorRadius * Math.sin((i * 15 * Math.PI) / 180)}
-                stroke="#475569"
-                strokeWidth="1"
-              />
-            ))}
+            {/* Armor Bedding/Base */}
+            <circle cx={center} cy={center} r={armorRadius} fill="#64748b" />
+            
+            {/* Specific Armor Textures */}
+            {armorType === 'SWA' || armorType === 'AWA' ? (
+              // Wire Armor
+              Array.from({ length: 30 }).map((_, i) => {
+                const angle = (i * 12 * Math.PI) / 180;
+                const r = armorRadius - 3;
+                return (
+                  <circle 
+                    key={i} 
+                    cx={center + r * Math.cos(angle)} 
+                    cy={center + r * Math.sin(angle)} 
+                    r="3" 
+                    fill={armorType === 'AWA' ? '#e2e8f0' : '#94a3b8'} 
+                    stroke="#475569" 
+                    strokeWidth="0.5" 
+                  />
+                );
+              })
+            ) : armorType === 'STA' ? (
+              // Tape Armor (Double Layer)
+              <g>
+                <circle cx={center} cy={center} r={armorRadius - 1} fill="none" stroke="#475569" strokeWidth="2" strokeDasharray="10 2" />
+                <circle cx={center} cy={center} r={armorRadius - 3} fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="8 4" />
+              </g>
+            ) : (armorType === 'GSWB' || armorType === 'TCWB') ? (
+              // Braid Armor
+              <g>
+                <circle cx={center} cy={center} r={armorRadius - 2} fill="none" stroke={armorType === 'TCWB' ? '#d97706' : '#94a3b8'} strokeWidth="4" strokeDasharray="2 1" />
+                <circle cx={center} cy={center} r={armorRadius - 2} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" strokeDasharray="1 2" />
+              </g>
+            ) : null}
           </g>
         )}
         
-        {/* Inner Covering */}
-        {(cores > 1 || armorType !== 'Unarmored') && (
-          <circle cx={center} cy={center} r={innerRadius} fill="#cbd5e1" />
+        {/* Inner Covering / Bedding */}
+        {!isABC && (cores > 1 || armorType !== 'Unarmored') && (
+          <g>
+            <circle cx={center} cy={center} r={innerRadius} fill="#cbd5e1" />
+            {/* Interstice Fillers (Visual representation of gaps being filled) */}
+            {cores > 1 && conductorType !== 'sm' && (
+              <g>
+                <circle cx={center} cy={center} r={innerRadius - 2} fill="#94a3b8" opacity="0.3" />
+                {/* Center filler element */}
+                <circle cx={center} cy={center} r={coreRadius * 0.4} fill="#64748b" opacity="0.5" />
+              </g>
+            )}
+          </g>
         )}
         
         {/* Cores */}
         {corePositions.map((pos, i) => {
-          const insulationColor = getInsulationColor(i, cores);
-          const angle = (i * 360) / cores - 90;
+          const insulationColor = pos.isEarth ? (isABC ? '#000000' : '#fbbf24') : getInsulationColor(i, cores, standard);
           
           if (conductorType === 'sm' && cores >= 3) {
-            // Draw sector shape for sm
-            const startAngle = angle - (180 / cores) + 5;
-            const endAngle = angle + (180 / cores) - 5;
-            
-            // Layers from outside in:
-            // 1. Insulation
-            const dIns = describeArc(center, center, innerRadius - 2, startAngle, endAngle, 8);
-            // 2. Metallic Screen (MV)
-            const dScreen = isMV && mvScreenType !== 'None' ? describeArc(center, center, innerRadius - 3, startAngle + 1, endAngle - 1, innerRadius - 5) : null;
-            // 3. Insulation Screen (MV)
-            const dInsScreen = isMV ? describeArc(center, center, innerRadius - 5, startAngle + 2, endAngle - 2, innerRadius - 7) : null;
-            // 4. Conductor Screen (MV)
-            const dCondScreen = isMV ? describeArc(center, center, innerRadius - 13, startAngle + 4, endAngle - 4, innerRadius - 15) : null;
-            // 5. MGT
-            const dMgt = hasMgt ? describeArc(center, center, innerRadius - 15, startAngle + 5, endAngle - 5, innerRadius - 17) : null;
-            // 6. Conductor
-            const dCond = describeArc(center, center, innerRadius - 17, startAngle + 6, endAngle - 6, 10);
+            // Sector shape logic
+            const startAngle = pos.angle - (180 / cores) + 8;
+            const endAngle = pos.angle + (180 / cores) - 8;
+            const rOuter = innerRadius - 2;
             
             return (
               <g key={i}>
-                <path d={dIns} fill={insulationColor} />
-                {dScreen && <path d={dScreen} fill={screenColor} />}
-                {dInsScreen && <path d={dInsScreen} fill="#000" />}
-                {dCondScreen && <path d={dCondScreen} fill="#000" />}
-                {dMgt && <path d={dMgt} fill={mgtColor} />}
-                <path d={dCond} fill={conductorColor} />
+                {/* Insulation Layer */}
+                <path d={describeArc(center, center, rOuter, startAngle, endAngle, 15)} fill={insulationColor} />
+                
+                {/* Earth Stripe for Sector */}
+                {pos.isEarth && (
+                   <path d={describeArc(center, center, rOuter - 2, startAngle + 10, endAngle - 10, 17)} fill="#22c55e" />
+                )}
+
+                {/* MV Layers for Sector */}
+                {isMV && (
+                  <>
+                    <path d={describeArc(center, center, rOuter - 2, startAngle + 1, endAngle - 1, rOuter - 4)} fill={screenColor} />
+                    <path d={describeArc(center, center, rOuter - 4, startAngle + 2, endAngle - 2, rOuter - 6)} fill="#000" />
+                  </>
+                )}
+                
+                {/* MGT for Sector */}
+                {hasMgt && (
+                  <path d={describeArc(center, center, rOuter - (isMV ? 12 : 8), startAngle + 4, endAngle - 4, rOuter - (isMV ? 14 : 10))} fill={mgtColor} />
+                )}
+                
+                {/* Conductor for Sector */}
+                <path d={describeArc(center, center, rOuter - (isMV ? 14 : 10), startAngle + 5, endAngle - 5, 12)} fill={conductorColor} />
               </g>
             );
           }
 
           return (
             <g key={i}>
-              {/* Insulation */}
-              <circle cx={pos.x} cy={pos.y} r={pos.r} fill={insulationColor} />
+              {/* Core Insulation */}
+              <circle cx={pos.x} cy={pos.y} r={pos.r} fill={insulationColor} stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
               
-              {/* Metallic Screen (MV) */}
-              {isMV && mvScreenType !== 'None' && (
-                <circle cx={pos.x} cy={pos.y} r={pos.r * 0.9} fill={screenColor} />
+              {/* Green Stripe for Earth Core */}
+              {pos.isEarth && (
+                <g transform={`rotate(${pos.angle + 45}, ${pos.x}, ${pos.y})`}>
+                  <rect x={pos.x - pos.r} y={pos.y - pos.r * 0.2} width={pos.r * 2} height={pos.r * 0.4} fill="#22c55e" />
+                </g>
               )}
 
-              {/* Insulation Screen (MV) */}
+              {/* MV Screen & Semi-cond Layers */}
               {isMV && (
-                <circle cx={pos.x} cy={pos.y} r={pos.r * 0.85} fill="#000" />
-              )}
-              
-              {/* Main Insulation area (inner part) */}
-              <circle cx={pos.x} cy={pos.y} r={pos.r * 0.8} fill={insulationColor} />
-
-              {/* Conductor Screen (MV) */}
-              {isMV && (
-                <circle cx={pos.x} cy={pos.y} r={pos.r * 0.55} fill="#000" />
+                <g>
+                  <circle cx={pos.x} cy={pos.y} r={pos.r * 0.92} fill={screenColor} />
+                  <circle cx={pos.x} cy={pos.y} r={pos.r * 0.88} fill="#000" />
+                  <circle cx={pos.x} cy={pos.y} r={pos.r * 0.84} fill={insulationColor} />
+                  <circle cx={pos.x} cy={pos.y} r={pos.r * 0.55} fill="#000" />
+                </g>
               )}
 
-              {/* MGT */}
+              {/* MGT Layer */}
               {hasMgt && (
-                <circle cx={pos.x} cy={pos.y} r={pos.r * 0.5} fill={mgtColor} />
+                <circle cx={pos.x} cy={pos.y} r={pos.r * (isMV ? 0.5 : 0.6)} fill={mgtColor} />
               )}
               
-              {/* Conductor */}
-              <circle cx={pos.x} cy={pos.y} r={pos.r * 0.45} fill={conductorColor} />
+              {/* Conductor Core */}
+              <circle cx={pos.x} cy={pos.y} r={pos.r * (isMV ? 0.45 : 0.5)} fill={conductorColor} />
               
-              {/* Compacted Stranded texture for cm */}
-              {conductorType === 'cm' && (
-                <circle cx={pos.x} cy={pos.y} r={pos.r * 0.45} fill="none" stroke={conductorMaterial === 'Cu' ? '#78350f' : '#94a3b8'} strokeWidth="0.5" strokeDasharray="1 1" />
-              )}
+              {/* Stranding Effect */}
+              <circle cx={pos.x} cy={pos.y} r={pos.r * (isMV ? 0.45 : 0.5)} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" strokeDasharray="1 1.5" />
+              
+              {/* Center dot for precision feel */}
+              <circle cx={pos.x} cy={pos.y} r="0.5" fill="rgba(255,255,255,0.3)" />
             </g>
           );
         })}
@@ -187,15 +265,24 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
   return d;
 }
 
-function getInsulationColor(index: number, total: number) {
-  if (total === 1) return '#ef4444'; // Red for single core
+function getInsulationColor(index: number, total: number, standard: string) {
+  if (standard.includes('NFA2X')) return '#000000'; // All black for ABC
+  if (total === 1) return '#b45309'; // Brown for single core phase
   
-  const colors = [
-    '#ef4444', // Brown/Red
-    '#000000', // Black
-    '#64748b', // Grey
-    '#3b82f6', // Blue
-    '#22c55e', // Green/Yellow
+  // Standard IEC 60446 / HD 308 S2 colors
+  const colors2 = ['#b45309', '#3b82f6']; // Brown, Blue
+  const colors3 = ['#b45309', '#000000', '#64748b']; // Brown, Black, Grey
+  const colors4 = ['#b45309', '#000000', '#64748b', '#3b82f6']; // Brown, Black, Grey, Blue
+  const colors5 = ['#b45309', '#000000', '#64748b', '#3b82f6', '#22c55e']; // Brown, Black, Grey, Blue, Green/Yellow
+  
+  if (total === 2) return colors2[index % 2];
+  if (total === 3) return colors3[index % 3];
+  if (total === 4) return colors4[index % 4];
+  if (total === 5) return colors5[index % 5];
+  
+  const genericColors = [
+    '#b45309', '#000000', '#64748b', '#3b82f6', '#22c55e',
+    '#ef4444', '#8b5cf6', '#ec4899', '#f97316', '#14b8a6'
   ];
-  return colors[index % colors.length];
+  return genericColors[index % genericColors.length];
 }

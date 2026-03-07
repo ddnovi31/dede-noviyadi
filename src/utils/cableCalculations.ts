@@ -1,13 +1,16 @@
-export type ConductorMaterial = 'Cu' | 'Al';
+export type ConductorMaterial = 'Cu' | 'Al' | 'TCu';
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
-export type InsulationMaterial = 'XLPE' | 'PVC';
-export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB';
-export type SheathMaterial = 'PVC' | 'PE' | 'LSZH';
+export type InsulationMaterial = 'XLPE' | 'PVC' | 'EPR' | 'HEPR';
+export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB';
+export type SheathMaterial = 'PVC' | 'PE' | 'LSZH' | 'PVC-FR' | 'PVC-FR Cat.A' | 'PVC-FR Cat.B' | 'PVC-FR Cat.C' | 'SHF1' | 'SHF2';
+export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
-export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.5 (NYMHY)' | 'SNI 04-6629.5 (NYYHY)';
+export type ScreenType = 'None' | 'CTS' | 'CWS';
+export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)';
 
 export interface CableDesignParams {
   id?: string;
+  projectName?: string;
   cores: number;
   size: number;
   conductorMaterial: ConductorMaterial;
@@ -15,12 +18,39 @@ export interface CableDesignParams {
   insulationMaterial: InsulationMaterial;
   armorType: ArmorType;
   sheathMaterial: SheathMaterial;
+  innerSheathMaterial?: SheathMaterial;
   voltage: string;
   standard: CableStandard;
   braidCoverage?: number; // Percentage, e.g., 90
   mvScreenType?: MvScreenType;
   mvScreenSize?: number; // For CWS (e.g., 16, 25, 35 mm2)
   hasMgt?: boolean;
+  hasInnerSheath?: boolean;
+  hasScreen?: boolean;
+  screenType?: ScreenType;
+  screenSize?: number;
+  hasSeparator?: boolean;
+  separatorMaterial?: SheathMaterial;
+  fireguard?: boolean;
+  stopfire?: boolean;
+  flameRetardantCategory?: FlameRetardantCategory;
+  overhead?: number; // Percentage, e.g., 10 for 10%
+  margin?: number; // Percentage, e.g., 20 for 20%
+  hasEarthing?: boolean;
+  earthingCores?: number;
+  earthingSize?: number;
+  
+  // Manual Overrides
+  manualInsulationThickness?: number;
+  manualInnerSheathThickness?: number;
+  manualSheathThickness?: number;
+  manualConductorDiameter?: number;
+  manualArmorThickness?: number;
+  manualConductorScreenThickness?: number;
+  manualInsulationScreenThickness?: number;
+  manualMgtThickness?: number;
+  manualScreenThickness?: number;
+  manualSeparatorThickness?: number;
 }
 
 interface SizeData {
@@ -31,6 +61,8 @@ interface SizeData {
 }
 
 const CABLE_DATA: SizeData[] = [
+  { size: 0.75, diameter: 1.1, xlpeThick: 0.5, pvcThick: 0.6 },
+  { size: 1, diameter: 1.3, xlpeThick: 0.5, pvcThick: 0.6 },
   { size: 1.5, diameter: 1.6, xlpeThick: 0.7, pvcThick: 0.8 },
   { size: 2.5, diameter: 2.0, xlpeThick: 0.7, pvcThick: 0.8 },
   { size: 4, diameter: 2.6, xlpeThick: 0.7, pvcThick: 1.0 },
@@ -52,7 +84,30 @@ const CABLE_DATA: SizeData[] = [
   { size: 630, diameter: 32.5, xlpeThick: 2.4, pvcThick: 2.8 },
 ];
 
-const DENSITIES = {
+export interface MaterialDensities {
+  Cu: number;
+  Al: number;
+  XLPE: number;
+  PVC: number;
+  PE: number;
+  LSZH: number;
+  Steel: number;
+  SteelWire: number;
+  SemiCond: number;
+  MGT: number;
+  TCu: number;
+  'PVC-FR': number;
+  'PVC-FR Cat.A': number;
+  'PVC-FR Cat.B': number;
+  'PVC-FR Cat.C': number;
+  SHF1: number;
+  SHF2: number;
+  EPR: number;
+  HEPR: number;
+  TCWB: number;
+}
+
+const DEFAULT_DENSITIES: MaterialDensities = {
   Cu: 8.89,
   Al: 2.7,
   XLPE: 0.92,
@@ -60,20 +115,151 @@ const DENSITIES = {
   PE: 0.95,
   LSZH: 1.5,
   Steel: 7.85,
+  SteelWire: 7.85,
+  SemiCond: 1.15,
+  MGT: 2.2,
+  TCu: 8.89,
+  'PVC-FR': 1.55,
+  'PVC-FR Cat.A': 1.55,
+  'PVC-FR Cat.B': 1.55,
+  'PVC-FR Cat.C': 1.55,
+  SHF1: 1.5,
+  SHF2: 1.6,
+  EPR: 1.3,
+  HEPR: 1.3,
+  TCWB: 8.89,
 };
 
 // Laying up factors for multi-core cables (approximate)
 const LAYING_UP_FACTORS: Record<number, number> = {
   1: 1.0,
   2: 2.0,
-  3: 2.16,
-  4: 2.42,
+  3: 2.15,
+  4: 2.41,
   5: 2.7,
+  7: 3.0,
+  10: 3.7,
+  12: 4.15,
+  14: 4.41,
+  19: 5.0,
+  24: 5.7,
+  30: 6.41,
+  37: 7.0,
+  48: 8.0,
+  61: 9.0,
+  80: 10.5,
 };
+
+interface ABCData {
+  size: number;
+  wireCount: number;
+  wireDiameter: number;
+  condDiameter: number;
+  condWeight: number;
+  insulationThickness: number;
+  coreDiameter: number;
+  resistance: number;
+  ampacity: number;
+  netWeight: number;
+}
+
+interface ABCMessengerData extends ABCData {
+  alWireCount: number;
+  alWireDiameter: number;
+  steelWireCount: number;
+  steelWireDiameter: number;
+}
+
+const NFA2X_DATA: Record<string, ABCData> = {
+  '2x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 100.4 },
+  '2x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 144.2 },
+  '4x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 200.8 },
+  '4x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 288.4 },
+  '4x25': { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.20, ampacity: 102, netWeight: 437.8 },
+  '4x35': { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 603.7 },
+};
+
+const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMessengerData, netWeight: number }> = {
+  '2x35+35': {
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.19, condWeight: 142.3, insulationThickness: 1.50, coreDiameter: 11.19, resistance: 0.836, ampacity: 125, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73 },
+    netWeight: 479
+  },
+  '2x50+50': {
+    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.06, condWeight: 138.17, insulationThickness: 1.60, coreDiameter: 12.26, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.78, condWeight: 202.91, insulationThickness: 1.60, coreDiameter: 12.98, resistance: 0.585, ampacity: 154, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26 },
+    netWeight: 643
+  },
+  '2x70+70': {
+    phase: { size: 70, wireCount: 19, wireDiameter: 2.17, condDiameter: 10.85, condWeight: 193.64, insulationThickness: 1.80, coreDiameter: 14.45, resistance: 0.443, ampacity: 196, netWeight: 0 },
+    messenger: { size: 70, wireCount: 7, wireDiameter: 3.85, condDiameter: 11.55, condWeight: 283.01, insulationThickness: 1.60, coreDiameter: 14.75, resistance: 0.418, ampacity: 196, netWeight: 0, alWireCount: 6, alWireDiameter: 3.85, steelWireCount: 1, steelWireDiameter: 3.85 },
+    netWeight: 898
+  },
+  '3x35+35': {
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.19, condWeight: 142.3, insulationThickness: 1.50, coreDiameter: 11.19, resistance: 0.836, ampacity: 125, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73 },
+    netWeight: 622
+  },
+  '3x50+50': {
+    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.06, condWeight: 138.17, insulationThickness: 1.60, coreDiameter: 12.26, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.78, condWeight: 202.91, insulationThickness: 1.60, coreDiameter: 12.98, resistance: 0.585, ampacity: 154, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26 },
+    netWeight: 1018
+  },
+  '3x70+70': {
+    phase: { size: 70, wireCount: 19, wireDiameter: 2.17, condDiameter: 10.85, condWeight: 193.64, insulationThickness: 1.80, coreDiameter: 14.45, resistance: 0.443, ampacity: 196, netWeight: 0 },
+    messenger: { size: 70, wireCount: 7, wireDiameter: 3.85, condDiameter: 11.55, condWeight: 283.01, insulationThickness: 1.60, coreDiameter: 14.75, resistance: 0.418, ampacity: 196, netWeight: 0, alWireCount: 6, alWireDiameter: 3.85, steelWireCount: 1, steelWireDiameter: 3.85 },
+    netWeight: 1165
+  },
+  '3x95+95': {
+    phase: { size: 95, wireCount: 19, wireDiameter: 2.52, condDiameter: 12.60, condWeight: 261.14, insulationThickness: 1.80, coreDiameter: 16.20, resistance: 0.320, ampacity: 242, netWeight: 0 },
+    messenger: { size: 95, wireCount: 33, wireDiameter: 0, condDiameter: 14.00, condWeight: 386.61, insulationThickness: 1.60, coreDiameter: 17.20, resistance: 0.308, ampacity: 242, netWeight: 0, alWireCount: 26, alWireDiameter: 2.16, steelWireCount: 7, steelWireDiameter: 1.68 },
+    netWeight: 1497
+  },
+  '3x120+95': {
+    phase: { size: 120, wireCount: 19, wireDiameter: 2.84, condDiameter: 14.20, condWeight: 331.67, insulationThickness: 1.80, coreDiameter: 17.80, resistance: 0.253, ampacity: 296, netWeight: 0 },
+    messenger: { size: 95, wireCount: 33, wireDiameter: 0, condDiameter: 14.00, condWeight: 386.61, insulationThickness: 1.60, coreDiameter: 17.20, resistance: 0.308, ampacity: 296, netWeight: 0, alWireCount: 26, alWireDiameter: 2.16, steelWireCount: 7, steelWireDiameter: 1.68 },
+    netWeight: 1845
+  },
+};
+
+function getLayingUpFactor(cores: number): number {
+  if (cores <= 1) return 1;
+  if (LAYING_UP_FACTORS[cores]) return LAYING_UP_FACTORS[cores];
+  
+  // Linear interpolation for missing values
+  const sortedCores = Object.keys(LAYING_UP_FACTORS).map(Number).sort((a, b) => a - b);
+  for (let i = 0; i < sortedCores.length - 1; i++) {
+    if (cores > sortedCores[i] && cores < sortedCores[i+1]) {
+      const c1 = sortedCores[i];
+      const c2 = sortedCores[i+1];
+      const f1 = LAYING_UP_FACTORS[c1];
+      const f2 = LAYING_UP_FACTORS[c2];
+      return f1 + (f2 - f1) * (cores - c1) / (c2 - c1);
+    }
+  }
+  
+  // Fallback to formula for very large core counts
+  return 1.15 * Math.sqrt(cores);
+}
+
+export interface CoreSpec {
+  conductorDiameter: number;
+  wireCount: number;
+  wireDiameter: number;
+  insulationThickness: number;
+  coreDiameter: number;
+  alWireCount?: number;
+  alWireDiameter?: number;
+  steelWireCount?: number;
+  steelWireDiameter?: number;
+}
 
 export interface CalculationResult {
   spec: {
+    phaseCore: CoreSpec;
+    earthingCore?: CoreSpec;
     conductorDiameter: number;
+    wireCount?: number;
     insulationThickness: number;
     coreDiameter: number;
     laidUpDiameter: number;
@@ -89,16 +275,26 @@ export interface CalculationResult {
     braidCoverage?: number;
     mvScreenDiameter?: number;
     mgtThickness?: number;
+    screenThickness?: number;
+    separatorThickness?: number;
+    overallDiameterMin?: number;
+    overallDiameterMax?: number;
   };
   bom: {
     conductorWeight: number;
     insulationWeight: number;
     innerCoveringWeight: number;
+    screenWeight: number;
+    separatorWeight: number;
     armorWeight: number;
     sheathWeight: number;
     semiCondWeight: number;
     mvScreenWeight: number;
     mgtWeight: number;
+    earthingConductorWeight: number;
+    earthingAlWeight?: number;
+    earthingSteelWeight?: number;
+    earthingInsulationWeight: number;
     totalWeight: number;
   };
   electrical: {
@@ -129,10 +325,20 @@ const CURRENT_CAPACITY_AIR_CU: Record<number, number> = {
   400: 780, 500: 900, 630: 1050
 };
 
+const CURRENT_CAPACITY_AIR_CU_MV: Record<number, number> = {
+  16: 125, 25: 163, 35: 198, 50: 238, 70: 296, 95: 361, 120: 417, 150: 473, 
+  185: 543, 240: 641, 300: 735, 400: 845
+};
+
 const CURRENT_CAPACITY_GROUND_CU: Record<number, number> = {
   1.5: 26, 2.5: 34, 4: 44, 6: 56, 10: 78, 16: 105, 25: 140, 35: 170, 50: 205, 
   70: 260, 95: 320, 120: 370, 150: 425, 185: 490, 240: 580, 300: 670, 
   400: 785, 500: 905, 630: 1055
+};
+
+const CURRENT_CAPACITY_GROUND_CU_MV: Record<number, number> = {
+  16: 109, 25: 140, 35: 166, 50: 196, 70: 239, 95: 285, 120: 323, 150: 361, 
+  185: 406, 240: 469, 300: 526, 400: 590
 };
 
 const CURRENT_CAPACITY_AIR_AL: Record<number, number> = {
@@ -141,98 +347,392 @@ const CURRENT_CAPACITY_AIR_AL: Record<number, number> = {
   400: 594, 500: 685, 630: 800
 };
 
+const CURRENT_CAPACITY_AIR_AL_MV: Record<number, number> = {
+  16: 97, 25: 127, 35: 154, 50: 184, 70: 230, 95: 280, 120: 324, 150: 368, 
+  185: 424, 240: 502, 300: 577, 400: 673
+};
+
 const CURRENT_CAPACITY_GROUND_AL: Record<number, number> = {
   1.5: 20, 2.5: 26, 4: 34, 6: 43, 10: 59, 16: 80, 25: 107, 35: 130, 50: 156, 
   70: 198, 95: 244, 120: 282, 150: 324, 185: 374, 240: 442, 300: 510, 
   400: 598, 500: 689, 630: 804
 };
 
-export function calculateCable(params: CableDesignParams): CalculationResult {
+const CURRENT_CAPACITY_GROUND_AL_MV: Record<number, number> = {
+  16: 84, 25: 108, 35: 129, 50: 152, 70: 186, 95: 221, 120: 252, 150: 281, 
+  185: 317, 240: 367, 300: 414, 400: 470
+};
+
+export function calculateCable(params: CableDesignParams, customDensities?: MaterialDensities, scrapFactors?: Record<string, number>): CalculationResult {
+  const densities = customDensities || DEFAULT_DENSITIES;
+  
+  const applyScrap = (weight: number, material: string) => {
+    if (!scrapFactors) return weight;
+    const scrap = scrapFactors[material] || 0;
+    return weight * (1 + scrap / 100);
+  };
+
   // Adjust params based on standard
   const effectiveParams = { ...params };
+  let innerCoveringThickness = effectiveParams.manualInnerSheathThickness;
+  let sheathThickness = effectiveParams.manualSheathThickness;
   if (params.standard === 'IEC 60502-2') {
     effectiveParams.insulationMaterial = 'XLPE';
     // Only set default if current voltage is not an MV voltage
     if (!['3.6/6 kV', '6/10 kV', '8.7/15 kV', '12/20 kV', '18/30 kV'].includes(params.voltage)) {
       effectiveParams.voltage = '6/10 kV';
     }
-  } else if (params.standard.includes('NYM')) {
+  } else if (params.standard.includes('(NYM)')) {
     effectiveParams.voltage = '300/500 V';
     effectiveParams.insulationMaterial = 'PVC';
     effectiveParams.sheathMaterial = 'PVC';
+    effectiveParams.innerSheathMaterial = 'PVC';
     effectiveParams.armorType = 'Unarmored';
-  } else if (params.standard.includes('NYAF')) {
+  } else if (params.standard.includes('(NYAF)')) {
     effectiveParams.voltage = '450/750 V';
     effectiveParams.insulationMaterial = 'PVC';
     effectiveParams.conductorType = 'f';
     effectiveParams.armorType = 'Unarmored';
     effectiveParams.cores = 1;
-  } else if (params.standard.includes('NYMHY')) {
+  } else if (params.standard.includes('(NYA)')) {
+    effectiveParams.voltage = '450/750 V';
+    effectiveParams.insulationMaterial = 'PVC';
+    effectiveParams.armorType = 'Unarmored';
+    effectiveParams.cores = 1;
+    if (effectiveParams.size <= 10) {
+      effectiveParams.conductorType = 're';
+    } else {
+      effectiveParams.conductorType = 'rm';
+    }
+  } else if (params.standard.includes('(NYMHY)')) {
     effectiveParams.voltage = '300/500 V';
     effectiveParams.insulationMaterial = 'PVC';
     effectiveParams.sheathMaterial = 'PVC';
     effectiveParams.conductorType = 'f';
     effectiveParams.armorType = 'Unarmored';
-  } else if (params.standard.includes('NYYHY')) {
-    effectiveParams.voltage = '450/750 V';
-    effectiveParams.insulationMaterial = 'PVC';
-    effectiveParams.sheathMaterial = 'PVC';
-    effectiveParams.conductorType = 'f';
+    effectiveParams.hasInnerSheath = false;
+  } else if (params.standard === 'IEC 60092-353') {
+    effectiveParams.voltage = '0.6/1 kV';
+    effectiveParams.insulationMaterial = 'XLPE';
+    effectiveParams.sheathMaterial = 'SHF1';
+  } else if (params.standard.includes('NFA2X')) {
+    effectiveParams.conductorMaterial = 'Al';
+    effectiveParams.insulationMaterial = 'XLPE';
+    effectiveParams.voltage = '0.6/1 kV';
     effectiveParams.armorType = 'Unarmored';
+    effectiveParams.hasInnerSheath = false;
+    effectiveParams.sheathMaterial = 'PVC'; // Usually no sheath for ABC, but we'll use this for weight if needed or set thickness to 0
+    if (params.standard.includes('NFA2X-T')) {
+      effectiveParams.hasEarthing = true;
+      effectiveParams.earthingCores = 1;
+      // Messenger size logic based on table
+      if (effectiveParams.size === 35) effectiveParams.earthingSize = 35;
+      else if (effectiveParams.size === 50) effectiveParams.earthingSize = 50;
+      else if (effectiveParams.size === 70) effectiveParams.earthingSize = 70;
+      else if (effectiveParams.size === 95) effectiveParams.earthingSize = 95;
+      else if (effectiveParams.size === 120) effectiveParams.earthingSize = 95;
+      else effectiveParams.earthingSize = effectiveParams.size; // Fallback
+    } else {
+      effectiveParams.hasEarthing = false;
+    }
+  }
+
+  // Aluminum size constraint: min 10mm2
+  if (effectiveParams.conductorMaterial === 'Al' && effectiveParams.size < 10) {
+    effectiveParams.size = 10;
   }
 
   const data = CABLE_DATA.find((d) => d.size === effectiveParams.size) || CABLE_DATA[0];
 
   // 1. Conductor
-  let conductorDiameter = data.diameter;
-  if (effectiveParams.conductorType === 're') {
-    conductorDiameter = Math.sqrt((4 * effectiveParams.size) / Math.PI);
-  } else if (effectiveParams.conductorType === 'f') {
-    conductorDiameter = data.diameter * 1.1; // Flexible class 5 is approx 10% larger than stranded class 2
-  } else if (effectiveParams.conductorType === 'cm') {
-    conductorDiameter = data.diameter * 0.92; // Compacted stranded is approx 8% smaller
-  } else if (effectiveParams.conductorType === 'sm') {
-    // sm is sector shaped, diameter is not circular but we use equivalent for insulation
-    conductorDiameter = data.diameter; 
+  let conductorDiameter = effectiveParams.manualConductorDiameter || data.diameter;
+  let wireCount = (effectiveParams.conductorType === 're' ? 1 : 7);
+  if (effectiveParams.conductorType === 'f') wireCount = Math.ceil(effectiveParams.size / 0.2); // Approximation for flexible
+  let wireDiameter = Math.sqrt((4 * effectiveParams.size) / (Math.PI * wireCount));
+
+  let maxDcResistance = effectiveParams.conductorMaterial === 'Cu' ? (RESISTANCE_CU[effectiveParams.size] || 0) : (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
+  let currentCapacityAir = effectiveParams.conductorMaterial === 'Cu' 
+    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_CU[effectiveParams.size]) || 0 
+    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_AL[effectiveParams.size]) || 0;
+  let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial];
+
+  // ABC Specific Data Overrides
+  const abcKey = `${effectiveParams.cores}x${effectiveParams.size}`;
+  const abcTKey = `${effectiveParams.cores}x${effectiveParams.size}+${effectiveParams.earthingSize}`;
+  let abcData: ABCData | null = null;
+  let abcTData: { phase: ABCData, messenger: ABCMessengerData, netWeight: number } | null = null;
+
+  if (effectiveParams.standard.includes('NFA2X-T')) {
+    abcTData = NFA2XT_DATA[abcTKey];
+    if (abcTData) {
+      conductorDiameter = abcTData.phase.condDiameter;
+      wireCount = abcTData.phase.wireCount;
+      wireDiameter = abcTData.phase.wireDiameter;
+      conductorWeightPerCore = abcTData.phase.condWeight;
+      maxDcResistance = abcTData.phase.resistance;
+      currentCapacityAir = abcTData.phase.ampacity;
+    }
+  } else if (effectiveParams.standard.includes('NFA2X')) {
+    abcData = NFA2X_DATA[abcKey];
+    if (abcData) {
+      conductorDiameter = abcData.condDiameter;
+      wireCount = abcData.wireCount;
+      wireDiameter = abcData.wireDiameter;
+      conductorWeightPerCore = abcData.condWeight;
+      maxDcResistance = abcData.resistance;
+      currentCapacityAir = abcData.ampacity;
+    }
   }
 
-  const conductorWeightPerCore = effectiveParams.size * DENSITIES[effectiveParams.conductorMaterial]; // kg/km
-  const totalConductorWeight = conductorWeightPerCore * effectiveParams.cores;
+  if (!effectiveParams.manualConductorDiameter && !abcData && !abcTData) {
+    if (effectiveParams.conductorType === 're') {
+      conductorDiameter = Math.sqrt((4 * effectiveParams.size) / Math.PI);
+    } else if (effectiveParams.conductorType === 'f') {
+      conductorDiameter = data.diameter * 1.1; 
+    } else if (effectiveParams.conductorType === 'cm') {
+      conductorDiameter = data.diameter * 0.92; 
+    } else if (effectiveParams.conductorType === 'sm') {
+      conductorDiameter = data.diameter; 
+    }
+  }
+
+  // Earthing Conductor
+  const earthingCores = (effectiveParams.hasEarthing !== false) ? (effectiveParams.earthingCores || 0) : 0;
+  const earthingSize = effectiveParams.earthingSize || 0;
+  const earthingData = CABLE_DATA.find((d) => d.size === earthingSize) || CABLE_DATA[0];
+  
+  let earthingConductorDiameter = 0;
+  let earthingWireCount = 0;
+  let earthingWireDiameter = 0;
+  let earthingAlWireCount: number | undefined;
+  let earthingAlWireDiameter: number | undefined;
+  let earthingSteelWireCount: number | undefined;
+  let earthingSteelWireDiameter: number | undefined;
+
+  if (earthingCores > 0) {
+    if (abcTData) {
+      earthingConductorDiameter = abcTData.messenger.condDiameter;
+      earthingWireCount = abcTData.messenger.wireCount;
+      earthingWireDiameter = abcTData.messenger.wireDiameter;
+      earthingAlWireCount = abcTData.messenger.alWireCount;
+      earthingAlWireDiameter = abcTData.messenger.alWireDiameter;
+      earthingSteelWireCount = abcTData.messenger.steelWireCount;
+      earthingSteelWireDiameter = abcTData.messenger.steelWireDiameter;
+    } else {
+      earthingWireCount = (effectiveParams.conductorType === 're' ? 1 : 7);
+      if (effectiveParams.conductorType === 'f') earthingWireCount = Math.ceil(earthingSize / 0.2);
+      earthingWireDiameter = Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
+
+      if (effectiveParams.conductorType === 're') {
+        earthingConductorDiameter = Math.sqrt((4 * earthingSize) / Math.PI);
+      } else if (effectiveParams.conductorType === 'f') {
+        earthingConductorDiameter = earthingData.diameter * 1.1;
+      } else if (effectiveParams.conductorType === 'cm') {
+        earthingConductorDiameter = earthingData.diameter * 0.92;
+      } else {
+        earthingConductorDiameter = earthingData.diameter;
+      }
+    }
+  }
+  
+  const earthingConductorWeightPerCore = abcTData 
+    ? abcTData.messenger.condWeight
+    : (effectiveParams.standard.includes('NFA2X-T') 
+      ? (earthingSize * densities.Al * 0.7 + earthingSize * densities.Steel * 0.3) // Mix for messenger
+      : earthingSize * densities[effectiveParams.conductorMaterial]);
+  
+  let earthingAlWeight = 0;
+  let earthingSteelWeight = 0;
+
+  if (effectiveParams.standard.includes('NFA2X-T') && abcTData) {
+    // Calculate split weights based on wire counts
+    const alArea = abcTData.messenger.alWireCount * (Math.PI * Math.pow(abcTData.messenger.alWireDiameter / 2, 2));
+    const steelArea = abcTData.messenger.steelWireCount * (Math.PI * Math.pow(abcTData.messenger.steelWireDiameter / 2, 2));
+    earthingAlWeight = alArea * densities.Al * 1.05 * earthingCores; // 5% lay factor
+    earthingSteelWeight = steelArea * densities.Steel * 1.05 * earthingCores;
+  }
+
+  const totalConductorWeight = (conductorWeightPerCore * effectiveParams.cores) + (earthingConductorWeightPerCore * earthingCores);
 
   // 1.5 Mica Glass Tape (MGT) - Fire Resistant
-  let mgtThickness = 0;
+  let mgtThickness = effectiveParams.manualMgtThickness || 0;
   let mgtWeightPerCore = 0;
   let diameterOverMgt = conductorDiameter;
 
-  if (effectiveParams.hasMgt) {
+  if (!effectiveParams.manualMgtThickness && (effectiveParams.hasMgt || effectiveParams.fireguard)) {
     mgtThickness = 0.2; // 2 layers of 0.1mm approx
+    if (effectiveParams.fireguard) mgtThickness += 0.1;
+  }
+
+  if (mgtThickness > 0) {
     diameterOverMgt = conductorDiameter + (2 * mgtThickness);
     const rCond = conductorDiameter / 2;
     const rMgt = diameterOverMgt / 2;
     const mgtArea = Math.PI * (rMgt * rMgt - rCond * rCond);
-    mgtWeightPerCore = mgtArea * 2.2; // Density ~2.2 for Mica Tape
+    mgtWeightPerCore = mgtArea * densities.MGT; // Density for Mica Tape
   }
 
-  const totalMgtWeight = mgtWeightPerCore * effectiveParams.cores;
+  const totalMgtWeight = (mgtWeightPerCore * effectiveParams.cores) + (earthingCores > 0 ? (mgtWeightPerCore * (earthingConductorDiameter / conductorDiameter)) * earthingCores : 0);
 
   // 2. Semi-conductive and Insulation
-  let conductorScreenThickness = 0;
-  let insulationScreenThickness = 0;
-  let insulationThickness = effectiveParams.insulationMaterial === 'XLPE' ? data.xlpeThick : data.pvcThick;
+  let conductorScreenThickness = effectiveParams.manualConductorScreenThickness || 0;
+  let insulationScreenThickness = effectiveParams.manualInsulationScreenThickness || 0;
+  let insulationThickness = effectiveParams.manualInsulationThickness || (effectiveParams.insulationMaterial === 'XLPE' ? data.xlpeThick : data.pvcThick);
 
-  // MV Specifics (IEC 60502-2)
-  if (effectiveParams.standard === 'IEC 60502-2') {
-    conductorScreenThickness = 0.5; 
-    insulationScreenThickness = 0.5;
-    if (effectiveParams.voltage.includes('3.6/6')) insulationThickness = 2.5;
-    else if (effectiveParams.voltage.includes('6/10')) insulationThickness = 3.4;
-    else if (effectiveParams.voltage.includes('8.7/15')) insulationThickness = 4.5;
-    else if (effectiveParams.voltage.includes('12/20')) insulationThickness = 5.5;
-    else if (effectiveParams.voltage.includes('18/30')) insulationThickness = 8.0;
+  // SNI 04-6629.4 (NYM) specific values
+  if (effectiveParams.standard.includes('SNI 04-6629.4 (NYM)')) {
+    const size = effectiveParams.size;
+    const cores = effectiveParams.cores;
+    
+    // Insulation Thickness
+    if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
+      if (size === 1.5) insulationThickness = 0.7;
+      else if (size <= 6) insulationThickness = 0.8;
+      else if (size <= 16) insulationThickness = 1.0;
+      else if (size <= 35) insulationThickness = 1.2;
+    }
+
+    // Inner Sheath Thickness (Tebal penutup bagian dalam)
+    if (innerCoveringThickness === undefined) {
+      if (size <= 4) {
+        if (cores === 5 && size === 4) innerCoveringThickness = 0.6;
+        else innerCoveringThickness = 0.4;
+      } else if (size === 6) {
+        if (cores >= 4) innerCoveringThickness = 0.6;
+        else innerCoveringThickness = 0.4;
+      } else if (size === 10) {
+        innerCoveringThickness = 0.6;
+      } else if (size === 16) {
+        if (cores >= 3) innerCoveringThickness = 0.8;
+        else innerCoveringThickness = 0.6;
+      } else if (size === 25) {
+        if (cores >= 4) innerCoveringThickness = 1.0;
+        else innerCoveringThickness = 0.8;
+      } else if (size === 35) {
+        if (cores === 5) innerCoveringThickness = 1.2;
+        else innerCoveringThickness = 1.0;
+      }
+    }
+
+    // Outer Sheath Thickness (Tebal selubung)
+    if (sheathThickness === undefined) {
+      if (size <= 2.5) {
+        sheathThickness = 1.2;
+      } else if (size === 4) {
+        if (cores >= 4) sheathThickness = 1.4;
+        else sheathThickness = 1.2;
+      } else if (size === 6) {
+        if (cores >= 3) sheathThickness = 1.4;
+        else sheathThickness = 1.2;
+      } else if (size <= 16) {
+        if (cores === 5 && size === 16) sheathThickness = 1.6;
+        else sheathThickness = 1.4;
+      } else if (size === 25) {
+        if (cores === 2) sheathThickness = 1.4;
+        else sheathThickness = 1.6;
+      } else if (size === 35) {
+        sheathThickness = 1.6;
+      }
+    }
+  }
+
+  // SNI 04-6629.5 (NYMHY) specific values
+  if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
+    const size = effectiveParams.size;
+    const cores = effectiveParams.cores;
+    
+    // Insulation Thickness
+    if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
+      if (size <= 1.0) insulationThickness = 0.6;
+      else if (size === 1.5) insulationThickness = 0.7;
+      else if (size === 2.5) insulationThickness = 0.8;
+    }
+
+    // NYMHY has no inner sheath
+    if (!effectiveParams.manualInnerSheathThickness) {
+      innerCoveringThickness = 0;
+    }
+
+    // Outer Sheath Thickness
+    if (sheathThickness === undefined || !effectiveParams.manualSheathThickness) {
+      if (cores === 2) {
+        if (size <= 1.5) sheathThickness = 0.8;
+        else if (size === 2.5) sheathThickness = 1.0;
+      } else if (cores === 3) {
+        if (size <= 1.0) sheathThickness = 0.8;
+        else if (size === 1.5) sheathThickness = 0.9;
+        else if (size === 2.5) sheathThickness = 1.1;
+      } else if (cores === 4) {
+        if (size === 0.75) sheathThickness = 0.8;
+        else if (size === 1.0) sheathThickness = 0.9;
+        else if (size === 1.5) sheathThickness = 1.0;
+        else if (size === 2.5) sheathThickness = 1.1;
+      } else if (cores === 5) {
+        if (size <= 1.0) sheathThickness = 0.9;
+        else if (size === 1.5) sheathThickness = 1.1;
+        else if (size === 2.5) sheathThickness = 1.2;
+      }
+    }
+  }
+
+  if (!effectiveParams.manualInsulationThickness) {
+    // ABC Insulation Thickness from table
+    if (abcTData) {
+      insulationThickness = abcTData.phase.insulationThickness;
+    } else if (abcData) {
+      insulationThickness = abcData.insulationThickness;
+    } else if (effectiveParams.standard.includes('SNI 04-6629') && !effectiveParams.standard.includes('NYM')) {
+      if (effectiveParams.size === 1.5) insulationThickness = 0.7;
+      else if (effectiveParams.size <= 6) insulationThickness = 0.8;
+      else if (effectiveParams.size <= 16) insulationThickness = 1.0;
+      else if (effectiveParams.size <= 35) insulationThickness = 1.2;
+    }
+
+    // MV Specifics (IEC 60502-2)
+    if (effectiveParams.standard === 'IEC 60502-2') {
+      if (!effectiveParams.manualConductorScreenThickness) conductorScreenThickness = 0.5; 
+      if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
+      if (effectiveParams.voltage.includes('3.6/6')) insulationThickness = 2.5;
+      else if (effectiveParams.voltage.includes('6/10')) insulationThickness = 3.4;
+      else if (effectiveParams.voltage.includes('8.7/15')) insulationThickness = 4.5;
+      else if (effectiveParams.voltage.includes('12/20')) insulationThickness = 5.5;
+      else if (effectiveParams.voltage.includes('18/30')) insulationThickness = 8.0;
+    }
+
+    // IEC 60092-353 (Marine Cable) Specifics
+    if (effectiveParams.standard === 'IEC 60092-353') {
+      if (effectiveParams.size <= 16) insulationThickness = 0.7;
+      else if (effectiveParams.size <= 35) insulationThickness = 0.9;
+      else if (effectiveParams.size <= 70) insulationThickness = 1.0;
+      else if (effectiveParams.size <= 120) insulationThickness = 1.1;
+      else if (effectiveParams.size <= 150) insulationThickness = 1.2;
+      else if (effectiveParams.size <= 185) insulationThickness = 1.4;
+      else if (effectiveParams.size <= 240) insulationThickness = 1.5;
+      else if (effectiveParams.size <= 300) insulationThickness = 1.6;
+      else insulationThickness = 1.8;
+    }
+  } else if (effectiveParams.standard === 'IEC 60502-2') {
+    // Even if insulation is manual, screens might still be needed for MV
+    if (!effectiveParams.manualConductorScreenThickness) conductorScreenThickness = 0.5;
+    if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
   }
 
   const coreDiameter = diameterOverMgt + (2 * conductorScreenThickness) + (2 * insulationThickness) + (2 * insulationScreenThickness);
   
+  // Earthing Core Diameter
+  let earthingCoreDiameter = 0;
+  let earthingInsulationWeightPerCore = 0;
+  let earthingInsulationThickness = 0;
+  if (earthingCores > 0) {
+    earthingInsulationThickness = abcTData ? abcTData.messenger.insulationThickness : (effectiveParams.insulationMaterial === 'XLPE' ? earthingData.xlpeThick : earthingData.pvcThick);
+    earthingCoreDiameter = abcTData ? abcTData.messenger.coreDiameter : earthingConductorDiameter + (2 * earthingInsulationThickness);
+    
+    const rEarthCond = earthingConductorDiameter / 2;
+    const rEarthIns = earthingCoreDiameter / 2;
+    const earthingInsArea = Math.PI * (rEarthIns * rEarthIns - rEarthCond * rEarthCond);
+    earthingInsulationWeightPerCore = earthingInsArea * densities[effectiveParams.insulationMaterial];
+  }
+
   // 2.5 Metallic Screen (MV Only)
   let mvScreenWeightPerCore = 0;
   let mvScreenThickness = 0;
@@ -246,11 +746,11 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
       const meanDiameter = coreDiameter + mvScreenThickness;
       // Area = pi * D * t * overlap_factor
       const area = Math.PI * meanDiameter * 0.1 * 1.25; // 0.1mm tape, 25% overlap
-      mvScreenWeightPerCore = area * DENSITIES.Cu;
+      mvScreenWeightPerCore = area * densities.Cu;
     } else if (effectiveParams.mvScreenType === 'CWS') {
       // Copper Wire Screen: specified by cross section (e.g., 16mm2)
       const screenSize = effectiveParams.mvScreenSize || 16;
-      mvScreenWeightPerCore = screenSize * DENSITIES.Cu * 1.05; // 5% lay factor
+      mvScreenWeightPerCore = screenSize * densities.Cu * 1.05; // 5% lay factor
       
       // Approximate thickness based on wire diameter for that size
       // For 16mm2, approx 25 wires of 0.9mm -> thickness ~ 1.0mm
@@ -287,14 +787,20 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
     insulationArea = Math.PI * (rIns * rIns - rCond * rCond);
   }
 
-  const insulationWeightPerCore = insulationArea * DENSITIES[effectiveParams.insulationMaterial]; // kg/km
-  const totalInsulationWeight = insulationWeightPerCore * effectiveParams.cores;
+  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial]; // kg/km
+  const totalInsulationWeight = (insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores);
+  const totalEarthingInsulationWeight = earthingInsulationWeightPerCore * earthingCores;
   
-  const semiCondWeightPerCore = semiCondArea * 1.15; // Density ~1.15 for semi-cond
+  const semiCondWeightPerCore = semiCondArea * densities.SemiCond; // Density for semi-cond
   const totalSemiCondWeight = semiCondWeightPerCore * effectiveParams.cores;
 
   // 3. Laying up
-  let laidUpDiameter = effectiveParams.cores === 1 ? diameterOverScreen : diameterOverScreen * (LAYING_UP_FACTORS[effectiveParams.cores] || 2.0);
+  const totalCores = effectiveParams.cores + earthingCores;
+  let laidUpFactor = getLayingUpFactor(totalCores);
+  
+  // If earthing cores are present and smaller, we use the phase core diameter for laying up
+  // but the factor is based on total cores. This is a common approximation.
+  let laidUpDiameter = totalCores === 1 ? diameterOverScreen : diameterOverScreen * laidUpFactor;
   
   // Sector shaped reduction
   if (effectiveParams.conductorType === 'sm' && effectiveParams.cores >= 3) {
@@ -302,37 +808,125 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
   }
 
   // 4. Inner Covering (Extruded)
-  let innerCoveringThickness = 0;
   let innerCoveringWeight = 0;
   let diameterUnderArmor = laidUpDiameter;
 
-  if (effectiveParams.cores > 1 && effectiveParams.armorType !== 'Unarmored') {
-    if (laidUpDiameter <= 25) innerCoveringThickness = 1.0;
-    else if (laidUpDiameter <= 35) innerCoveringThickness = 1.2;
-    else if (laidUpDiameter <= 45) innerCoveringThickness = 1.4;
-    else if (laidUpDiameter <= 60) innerCoveringThickness = 1.6;
-    else innerCoveringThickness = 2.0;
+  if (effectiveParams.standard.includes('NFA2X')) {
+    innerCoveringThickness = 0;
+    diameterUnderArmor = laidUpDiameter;
+  } else if (effectiveParams.armorType !== 'Unarmored' || effectiveParams.hasInnerSheath || effectiveParams.manualInnerSheathThickness) {
+    // Armor always requires inner sheath
+    const needsInnerSheath = effectiveParams.armorType !== 'Unarmored' || effectiveParams.hasInnerSheath || effectiveParams.manualInnerSheathThickness;
+    
+    if (needsInnerSheath && innerCoveringThickness === undefined) {
+      if (effectiveParams.standard === 'IEC 60092-353') {
+        // Marine cable bedding formula: 0.04 * d + 0.8
+        innerCoveringThickness = Math.round((0.04 * laidUpDiameter + 0.8) * 10) / 10;
+      } else {
+        if (laidUpDiameter <= 25) innerCoveringThickness = 1.0;
+        else if (laidUpDiameter <= 35) innerCoveringThickness = 1.2;
+        else if (laidUpDiameter <= 45) innerCoveringThickness = 1.4;
+        else if (laidUpDiameter <= 60) innerCoveringThickness = 1.6;
+        else innerCoveringThickness = 2.0;
+      }
+    }
 
-    diameterUnderArmor = laidUpDiameter + 2 * innerCoveringThickness;
+    const finalInnerThickness = innerCoveringThickness || 0;
+    diameterUnderArmor = laidUpDiameter + 2 * finalInnerThickness;
     const rLaidUp = laidUpDiameter / 2;
     const rUnderArmor = diameterUnderArmor / 2;
-    const innerCoveringArea = Math.PI * (rUnderArmor * rUnderArmor - rLaidUp * rLaidUp);
-    innerCoveringWeight = innerCoveringArea * DENSITIES.PVC; // Assuming PVC extruded inner covering
+    
+    // 1. Ring Area (The sheath layer itself)
+    const ringArea = Math.PI * (rUnderArmor * rUnderArmor - rLaidUp * rLaidUp);
+    
+    // 2. Interstice Area (Gaps between cores)
+    // For circular cores, the gap is the area of the laid-up circle minus the area of the cores
+    const phaseCoreAreaTotal = effectiveParams.cores * Math.PI * Math.pow(diameterOverScreen / 2, 2);
+    const earthingCoreAreaTotal = earthingCores * Math.PI * Math.pow(earthingCoreDiameter / 2, 2);
+    const coreAreaTotal = phaseCoreAreaTotal + earthingCoreAreaTotal;
+    
+    const laidUpArea = Math.PI * Math.pow(laidUpDiameter / 2, 2);
+    let intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
+    
+    // Reduction for sector shape (sm) - gaps are much smaller
+    if (effectiveParams.conductorType === 'sm') {
+      intersticeArea = intersticeArea * 0.2; // 80% reduction in gaps for sector shape
+    }
+    
+    // Filler Factor: Industrial cables often use 70-90% filling for extruded bedding
+    const fillerFactor = 0.85; 
+    const totalInnerSheathArea = ringArea + (intersticeArea * fillerFactor);
+    
+    innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC);
   }
 
+  // 4.5 Screen (CTS, SWS) - New Feature
+  let screenWeight = 0;
+  let screenThickness = effectiveParams.manualScreenThickness || 0;
+  let diameterOverOverallScreen = diameterUnderArmor;
+
+  if (effectiveParams.hasScreen && effectiveParams.screenType && effectiveParams.screenType !== 'None') {
+    if (effectiveParams.screenType === 'CTS') {
+      screenThickness = 0.2; // Effective thickness with overlap
+      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
+      const meanDiameter = diameterUnderArmor + screenThickness;
+      const area = Math.PI * meanDiameter * 0.1 * 1.25; // 0.1mm tape, 25% overlap
+      screenWeight = area * densities.Cu;
+    } else if (effectiveParams.screenType === 'CWS') {
+      const cwsSize = effectiveParams.screenSize || 16;
+      // Copper Wire Screen weight calculation
+      // Weight (kg/km) = Area (mm2) * Density (kg/dm3) * Lay Factor (approx 1.1)
+      screenWeight = cwsSize * densities.Cu * 1.1;
+      
+      // Approximate thickness based on wire diameter for that size
+      // 16mm2 -> ~0.7mm, 25mm2 -> ~0.9mm, 35mm2 -> ~1.1mm
+      screenThickness = Math.sqrt(cwsSize / 16) * 0.7;
+      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
+    }
+  }
+
+  // 4.6 Separator Sheath - New Feature
+  let separatorWeight = 0;
+  let separatorThickness = effectiveParams.manualSeparatorThickness || 0;
+  let diameterOverSeparator = diameterOverOverallScreen;
+
+  // Auto-separator logic: if cable has screen and armor
+  const autoSeparator = effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
+  const needsSeparator = effectiveParams.hasSeparator || autoSeparator;
+
+  if (needsSeparator) {
+    if (!effectiveParams.manualSeparatorThickness) {
+      const calcThick = 0.02 * diameterOverOverallScreen + 0.6;
+      separatorThickness = calcThick < 1 ? 1.0 : Math.round(calcThick * 10) / 10;
+    }
+    diameterOverSeparator = diameterOverOverallScreen + (2 * separatorThickness);
+    const rUnder = diameterOverOverallScreen / 2;
+    const rOver = diameterOverSeparator / 2;
+    const area = Math.PI * (rOver * rOver - rUnder * rUnder);
+    separatorWeight = area * (densities[effectiveParams.separatorMaterial || 'PVC'] || densities.PVC);
+  }
+
+  // Update diameter under armor to include screen and separator
+  diameterUnderArmor = diameterOverSeparator;
+
   // 5. Armor
-  let armorThickness = 0;
+  let armorThickness = effectiveParams.manualArmorThickness || 0;
   let armorWeight = 0;
   let diameterOverArmor = diameterUnderArmor;
 
-  if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
-    // SWA Wire diameters according to IEC 60502-1
-    if (diameterUnderArmor <= 10) armorThickness = 0.8;
-    else if (diameterUnderArmor <= 15) armorThickness = 1.25;
-    else if (diameterUnderArmor <= 25) armorThickness = 1.6;
-    else if (diameterUnderArmor <= 35) armorThickness = 2.0;
-    else if (diameterUnderArmor <= 60) armorThickness = 2.5;
-    else armorThickness = 3.15;
+  if (effectiveParams.standard.includes('NFA2X')) {
+    armorThickness = 0;
+    diameterOverArmor = diameterUnderArmor;
+  } else if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
+    if (!effectiveParams.manualArmorThickness) {
+      // SWA Wire diameters according to IEC 60502-1
+      if (diameterUnderArmor <= 10) armorThickness = 0.8;
+      else if (diameterUnderArmor <= 15) armorThickness = 1.25;
+      else if (diameterUnderArmor <= 25) armorThickness = 1.6;
+      else if (diameterUnderArmor <= 35) armorThickness = 2.0;
+      else if (diameterUnderArmor <= 60) armorThickness = 2.5;
+      else armorThickness = 3.15;
+    }
 
     diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
     
@@ -340,25 +934,27 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
     const meanArmorDiameter = diameterUnderArmor + armorThickness;
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
-    const armorDensity = effectiveParams.armorType === 'AWA' ? DENSITIES.Al : DENSITIES.Steel;
+    const armorDensity = effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel;
     armorWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
   } else if (effectiveParams.armorType === 'STA') {
-    // STA Tape thickness
-    if (diameterUnderArmor <= 30) armorThickness = 0.2;
-    else if (diameterUnderArmor <= 70) armorThickness = 0.5;
-    else armorThickness = 0.8;
+    if (!effectiveParams.manualArmorThickness) {
+      // STA Tape thickness
+      if (diameterUnderArmor <= 30) armorThickness = 0.2;
+      else if (diameterUnderArmor <= 70) armorThickness = 0.5;
+      else armorThickness = 0.8;
+    }
 
     // 2 layers of tape, approx 25% overlap -> effective thickness ~ 2 * thickness
     diameterOverArmor = diameterUnderArmor + 4 * armorThickness;
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness;
-    armorWeight = tapeArea * DENSITIES.Steel;
+    armorWeight = tapeArea * densities.Steel;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
     // Flat wire approx 0.8mm, Tape approx 0.2mm
-    const flatThickness = 0.8;
-    const tapeThickness = 0.2;
+    const flatThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.8 : 0.8;
+    const tapeThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.2 : 0.2;
     armorThickness = flatThickness + tapeThickness;
     diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
     
@@ -367,12 +963,12 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2; // Overlap
     
-    armorWeight = (flatArea + tapeArea) * DENSITIES.Steel;
+    armorWeight = (flatArea + tapeArea) * densities.Steel;
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
     // Wire approx 1.25mm, Tape approx 0.2mm
-    const wireDia = 1.25;
-    const tapeThickness = 0.2;
+    const wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.85 : 1.25;
+    const tapeThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.15 : 0.2;
     armorThickness = wireDia + tapeThickness;
     diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
     
@@ -382,61 +978,105 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2;
     
-    armorWeight = (wireArea + tapeArea) * DENSITIES.Steel;
-  } else if (effectiveParams.armorType === 'GSWB') {
-    // Galvanized Steel Wire Braided (IEC 60092-353)
-    let wireDia = 0.3;
-    if (diameterUnderArmor <= 15) wireDia = 0.2;
-    else wireDia = 0.3;
+    armorWeight = (wireArea + tapeArea) * densities.Steel;
+  } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
+    // Industrial Level Braid Calculation (GSWB/TCWB)
     
-    // Braiding thickness is approx 2x wire diameter due to weave overlap
-    armorThickness = wireDia * 2; 
+    let wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness / 2 : 0.3;
+    if (!effectiveParams.manualArmorThickness) {
+      if (diameterUnderArmor <= 15) wireDia = 0.2;
+      else if (diameterUnderArmor <= 30) wireDia = 0.3;
+      else wireDia = 0.4;
+    }
+    
+    // Number of carriers (C) - typical industrial values
+    let carriers = 24;
+    if (diameterUnderArmor <= 10) carriers = 16;
+    else if (diameterUnderArmor <= 20) carriers = 24;
+    else if (diameterUnderArmor <= 35) carriers = 32;
+    else if (diameterUnderArmor <= 50) carriers = 48;
+    else carriers = 64;
+
+    // Braid angle (alpha) - typically 45-60 degrees for good coverage
+    const braidAngleDeg = 45; 
+    const layFactor = 1 / Math.cos(braidAngleDeg * Math.PI / 180);
+    
+    const meanBraidDiameter = diameterUnderArmor + wireDia;
+    const coverage = (effectiveParams.braidCoverage || 90) / 100;
+    
+    const n = Math.ceil((coverage * 2 * Math.PI * meanBraidDiameter * Math.cos(braidAngleDeg * Math.PI / 180)) / (carriers * wireDia));
+    
+    const wireArea = (Math.PI * wireDia * wireDia) / 4;
+    const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : densities.Steel;
+    
+    armorWeight = (n * carriers) * wireArea * armorDensity * layFactor;
+    
+    armorThickness = wireDia * 2; // Double wire diameter for braid thickness
     diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
-    
-    const meanBraidDiameter = diameterUnderArmor + armorThickness;
-    const coverageFactor = (effectiveParams.braidCoverage || 90) / 100;
-    // Braiding factor formula: Area = pi * D * d * factor
-    // factor is related to coverage. Standard coverage is often 90%
-    const braidArea = Math.PI * meanBraidDiameter * wireDia * (coverageFactor * 1.5); 
-    armorWeight = braidArea * DENSITIES.Steel;
   }
 
   // 6. Outer Sheath
   // IEC 60502-1 formula: ts = 0.035D + 1.0
   const fictitiousDiameter = diameterOverArmor;
-  let sheathThickness = Math.max(1.4, Math.round((0.035 * fictitiousDiameter + 1.0) * 10) / 10);
-  
-  // Minimums for unarmored
-  if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores === 1) {
-    sheathThickness = Math.max(1.4, sheathThickness);
-  } else if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores > 1) {
-    sheathThickness = Math.max(1.8, sheathThickness);
-  }
-
-  // NYAF has no sheath
-  if (effectiveParams.standard.includes('NYAF')) {
+  if (effectiveParams.standard.includes('NFA2X')) {
     sheathThickness = 0;
+  } else if (sheathThickness === undefined) {
+    sheathThickness = Math.max(1.4, Math.round((0.035 * fictitiousDiameter + 1.0) * 10) / 10);
+    
+    // IEC 60092-353 Outer Sheath: 0.025 * d + 0.6
+    if (effectiveParams.standard === 'IEC 60092-353') {
+      sheathThickness = Math.round((0.025 * fictitiousDiameter + 0.6) * 10) / 10;
+    }
+    
+    // Minimums for unarmored
+    if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores === 1) {
+      sheathThickness = Math.max(1.4, sheathThickness);
+    } else if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores > 1) {
+      sheathThickness = Math.max(1.8, sheathThickness);
+    }
+
+    // NYAF and NYA have no sheath
+    if (effectiveParams.standard.includes('(NYAF)') || effectiveParams.standard.includes('(NYA)')) {
+      sheathThickness = 0;
+    }
   }
 
-  const overallDiameter = diameterOverArmor + 2 * sheathThickness;
+  const finalSheathThickness = sheathThickness || 0;
+  const overallDiameter = diameterOverArmor + 2 * finalSheathThickness;
   const rOverArmor = diameterOverArmor / 2;
   const rOverall = overallDiameter / 2;
   const sheathArea = Math.PI * (rOverall * rOverall - rOverArmor * rOverArmor);
-  const sheathWeight = sheathThickness > 0 ? sheathArea * DENSITIES[effectiveParams.sheathMaterial] : 0;
+  const sheathWeight = finalSheathThickness > 0 ? sheathArea * densities[effectiveParams.sheathMaterial] : 0;
 
-  const totalWeight = totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight;
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight);
+
+  // NYMHY Standard Limits (Batas bawah / Batas atas)
+  let overallDiameterMin: number | undefined;
+  let overallDiameterMax: number | undefined;
+
+  if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
+    const size = effectiveParams.size;
+    const cores = effectiveParams.cores;
+    
+    const limits: Record<string, [number, number]> = {
+      '2x0.75': [5.7, 7.2], '2x1': [5.9, 7.5], '2x1.5': [6.8, 8.6], '2x2.5': [8.4, 10.6],
+      '3x0.75': [6.0, 7.6], '3x1': [6.3, 8.0], '3x1.5': [7.4, 9.4], '3x2.5': [9.2, 11.4],
+      '4x0.75': [6.6, 8.3], '4x1': [7.1, 9.0], '4x1.5': [8.4, 10.5], '4x2.5': [10.1, 12.5],
+      '5x0.75': [7.4, 9.3], '5x1': [7.8, 9.8], '5x1.5': [9.3, 11.6], '5x2.5': [11.2, 13.9]
+    };
+    
+    const key = `${cores}x${size}`;
+    if (limits[key]) {
+      [overallDiameterMin, overallDiameterMax] = limits[key];
+    }
+  }
 
   // Electrical
-  const baseResistance = RESISTANCE_CU[effectiveParams.size] || 0;
-  const maxDcResistance = effectiveParams.conductorMaterial === 'Cu' ? baseResistance : baseResistance * 1.61;
+  // maxDcResistance, currentCapacityAir already calculated or overridden above
   
-  const currentCapacityAir = effectiveParams.conductorMaterial === 'Cu' 
-    ? CURRENT_CAPACITY_AIR_CU[effectiveParams.size] || 0 
-    : CURRENT_CAPACITY_AIR_AL[effectiveParams.size] || 0;
-    
   const currentCapacityGround = effectiveParams.conductorMaterial === 'Cu' 
-    ? CURRENT_CAPACITY_GROUND_CU[effectiveParams.size] || 0 
-    : CURRENT_CAPACITY_GROUND_AL[effectiveParams.size] || 0;
+    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_CU[effectiveParams.size]) || 0 
+    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_AL[effectiveParams.size]) || 0;
 
   // Test Voltage Calculation
   let testVoltage = '3.5 kV';
@@ -448,9 +1088,11 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
     else if (effectiveParams.voltage.includes('8.7/15')) testVoltage = '30.5 kV';
     else if (effectiveParams.voltage.includes('12/20')) testVoltage = '42 kV';
     else if (effectiveParams.voltage.includes('18/30')) testVoltage = '63 kV';
-  } else if (effectiveParams.standard.includes('NYM')) {
+  } else if (effectiveParams.standard === 'IEC 60092-353') {
+    testVoltage = '3.5 kV';
+  } else if (effectiveParams.standard.includes('(NYM)')) {
     testVoltage = '2 kV';
-  } else if (effectiveParams.standard.includes('NYAF')) {
+  } else if (effectiveParams.standard.includes('(NYAF)') || effectiveParams.standard.includes('(NYA)')) {
     testVoltage = '2.5 kV';
   }
 
@@ -465,6 +1107,11 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
 
   if (effectiveParams.standard.includes('SNI')) {
     flameRetardant = 'SNI 04-6629.1';
+  } else if (effectiveParams.standard === 'IEC 60092-353') {
+    flameRetardant = 'IEC 60332-3-22 (Cat.A)';
+    if (effectiveParams.hasMgt || effectiveParams.fireguard) {
+      flameRetardant += ' & IEC 60331 (Fire Resistant)';
+    }
   }
 
   // Extract braid wire diameter for spec display
@@ -475,33 +1122,62 @@ export function calculateCable(params: CableDesignParams): CalculationResult {
 
   return {
     spec: {
-      conductorDiameter: Number(conductorDiameter.toFixed(2)),
-      insulationThickness: Number(insulationThickness.toFixed(2)),
-      coreDiameter: Number(coreDiameter.toFixed(2)),
-      laidUpDiameter: Number(laidUpDiameter.toFixed(2)),
-      innerCoveringThickness: Number(innerCoveringThickness.toFixed(2)),
-      diameterUnderArmor: Number(diameterUnderArmor.toFixed(2)),
-      armorThickness: Number(armorThickness.toFixed(2)),
-      diameterOverArmor: Number(diameterOverArmor.toFixed(2)),
-      sheathThickness: Number(sheathThickness.toFixed(2)),
-      overallDiameter: Number(overallDiameter.toFixed(2)),
-      conductorScreenThickness: conductorScreenThickness > 0 ? conductorScreenThickness : undefined,
-      insulationScreenThickness: insulationScreenThickness > 0 ? insulationScreenThickness : undefined,
-      mvScreenDiameter: mvScreenThickness > 0 ? Number(diameterOverScreen.toFixed(2)) : undefined,
-      mgtThickness: mgtThickness > 0 ? mgtThickness : undefined,
+      phaseCore: {
+        conductorDiameter: Number(conductorDiameter.toFixed(2)),
+        wireCount,
+        wireDiameter: Number(wireDiameter.toFixed(2)),
+        insulationThickness: Number(insulationThickness.toFixed(2)),
+        coreDiameter: Number(coreDiameter.toFixed(2)),
+      },
+      earthingCore: earthingCores > 0 ? {
+        conductorDiameter: Number(earthingConductorDiameter.toFixed(2)),
+        wireCount: earthingWireCount,
+        wireDiameter: Number(earthingWireDiameter.toFixed(2)),
+        insulationThickness: Number(earthingInsulationThickness.toFixed(2)),
+        coreDiameter: Number(earthingCoreDiameter.toFixed(2)),
+        alWireCount: earthingAlWireCount,
+        alWireDiameter: earthingAlWireDiameter,
+        steelWireCount: earthingSteelWireCount,
+        steelWireDiameter: earthingSteelWireDiameter,
+      } : undefined,
+      conductorDiameter: Number(conductorDiameter.toFixed(1)),
+      wireCount,
+      insulationThickness: Number(insulationThickness.toFixed(1)),
+      coreDiameter: Number(coreDiameter.toFixed(1)),
+      laidUpDiameter: Number(laidUpDiameter.toFixed(1)),
+      innerCoveringThickness: Number((innerCoveringThickness || 0).toFixed(1)),
+      diameterUnderArmor: Number(diameterUnderArmor.toFixed(1)),
+      screenThickness: screenThickness > 0 ? Number(screenThickness.toFixed(1)) : undefined,
+      separatorThickness: separatorThickness > 0 ? Number(separatorThickness.toFixed(1)) : undefined,
+      armorThickness: Number(armorThickness.toFixed(1)),
+      diameterOverArmor: Number(diameterOverArmor.toFixed(1)),
+      sheathThickness: Number((sheathThickness || 0).toFixed(1)),
+      overallDiameter: Number(overallDiameter.toFixed(1)),
+      conductorScreenThickness: conductorScreenThickness > 0 ? Number(conductorScreenThickness.toFixed(1)) : undefined,
+      insulationScreenThickness: insulationScreenThickness > 0 ? Number(insulationScreenThickness.toFixed(1)) : undefined,
+      mvScreenDiameter: mvScreenThickness > 0 ? Number(diameterOverScreen.toFixed(1)) : undefined,
+      mgtThickness: mgtThickness > 0 ? Number(mgtThickness.toFixed(1)) : undefined,
+      overallDiameterMin,
+      overallDiameterMax,
       braidWireDiameter,
       braidCoverage: effectiveParams.armorType === 'GSWB' ? (effectiveParams.braidCoverage || 90) : undefined,
     },
     bom: {
-      conductorWeight: Number(totalConductorWeight.toFixed(1)),
-      insulationWeight: Number(totalInsulationWeight.toFixed(1)),
-      innerCoveringWeight: Number(innerCoveringWeight.toFixed(1)),
-      armorWeight: Number(armorWeight.toFixed(1)),
-      sheathWeight: Number(sheathWeight.toFixed(1)),
-      semiCondWeight: Number(totalSemiCondWeight.toFixed(1)),
-      mvScreenWeight: Number(totalMvScreenWeight.toFixed(1)),
-      mgtWeight: Number(totalMgtWeight.toFixed(1)),
-      totalWeight: Number(totalWeight.toFixed(1)),
+      conductorWeight: Number(applyScrap(totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
+      insulationWeight: Number(applyScrap(totalInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
+      innerCoveringWeight: Number(applyScrap(innerCoveringWeight, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
+      screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'Cu' : 'Steel').toFixed(1)),
+      separatorWeight: Number(applyScrap(separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
+      armorWeight: Number(applyScrap(armorWeight, effectiveParams.armorType === 'AWA' ? 'Al' : 'Steel').toFixed(1)),
+      sheathWeight: Number(applyScrap(sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
+      semiCondWeight: Number(applyScrap(totalSemiCondWeight, 'SemiCond').toFixed(1)),
+      mvScreenWeight: Number(applyScrap(totalMvScreenWeight, 'Cu').toFixed(1)),
+      mgtWeight: Number(applyScrap(totalMgtWeight, 'MGT').toFixed(1)),
+      earthingConductorWeight: Number(applyScrap(earthingConductorWeightPerCore * earthingCores, effectiveParams.conductorMaterial).toFixed(1)),
+      earthingAlWeight: earthingAlWeight > 0 ? Number(applyScrap(earthingAlWeight, 'Al').toFixed(1)) : undefined,
+      earthingSteelWeight: earthingSteelWeight > 0 ? Number(applyScrap(earthingSteelWeight, 'SteelWire').toFixed(1)) : undefined,
+      earthingInsulationWeight: Number(applyScrap(totalEarthingInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
+      totalWeight: Number(applyScrap(totalWeight, 'Total').toFixed(1)),
     },
     electrical: {
       maxDcResistance: Number(maxDcResistance.toFixed(4)),

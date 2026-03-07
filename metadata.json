@@ -1,5 +1,5 @@
 {
-  "name": "IEC 60502-1 Cable Designer",
+  "name": "Cable Designer",
   "description": "Cable design application based on IEC 60502-1 standard. Calculates Bill of Material and Technical Specifications.",
   "requestFramePermissions": []
 }

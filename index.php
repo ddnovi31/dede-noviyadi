@@ -1,6 +1,6 @@
 <?php
 /**
- * MULTI KABEL - Cable Design Tool (PHP Portable Version)
+ * Cable Designer - Cable Design Tool (PHP Portable Version)
  * Copy this file to your XAMPP htdocs folder.
  */
 ?>
@@ -9,7 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MULTI KABEL - Cable Design Tool</title>
+    <title>Cable Designer - Cable Design Tool</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -32,7 +32,44 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-900">
 
-    <div id="app" class="max-w-[1600px] mx-auto p-4 md:p-8">
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 md:p-10">
+            <div class="flex flex-col items-center mb-8">
+                <div class="bg-indigo-600 p-4 rounded-2xl shadow-lg shadow-indigo-200 mb-4">
+                    <i data-lucide="layers" class="w-10 h-10 text-white"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900">Welcome Back</h2>
+                <p class="text-slate-500 text-sm">Please sign in to access the designer</p>
+            </div>
+            
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Username</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="username" required class="w-full pl-10 pr-4 py-3 rounded-xl border-slate-200 border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm" placeholder="Enter username">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Password</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                        <input type="password" id="password" required class="w-full pl-10 pr-4 py-3 rounded-xl border-slate-200 border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm" placeholder="Enter password">
+                    </div>
+                </div>
+                <div id="login-error" class="hidden text-red-500 text-xs font-bold bg-red-50 p-3 rounded-xl border border-red-100">
+                    Invalid username or password. Please try again.
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                    Sign In
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" class="hidden max-w-[1600px] mx-auto p-4 md:p-8">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div class="flex items-center gap-3">
@@ -40,7 +77,7 @@
                     <i data-lucide="layers" class="w-8 h-8 text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight text-slate-900">MULTI KABEL</h1>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900">Cable Designer</h1>
                     <p class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Cable Design Studio</p>
                 </div>
             </div>
@@ -76,7 +113,6 @@
                                 <option value="SNI 04-6629.4 (NYM)">SNI 04-6629.4 (NYM)</option>
                                 <option value="SNI 04-6629.3 (NYAF)">SNI 04-6629.3 (NYAF)</option>
                                 <option value="SNI 04-6629.5 (NYMHY)">SNI 04-6629.5 (NYMHY)</option>
-                                <option value="SNI 04-6629.5 (NYYHY)">SNI 04-6629.5 (NYYHY)</option>
                             </select>
                         </div>
 
@@ -95,13 +131,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Cores</label>
-                                <select id="cores" onchange="updateUI()" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50">
-                                    <option value="1">1 Core</option>
-                                    <option value="2">2 Cores</option>
-                                    <option value="3">3 Cores</option>
-                                    <option value="4">4 Cores</option>
-                                    <option value="5">5 Cores</option>
-                                </select>
+                                <input type="number" id="cores" min="1" max="80" value="3" onchange="updateUI()" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
@@ -113,9 +143,10 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Conductor Material</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button onclick="setParam('conductorMaterial', 'Cu')" id="btn-cu" class="py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-indigo-600 text-white shadow-md">Copper (Cu)</button>
-                                <button onclick="setParam('conductorMaterial', 'Al')" id="btn-al" class="py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200">Aluminum (Al)</button>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="setParam('conductorMaterial', 'Cu')" id="btn-cu" class="py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-indigo-600 text-white shadow-md">Copper (Cu)</button>
+                                <button onclick="setParam('conductorMaterial', 'Al')" id="btn-al" class="py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200">Aluminum (Al)</button>
+                                <button onclick="setParam('conductorMaterial', 'TCu')" id="btn-tcu" class="py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200">Tinned Cu (TCu)</button>
                             </div>
                         </div>
 
@@ -139,11 +170,38 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Flame Retardant Category</label>
+                            <select id="flameRetardantCategory" onchange="updateFRCategory()" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50">
+                                <option value="None">Non Category</option>
+                                <option value="Cat.A">Cat.A</option>
+                                <option value="Cat.B">Cat.B</option>
+                                <option value="Cat.C">Cat.C</option>
+                            </select>
+                        </div>
+
+                        <div id="mgt-container" class="pt-2">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" id="hasMgt" onchange="updateUI()" class="sr-only">
+                                    <div id="mgt-toggle-bg" class="block w-10 h-6 rounded-full transition-colors bg-slate-200"></div>
+                                    <div id="mgt-toggle-dot" class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-slate-700 group-hover:text-orange-600 transition-colors">Fire Resistant (MGT)</span>
+                                    <span class="text-[10px] text-slate-400">Add Mica Glass Tape over conductor</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Outer Sheath</label>
                             <select id="sheathMaterial" onchange="updateUI()" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50">
                                 <option value="PVC">PVC</option>
                                 <option value="PE">PE</option>
                                 <option value="LSZH">LSZH</option>
+                                <option value="PVC-FR Cat.A">PVC-FR Cat.A</option>
+                                <option value="PVC-FR Cat.B">PVC-FR Cat.B</option>
+                                <option value="PVC-FR Cat.C">PVC-FR Cat.C</option>
                             </select>
                         </div>
                     </div>
@@ -156,6 +214,19 @@
                         Material Prices (IDR/kg)
                     </h2>
                     <div class="space-y-4">
+                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-2">
+                            <label class="block text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
+                                <i data-lucide="percent" class="w-4 h-4"></i>
+                                Overhead Cost (%)
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="overhead-range" min="0" max="50" step="0.5" value="5" oninput="document.getElementById('price-overhead').value = this.value; updatePrices();" class="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                                <div class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                    <input type="number" id="price-overhead" value="5" oninput="document.getElementById('overhead-range').value = this.value; updatePrices();" class="w-12 bg-transparent border-none p-0 text-sm font-mono font-bold text-indigo-600 focus:ring-0 text-right">
+                                    <span class="text-sm font-bold text-slate-400">%</span>
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Copper (Cu)</label>
                             <input type="number" id="price-cu" oninput="updatePrices()" value="150000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
@@ -165,12 +236,28 @@
                             <input type="number" id="price-al" oninput="updatePrices()" value="45000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
                         </div>
                         <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tinned Copper (TCu)</label>
+                            <input type="number" id="price-tcu" oninput="updatePrices()" value="165000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">XLPE</label>
                             <input type="number" id="price-xlpe" oninput="updatePrices()" value="35000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PVC</label>
                             <input type="number" id="price-pvc" oninput="updatePrices()" value="25000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PVC-FR Cat.A</label>
+                            <input type="number" id="price-pvc-fra" oninput="updatePrices()" value="35000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PVC-FR Cat.B</label>
+                            <input type="number" id="price-pvc-frb" oninput="updatePrices()" value="32000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PVC-FR Cat.C</label>
+                            <input type="number" id="price-pvc-frc" oninput="updatePrices()" value="30000" class="w-full rounded-xl border-slate-300 p-2.5 border bg-slate-50 font-mono">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Steel (Armor)</label>
@@ -196,7 +283,17 @@
                         <div class="mt-6 flex flex-wrap items-center gap-4">
                             <div class="bg-white/20 px-5 py-2 rounded-2xl backdrop-blur-md border border-white/10">
                                 <span class="text-indigo-100 text-[10px] uppercase font-bold block mb-0.5">Overall Diameter</span>
-                                <span id="main-diameter" class="text-xl font-black">28.50 mm</span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <span id="main-diameter" class="text-xl font-black">28.50 mm</span>
+                                    <div class="flex gap-1">
+                                        <div id="fireguard-badge" class="hidden">
+                                            <span class="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-400">FireGuard®</span>
+                                        </div>
+                                        <div id="stopfire-badge" class="hidden">
+                                            <span class="bg-orange-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-orange-400">StopFire®</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="bg-white/20 px-5 py-2 rounded-2xl backdrop-blur-md border border-white/10">
                                 <span class="text-indigo-100 text-[10px] uppercase font-bold block mb-0.5">Total Weight</span>
@@ -257,13 +354,9 @@
                     </div>
 
                     <div id="project-actions" class="hidden pt-6 mt-6 border-t border-slate-100 space-y-3">
-                        <button onclick="viewReport()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all shadow-sm">
-                            <i data-lucide="eye" class="w-5 h-5"></i>
-                            View Report
-                        </button>
-                        <button onclick="downloadReport()" class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold transition-all shadow-sm">
-                            <i data-lucide="download" class="w-5 h-5"></i>
-                            Download JSON
+                        <button onclick="showProjectReview()" class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold transition-all shadow-sm">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                            Review Project
                         </button>
                     </div>
                 </div>
@@ -271,10 +364,137 @@
         </div>
     </div>
 
+    <!-- Project Review Modal -->
+    <div id="review-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/50 backdrop-blur-sm p-4 md:p-8">
+        <div class="max-w-5xl mx-auto space-y-8 bg-slate-50 p-6 md:p-10 rounded-3xl shadow-2xl">
+            <!-- Review Header -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4">
+                    <button onclick="hideProjectReview()" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500">
+                        <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Project Review</h1>
+                        <p class="text-sm text-slate-500">Summary of all designed cables and total estimated costs</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.print()" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        Print Summary
+                    </button>
+                    <button onclick="hideProjectReview()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl text-sm font-semibold transition-all shadow-md">
+                        Back to Designer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Project Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
+                    <div id="review-total-items" class="text-3xl font-bold text-slate-900">0 Cables</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Estimated Project HPP (per meter sum)</div>
+                    <div id="review-total-price" class="text-3xl font-bold text-indigo-600 font-mono">Rp 0</div>
+                </div>
+            </div>
+
+            <!-- Detailed Items Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100">
+                    <h2 class="text-lg font-bold flex items-center gap-2">
+                        <i data-lucide="list" class="w-5 h-5 text-indigo-600"></i>
+                        Cable Specifications & Costs
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
+                                <th class="px-6 py-4 border-b border-slate-100">Designation</th>
+                                <th className="px-6 py-4 border-b border-slate-100">Dimensions</th>
+                                <th className="px-6 py-4 border-b border-slate-100">Weight</th>
+                                <th className="px-6 py-4 border-b border-slate-100 text-right">HPP / Meter</th>
+                            </tr>
+                        </thead>
+                        <tbody id="review-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center py-8 border-t border-slate-200">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">PT. Multi Kencana Niagatama</div>
+                <div id="review-date" class="text-[9px] text-slate-300 mt-1">Generated on ...</div>
+            </footer>
+        </div>
+    </div>
+
     <script>
+        // --- Authentication ---
+        const AUTH_USER = 'dede';
+        const AUTH_PASS = 'Tangerang123';
+
+        function checkAuth() {
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+            const loginScreen = document.getElementById('login-screen');
+            const app = document.getElementById('app');
+            
+            if (isLoggedIn) {
+                loginScreen.classList.add('hidden');
+                app.classList.remove('hidden');
+            } else {
+                loginScreen.classList.remove('hidden');
+                app.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const error = document.getElementById('login-error');
+
+            if (user === AUTH_USER && pass === AUTH_PASS) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                error.classList.add('hidden');
+                checkAuth();
+                lucide.createIcons();
+            } else {
+                error.classList.remove('hidden');
+            }
+        });
+
+        // Initialize auth
+        checkAuth();
+
         // --- Data & Constants ---
         const CABLE_SIZES = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500, 630, 800, 1000];
         
+        const LAYING_UP_FACTORS = {
+            1: 1.0, 2: 2.0, 3: 2.15, 4: 2.41, 5: 2.7, 7: 3.0, 10: 3.7, 12: 4.15, 14: 4.41, 19: 5.0, 24: 5.7, 30: 6.41, 37: 7.0, 48: 8.0, 61: 9.0, 80: 10.5
+        };
+
+        function getLayingUpFactor(cores) {
+            if (cores <= 1) return 1;
+            if (LAYING_UP_FACTORS[cores]) return LAYING_UP_FACTORS[cores];
+            const sortedCores = Object.keys(LAYING_UP_FACTORS).map(Number).sort((a, b) => a - b);
+            for (let i = 0; i < sortedCores.length - 1; i++) {
+                if (cores > sortedCores[i] && cores < sortedCores[i+1]) {
+                    const c1 = sortedCores[i];
+                    const c2 = sortedCores[i+1];
+                    const f1 = LAYING_UP_FACTORS[c1];
+                    const f2 = LAYING_UP_FACTORS[c2];
+                    return f1 + (f2 - f1) * (cores - c1) / (c2 - c1);
+                }
+            }
+            return 1.15 * Math.sqrt(cores);
+        }
+
         let params = {
             standard: 'IEC 60502-1',
             voltage: '0.6/1 kV',
@@ -285,16 +505,24 @@
             insulationMaterial: 'XLPE',
             armorType: 'Unarmored',
             sheathMaterial: 'PVC',
-            braidCoverage: 90
+            braidCoverage: 90,
+            flameRetardantCategory: 'None',
+            hasMgt: false,
+            overhead: 5
         };
 
         let materialPrices = {
             Cu: 150000,
             Al: 45000,
+            TCu: 165000,
             XLPE: 35000,
             PVC: 25000,
+            'PVC-FR Cat.A': 35000,
+            'PVC-FR Cat.B': 32000,
+            'PVC-FR Cat.C': 30000,
             Steel: 15000,
-            Other: 40000
+            Other: 40000,
+            MGT: 50000
         };
 
         let projectItems = [];
@@ -327,30 +555,43 @@
         function updatePrices() {
             const cuEl = document.getElementById('price-cu');
             const alEl = document.getElementById('price-al');
+            const tcuEl = document.getElementById('price-tcu');
             const xlpeEl = document.getElementById('price-xlpe');
             const pvcEl = document.getElementById('price-pvc');
+            const pvcFraEl = document.getElementById('price-pvc-fra');
+            const pvcFrbEl = document.getElementById('price-pvc-frb');
+            const pvcFrcEl = document.getElementById('price-pvc-frc');
             const steelEl = document.getElementById('price-steel');
             const otherEl = document.getElementById('price-other');
 
             if (cuEl) materialPrices.Cu = parseFloat(cuEl.value) || 0;
             if (alEl) materialPrices.Al = parseFloat(alEl.value) || 0;
+            if (tcuEl) materialPrices.TCu = parseFloat(tcuEl.value) || 0;
             if (xlpeEl) materialPrices.XLPE = parseFloat(xlpeEl.value) || 0;
             if (pvcEl) materialPrices.PVC = parseFloat(pvcEl.value) || 0;
+            if (pvcFraEl) materialPrices['PVC-FR Cat.A'] = parseFloat(pvcFraEl.value) || 0;
+            if (pvcFrbEl) materialPrices['PVC-FR Cat.B'] = parseFloat(pvcFrbEl.value) || 0;
+            if (pvcFrcEl) materialPrices['PVC-FR Cat.C'] = parseFloat(pvcFrcEl.value) || 0;
             if (steelEl) materialPrices.Steel = parseFloat(steelEl.value) || 0;
             if (otherEl) materialPrices.Other = parseFloat(otherEl.value) || 0;
             
+            const overheadEl = document.getElementById('price-overhead');
+            if (overheadEl) params.overhead = parseFloat(overheadEl.value) || 0;
+
             updateUI();
         }
 
         function calculateCable() {
-            const { cores, size, conductorMaterial, insulationMaterial, armorType, sheathMaterial } = params;
+            const { cores, size, conductorMaterial, insulationMaterial, armorType, sheathMaterial, hasMgt, overhead } = params;
             
             // Simplified calculation logic for portable version
             const condDiam = Math.sqrt(size / 0.785) * 1.1;
+            const mgtThick = hasMgt ? 0.2 : 0;
             const insThick = insulationMaterial === 'XLPE' ? (size <= 35 ? 0.7 : size <= 95 ? 0.9 : 1.1) : (size <= 6 ? 0.8 : size <= 16 ? 1.0 : 1.2);
-            const coreDiam = condDiam + (2 * insThick);
+            const coreDiam = condDiam + (2 * mgtThick) + (2 * insThick);
             
-            let laidUpDiam = cores === 1 ? coreDiam : coreDiam * (cores === 2 ? 2 : cores === 3 ? 2.15 : cores === 4 ? 2.42 : 2.7);
+            let laidUpFactor = getLayingUpFactor(cores);
+            let laidUpDiam = cores === 1 ? coreDiam : coreDiam * laidUpFactor;
             let diamUnderArmor = laidUpDiam;
             let armorThick = 0;
             
@@ -365,20 +606,25 @@
             const overallDiam = diamOverArmor + (2 * sheathThick);
             
             // Weights (kg/km)
-            const condWeight = size * cores * (conductorMaterial === 'Cu' ? 8.89 : 2.7) * 1.02;
+            const condDensity = conductorMaterial === 'Cu' ? 8.89 : (conductorMaterial === 'Al' ? 2.7 : 8.89);
+            const condWeight = size * cores * condDensity * 1.02;
             const insWeight = (Math.PI * (coreDiam**2 - condDiam**2) / 4) * cores * (insulationMaterial === 'XLPE' ? 0.95 : 1.4);
             const armorWeight = armorType === 'Unarmored' ? 0 : (Math.PI * (diamOverArmor**2 - diamUnderArmor**2) / 4) * 7.85;
             const sheathWeight = (Math.PI * (overallDiam**2 - diamOverArmor**2) / 4) * (sheathMaterial === 'PVC' ? 1.45 : 0.95);
             const totalWeight = condWeight + insWeight + armorWeight + sheathWeight + (cores > 1 ? condWeight * 0.1 : 0);
 
             // HPP Calculation
-            const condPrice = conductorMaterial === 'Cu' ? materialPrices.Cu : materialPrices.Al;
+            let condPrice = materialPrices.Cu;
+            if (conductorMaterial === 'Al') condPrice = materialPrices.Al;
+            if (conductorMaterial === 'TCu') condPrice = materialPrices.TCu;
             const insPrice = insulationMaterial === 'XLPE' ? materialPrices.XLPE : materialPrices.PVC;
             const armorPrice = materialPrices.Steel;
-            const sheathPrice = sheathMaterial === 'PVC' ? materialPrices.PVC : materialPrices.Other;
+            const sheathPrice = materialPrices[sheathMaterial] || materialPrices.PVC;
 
             const hppKm = (condWeight * condPrice) + (insWeight * insPrice) + (armorWeight * armorPrice) + (sheathWeight * sheathPrice);
-            const hppMeter = hppKm / 1000;
+            const baseHppMeter = hppKm / 1000;
+            const overheadFactor = 1 + (params.overhead || 0) / 100;
+            const hppMeter = baseHppMeter * overheadFactor;
 
             return {
                 spec: {
@@ -413,15 +659,88 @@
             const sizeEl = document.getElementById('size');
             const armorTypeEl = document.getElementById('armorType');
             const sheathMaterialEl = document.getElementById('sheathMaterial');
+            const frCategoryEl = document.getElementById('flameRetardantCategory');
             const voltSelect = document.getElementById('voltage');
+            const mgtEl = document.getElementById('hasMgt');
 
-            if (!standardEl || !coresEl || !sizeEl || !armorTypeEl || !sheathMaterialEl || !voltSelect) return;
+            if (!standardEl || !coresEl || !sizeEl || !armorTypeEl || !sheathMaterialEl || !voltSelect || !frCategoryEl || !mgtEl) return;
 
             params.standard = standardEl.value;
-            params.cores = parseInt(coresEl.value);
-            params.size = parseFloat(sizeEl.value);
+            params.cores = parseInt(coresEl.value) || 1;
+
+            // Core count constraint: if cores > 5, max size is 10mm2
+            if (params.cores > 5 && params.size > 10) {
+                params.size = 10;
+            }
+
+            // Populate sizes based on core count
+            const currentSize = params.size;
+            sizeEl.innerHTML = '';
+            CABLE_SIZES.filter(s => params.cores <= 5 || s <= 10).forEach(s => {
+                const opt = new Option(s + ' mm²', s);
+                if (s === currentSize) opt.selected = true;
+                sizeEl.add(opt);
+            });
+            params.size = parseFloat(sizeEl.value) || 1.5;
+
             params.armorType = armorTypeEl.value;
             params.sheathMaterial = sheathMaterialEl.value;
+            params.flameRetardantCategory = frCategoryEl.value;
+            params.hasMgt = mgtEl.checked;
+
+            // Standard specific constraints
+            if (params.standard.includes('SNI 04-6629')) {
+                if (params.standard.includes('NYM')) {
+                    if (params.cores < 2) { params.cores = 2; coresEl.value = 2; }
+                    if (params.cores > 5) { params.cores = 5; coresEl.value = 5; }
+                    if (params.size > 35) { params.size = 35; sizeEl.value = 35; }
+                    params.insulationMaterial = 'PVC';
+                    params.armorType = 'Unarmored';
+                    armorTypeEl.value = 'Unarmored';
+                    armorTypeEl.disabled = true;
+                } else if (params.standard.includes('NYAF')) {
+                    params.cores = 1;
+                    coresEl.value = 1;
+                    coresEl.disabled = true;
+                    params.conductorType = 'f';
+                    params.armorType = 'Unarmored';
+                    armorTypeEl.value = 'Unarmored';
+                    armorTypeEl.disabled = true;
+                } else if (params.standard.includes('NYMHY')) {
+                    params.conductorType = 'f';
+                    params.armorType = 'Unarmored';
+                    armorTypeEl.value = 'Unarmored';
+                    armorTypeEl.disabled = true;
+                }
+            } else {
+                armorTypeEl.disabled = false;
+                coresEl.disabled = false;
+            }
+
+            // Update MGT Toggle UI
+            const mgtBg = document.getElementById('mgt-toggle-bg');
+            const mgtDot = document.getElementById('mgt-toggle-dot');
+            if (mgtBg && mgtDot) {
+                if (params.hasMgt) {
+                    mgtBg.classList.replace('bg-slate-200', 'bg-orange-500');
+                    mgtDot.classList.add('translate-x-4');
+                } else {
+                    mgtBg.classList.replace('bg-orange-500', 'bg-slate-200');
+                    mgtDot.classList.remove('translate-x-4');
+                }
+            }
+
+            // Show/Hide MGT based on Standard
+            const mgtContainer = document.getElementById('mgt-container');
+            if (mgtContainer) {
+                if (params.standard === 'IEC 60502-1') {
+                    mgtContainer.classList.remove('hidden');
+                } else {
+                    mgtContainer.classList.add('hidden');
+                    mgtEl.checked = false;
+                    params.hasMgt = false;
+                }
+            }
             
             // Update Voltage Options based on Standard
             voltSelect.innerHTML = '';
@@ -445,11 +764,31 @@
             const mainHpp = document.getElementById('main-hpp');
 
             if (mainDesignation && mainDiameter && mainWeight && mainHpp) {
-                const designation = `${params.conductorMaterial}/${params.insulationMaterial}/${params.armorType === 'Unarmored' ? '' : params.armorType + '/'}${params.sheathMaterial} ${params.cores} x ${params.size} mm² (${params.conductorType}) ${params.voltage}`;
+                const mgt = params.hasMgt ? '/MGT' : '';
+                const designation = `${params.conductorMaterial}${mgt}/${params.insulationMaterial}/${params.armorType === 'Unarmored' ? '' : params.armorType + '/'}${params.sheathMaterial} ${params.cores} x ${params.size} mm² (${params.conductorType}) ${params.voltage}`;
                 mainDesignation.innerText = designation;
                 mainDiameter.innerText = result.spec.overallDiameter.toFixed(2) + ' mm';
                 mainWeight.innerText = Math.round(result.bom.totalWeight).toLocaleString() + ' kg/km';
                 mainHpp.innerText = 'Rp ' + Math.round(result.cost.hppMeter).toLocaleString();
+
+                // Update Badges
+                const stopFireBadge = document.getElementById('stopfire-badge');
+                if (stopFireBadge) {
+                    if (params.flameRetardantCategory && params.flameRetardantCategory !== 'None') {
+                        stopFireBadge.classList.remove('hidden');
+                    } else {
+                        stopFireBadge.classList.add('hidden');
+                    }
+                }
+
+                const fireGuardBadge = document.getElementById('fireguard-badge');
+                if (fireGuardBadge) {
+                    if (params.hasMgt) {
+                        fireGuardBadge.classList.remove('hidden');
+                    } else {
+                        fireGuardBadge.classList.add('hidden');
+                    }
+                }
             }
 
             // Update Tech Spec List
@@ -493,12 +832,27 @@
             params[key] = value;
             // Update button styles
             if (key === 'conductorMaterial') {
-                document.getElementById('btn-cu').className = value === 'Cu' ? 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
-                document.getElementById('btn-al').className = value === 'Al' ? 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
+                document.getElementById('btn-cu').className = value === 'Cu' ? 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
+                document.getElementById('btn-al').className = value === 'Al' ? 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
+                document.getElementById('btn-tcu').className = value === 'TCu' ? 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
             }
             if (key === 'insulationMaterial') {
                 document.getElementById('btn-xlpe').className = value === 'XLPE' ? 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
                 document.getElementById('btn-pvc').className = value === 'PVC' ? 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-indigo-600 text-white shadow-md' : 'py-2 px-4 rounded-xl text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200';
+            }
+            updateUI();
+        }
+
+        function updateFRCategory() {
+            const frCategoryEl = document.getElementById('flameRetardantCategory');
+            const sheathMaterialEl = document.getElementById('sheathMaterial');
+            if (!frCategoryEl || !sheathMaterialEl) return;
+
+            const cat = frCategoryEl.value;
+            if (cat === 'None') {
+                sheathMaterialEl.value = 'PVC';
+            } else {
+                sheathMaterialEl.value = `PVC-FR ${cat}`;
             }
             updateUI();
         }
@@ -572,6 +926,52 @@
             lucide.createIcons();
         }
 
+        function showProjectReview() {
+            const modal = document.getElementById('review-modal');
+            const tableBody = document.getElementById('review-table-body');
+            const totalItemsEl = document.getElementById('review-total-items');
+            const totalPriceEl = document.getElementById('review-total-price');
+            const dateEl = document.getElementById('review-date');
+
+            if (!modal || !tableBody || !totalItemsEl || !totalPriceEl || !dateEl) return;
+
+            let totalPrice = 0;
+            tableBody.innerHTML = projectItems.map(item => {
+                const hpp = item.result.cost.hppMeter;
+                totalPrice += hpp;
+                return `
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="font-mono text-xs font-bold text-slate-900">${item.designation}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${item.params.standard}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs text-slate-600">OD: <span class="font-mono text-slate-900">${item.result.spec.overallDiameter.toFixed(2)} mm</span></div>
+                            <div class="text-[10px] text-slate-400">Core: ${item.result.spec.coreDiameter.toFixed(2)} mm</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs text-slate-900 font-mono">${Math.round(item.result.bom.totalWeight).toLocaleString()} kg/km</div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="text-sm font-bold text-indigo-600 font-mono">Rp ${Math.round(hpp).toLocaleString()}</div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            totalItemsEl.innerText = projectItems.length + ' Cables';
+            totalPriceEl.innerText = 'Rp ' + Math.round(totalPrice).toLocaleString();
+            dateEl.innerText = 'Generated on ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function hideProjectReview() {
+            const modal = document.getElementById('review-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
         function downloadReport() {
             const data = JSON.stringify(projectItems, null, 2);
             const blob = new Blob([data], { type: 'application/json' });
@@ -594,7 +994,7 @@
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>MULTI KABEL - Project Report</title>
+                    <title>Cable Designer - Project Report</title>
                     <script src="https://cdn.tailwindcss.com"></script>
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
                     <style>
@@ -610,7 +1010,7 @@
                     <div class="max-w-4xl mx-auto">
                         <div class="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
                             <div>
-                                <h1 class="text-3xl font-black tracking-tighter">MULTI KABEL</h1>
+                                <h1 class="text-3xl font-black tracking-tighter">Cable Designer</h1>
                                 <p class="text-sm font-bold text-indigo-600 uppercase tracking-widest">Technical Project Report</p>
                             </div>
                             <div class="text-right">
@@ -704,7 +1104,7 @@
                         </div>
 
                         <footer class="mt-20 pt-8 border-t border-slate-200 text-center text-[10px] text-slate-400 uppercase tracking-widest">
-                            &copy; ${new Date().getFullYear()} MULTI KABEL - Cable Design Studio. All technical data are calculated values.
+                            &copy; ${new Date().getFullYear()} Cable Designer - Cable Design Studio. All technical data are calculated values.
                         </footer>
                     </div>
                 </body>
@@ -718,9 +1118,12 @@
         // Initialize
         window.onload = () => {
             const sizeSelect = document.getElementById('size');
-            CABLE_SIZES.forEach(s => sizeSelect.add(new Option(s + ' mm²', s)));
-            sizeSelect.value = 50;
+            if (sizeSelect) {
+                CABLE_SIZES.forEach(s => sizeSelect.add(new Option(s + ' mm²', s)));
+                sizeSelect.value = 50;
+            }
             updateUI();
+            lucide.createIcons();
         };
     </script>
 </body>

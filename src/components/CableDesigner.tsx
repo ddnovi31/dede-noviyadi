@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3 } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp } from 'lucide-react';
 import {
   calculateCable,
   CableDesignParams,
@@ -12,11 +12,15 @@ import {
   SheathMaterial,
   CableStandard,
   MvScreenType,
+  MaterialDensities,
+  FlameRetardantCategory,
 } from '../utils/cableCalculations';
 import CableCrossSection from './CableCrossSection';
+import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 
 export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>({
+    projectName: 'New Project',
     cores: 3,
     size: 50,
     conductorMaterial: 'Cu',
@@ -30,32 +34,214 @@ export default function CableDesigner() {
     mvScreenType: 'None',
     mvScreenSize: 16,
     hasMgt: false,
+    fireguard: false,
+    stopfire: false,
+    hasInnerSheath: true,
+    innerSheathMaterial: 'PVC',
+    flameRetardantCategory: 'None',
+    overhead: 10,
+    margin: 15,
+    hasScreen: false,
+    screenType: 'CTS',
+    screenSize: 16,
+    hasSeparator: false,
+    separatorMaterial: 'PVC',
+    earthingCores: 0,
+    earthingSize: 0,
   });
 
-  const [activeTab, setActiveTab] = useState<'config' | 'prices'>('config');
-  const [materialPrices, setMaterialPrices] = useState({
-    Cu: 155000,
-    Al: 45000,
-    XLPE: 35000,
-    PVC: 25000,
-    PE: 30000,
-    LSZH: 45000,
-    Steel: 18000,
-    SemiCond: 65000,
-    MGT: 120000,
+  const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
+  const [showReview, setShowReview] = useState(false);
+  const [newMaterialName, setNewMaterialName] = useState('');
+
+  const [drumData, setDrumData] = useState<DrumData[]>(() => {
+    const saved = localStorage.getItem('cable_drum_data');
+    return saved ? JSON.parse(saved) : INITIAL_DRUM_DATA;
   });
+
+  useEffect(() => {
+    localStorage.setItem('cable_drum_data', JSON.stringify(drumData));
+  }, [drumData]);
+
+  const [materialPrices, setMaterialPrices] = useState(() => {
+    const saved = localStorage.getItem('cable_material_prices');
+    const prices = saved ? JSON.parse(saved) : {
+      Cu: 155000,
+      Al: 45000,
+      XLPE: 35000,
+      PVC: 25000,
+      PE: 30000,
+      LSZH: 45000,
+      Steel: 18000,
+      SteelWire: 50000,
+      SemiCond: 65000,
+      MGT: 120000,
+      TCu: 165000,
+      'PVC-FR Cat.A': 35000,
+      'PVC-FR Cat.B': 32000,
+      'PVC-FR Cat.C': 30000,
+      'PVC-FR': 28000,
+      SHF1: 45000,
+      SHF2: 48000,
+      EPR: 42000,
+      HEPR: 45000,
+      TCWB: 165000,
+    };
+    if (!prices.SteelWire) prices.SteelWire = 50000;
+    return prices;
+  });
+
+  const [materialDensities, setMaterialDensities] = useState<MaterialDensities>(() => {
+    const saved = localStorage.getItem('cable_material_densities');
+    const densities = saved ? JSON.parse(saved) : {
+      Cu: 8.89,
+      Al: 2.7,
+      XLPE: 0.92,
+      PVC: 1.45,
+      PE: 0.95,
+      LSZH: 1.5,
+      Steel: 7.85,
+      SteelWire: 7.85,
+      SemiCond: 1.15,
+      MGT: 2.2,
+      TCu: 8.89,
+      'PVC-FR Cat.A': 1.45,
+      'PVC-FR Cat.B': 1.45,
+      'PVC-FR Cat.C': 1.45,
+      'PVC-FR': 1.45,
+      SHF1: 1.5,
+      SHF2: 1.6,
+      EPR: 1.3,
+      HEPR: 1.3,
+      TCWB: 8.89,
+    };
+    if (!densities.SteelWire) densities.SteelWire = 7.85;
+    return densities;
+  });
+
+  const [materialScrap, setMaterialScrap] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('cable_material_scrap');
+    const scrap = saved ? JSON.parse(saved) : {
+      Cu: 2.5,
+      Al: 2.5,
+      XLPE: 5,
+      PVC: 5,
+      PE: 5,
+      LSZH: 5,
+      Steel: 2.5,
+      SteelWire: 2.5,
+      SemiCond: 5,
+      MGT: 5,
+      TCu: 2.5,
+      'PVC-FR Cat.A': 5,
+      'PVC-FR Cat.B': 5,
+      'PVC-FR Cat.C': 5,
+      SHF1: 5,
+      SHF2: 5,
+      EPR: 5,
+      HEPR: 5,
+      TCWB: 2.5,
+    };
+    if (!scrap.SteelWire) scrap.SteelWire = 2.5;
+    return scrap;
+  });
+
+  const saveMaterialSettings = () => {
+    localStorage.setItem('cable_material_prices', JSON.stringify(materialPrices));
+    localStorage.setItem('cable_material_densities', JSON.stringify(materialDensities));
+    localStorage.setItem('cable_material_scrap', JSON.stringify(materialScrap));
+    
+    // Simple feedback
+    const btn = document.activeElement as HTMLButtonElement;
+    if (btn) {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Saved!';
+      btn.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('bg-green-50', 'text-green-600', 'border-green-200');
+      }, 2000);
+    }
+  };
+
+  const handleAddMaterial = () => {
+    if (!newMaterialName.trim()) return;
+    const name = newMaterialName.trim();
+    if (materialPrices[name]) {
+      alert('Material already exists');
+      return;
+    }
+    setMaterialPrices(prev => ({ ...prev, [name]: 0 }));
+    setMaterialDensities(prev => ({ ...prev, [name]: 1 }));
+    setMaterialScrap(prev => ({ ...prev, [name]: 0 }));
+    setNewMaterialName('');
+  };
+
+  const handleRemoveMaterial = (name: string) => {
+    if (confirm(`Are you sure you want to remove ${name}?`)) {
+      const { [name]: _, ...restPrices } = materialPrices;
+      const { [name]: __, ...restDensities } = materialDensities;
+      const { [name]: ___, ...restScrap } = materialScrap;
+      setMaterialPrices(restPrices);
+      setMaterialDensities(restDensities as MaterialDensities);
+      setMaterialScrap(restScrap);
+    }
+  };
 
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
+  const [projectName, setProjectName] = useState('New Project');
   const [result, setResult] = useState<CalculationResult | null>(null);
 
   useEffect(() => {
-    const res = calculateCable(params);
+    const res = calculateCable(params, materialDensities, materialScrap);
     setResult(res);
-  }, [params]);
+  }, [params, materialDensities, materialScrap]);
 
   const handleParamChange = (key: keyof CableDesignParams, value: any) => {
     setParams((prev) => {
-      const newParams = { ...prev, [key]: value };
+      let processedValue = value;
+      
+      // Round manual overrides to 1 decimal place
+      if (typeof value === 'number' && [
+        'manualInsulationThickness', 
+        'manualInnerSheathThickness', 
+        'manualSheathThickness', 
+        'manualConductorDiameter', 
+        'manualArmorThickness', 
+        'manualConductorScreenThickness', 
+        'manualInsulationScreenThickness', 
+        'manualMgtThickness'
+      ].includes(key)) {
+        processedValue = Math.round(value * 10) / 10;
+      }
+
+      const newParams = { ...prev, [key]: processedValue };
+      
+      // Feature Logic
+      if (key === 'fireguard') {
+        newParams.hasMgt = value;
+      }
+      if (key === 'stopfire') {
+        if (value === true) {
+          if (!newParams.flameRetardantCategory || newParams.flameRetardantCategory === 'None') {
+            newParams.flameRetardantCategory = 'None';
+            newParams.sheathMaterial = 'PVC-FR';
+          } else {
+            newParams.sheathMaterial = `PVC-FR ${newParams.flameRetardantCategory}` as SheathMaterial;
+          }
+        } else {
+          newParams.flameRetardantCategory = 'None';
+          newParams.sheathMaterial = 'PVC';
+        }
+      }
+      if (key === 'flameRetardantCategory') {
+        if (value === 'None') {
+          newParams.sheathMaterial = 'PVC-FR';
+        } else {
+          newParams.sheathMaterial = `PVC-FR ${value}` as SheathMaterial;
+          newParams.stopfire = true;
+        }
+      }
       
       // Validation rules
       if (newParams.cores === 1 && newParams.armorType === 'SWA') {
@@ -64,9 +250,29 @@ export default function CableDesigner() {
       if (newParams.cores > 1 && newParams.armorType === 'AWA') {
         newParams.armorType = 'SWA'; // Multi core uses SWA
       }
+      if (newParams.cores > 5 && newParams.size > 10) {
+        newParams.size = 10; // Max 10mm2 for > 5 cores
+      }
       if (newParams.cores === 1 && newParams.conductorType === 'sm') {
         newParams.conductorType = 'rm'; // Sector only for multi-core
       }
+
+      // Aluminum size constraint: min 10mm2
+      if (newParams.conductorMaterial === 'Al' && newParams.size < 10) {
+        newParams.size = 10;
+      }
+
+      if (key === 'size') {
+        newParams.earthingSize = value as number;
+        if (newParams.standard.includes('NFA2X-T')) {
+          if (newParams.size === 35) newParams.earthingSize = 35;
+          else if (newParams.size === 50) newParams.earthingSize = 50;
+          else if (newParams.size === 70) newParams.earthingSize = 70;
+          else if (newParams.size === 95) newParams.earthingSize = 95;
+          else if (newParams.size === 120) newParams.earthingSize = 95;
+        }
+      }
+
       if (newParams.size < 25 && newParams.conductorType === 'sm') {
         newParams.conductorType = 'rm'; // Sector usually for larger sizes
       }
@@ -75,6 +281,12 @@ export default function CableDesigner() {
       if (newParams.standard === 'IEC 60502-2') {
         newParams.conductorType = 'cm';
         newParams.insulationMaterial = 'XLPE';
+        if (newParams.cores !== 1 && newParams.cores !== 3) {
+          newParams.cores = 3;
+        }
+        if (newParams.size < 25) {
+          newParams.size = 25;
+        }
         if (newParams.mvScreenType === 'None' || !newParams.mvScreenType) {
           newParams.mvScreenType = 'CTS';
         }
@@ -83,34 +295,131 @@ export default function CableDesigner() {
         }
       } else {
         newParams.mvScreenType = 'None';
-        if (newParams.standard.includes('NYAF')) {
-          newParams.cores = 1;
-          newParams.conductorType = 'f';
+        if (newParams.standard.includes('SNI 04-6629')) {
+          newParams.conductorMaterial = 'Cu';
+          newParams.insulationMaterial = 'PVC';
           newParams.armorType = 'Unarmored';
-        } else if (newParams.standard.includes('NYMHY') || newParams.standard.includes('NYYHY')) {
-          newParams.conductorType = 'f';
+          if (newParams.standard.includes('(NYM)')) {
+            if (newParams.cores < 2) newParams.cores = 2;
+            if (newParams.cores > 5) newParams.cores = 5;
+            if (newParams.size < 1.5) newParams.size = 1.5;
+            if (newParams.size > 16) newParams.size = 16;
+            newParams.voltage = '300/500 V';
+            newParams.sheathMaterial = 'PVC';
+            newParams.innerSheathMaterial = 'PVC';
+            newParams.hasInnerSheath = true;
+            
+            // Conductor type based on table
+            if (newParams.size >= 16) {
+              newParams.conductorType = 'rm';
+            }
+          } else if (newParams.standard.includes('(NYAF)')) {
+            newParams.cores = 1;
+            newParams.conductorType = 'f';
+            newParams.voltage = '450/750 V';
+          } else if (newParams.standard.includes('(NYA)')) {
+            newParams.cores = 1;
+            if (newParams.size <= 10) {
+              newParams.conductorType = 're';
+            } else {
+              newParams.conductorType = 'rm';
+            }
+            newParams.voltage = '450/750 V';
+          } else if (newParams.standard.includes('(NYMHY)')) {
+            if (newParams.cores < 2) newParams.cores = 2;
+            if (newParams.cores > 5) newParams.cores = 5;
+            if (newParams.size > 2.5) newParams.size = 2.5;
+            newParams.conductorType = 'f';
+            newParams.voltage = '300/500 V';
+            newParams.hasInnerSheath = false;
+          }
+        } else if (newParams.standard === 'IEC 60092-353') {
+          newParams.voltage = '0.6/1 kV';
+          newParams.insulationMaterial = 'XLPE';
+          newParams.sheathMaterial = 'SHF1';
+          if (newParams.armorType !== 'Unarmored' && newParams.armorType !== 'GSWB') {
+            newParams.armorType = 'GSWB';
+          }
+        } else if (newParams.standard.includes('NFA2X')) {
+          newParams.conductorMaterial = 'Al';
+          newParams.insulationMaterial = 'XLPE';
           newParams.armorType = 'Unarmored';
-        } else if (newParams.standard.includes('NYM')) {
-          newParams.armorType = 'Unarmored';
+          newParams.hasInnerSheath = false;
+          newParams.voltage = '0.6/1 kV';
+          if (newParams.size < 10) newParams.size = 10;
+          if (newParams.standard.includes('NFA2X-T')) {
+            newParams.hasEarthing = true;
+            newParams.earthingCores = 1;
+            if (newParams.cores < 2) newParams.cores = 2;
+            if (newParams.cores > 3) newParams.cores = 3;
+            // Auto-set messenger size
+            if (newParams.size === 35) newParams.earthingSize = 35;
+            else if (newParams.size === 50) newParams.earthingSize = 50;
+            else if (newParams.size === 70) newParams.earthingSize = 70;
+            else if (newParams.size === 95) newParams.earthingSize = 95;
+            else if (newParams.size === 120) newParams.earthingSize = 95;
+          } else {
+            newParams.hasEarthing = false;
+            if (newParams.cores < 2) newParams.cores = 2;
+            if (newParams.cores > 4) newParams.cores = 4;
+          }
         }
+      }
+
+      if (newParams.armorType !== 'Unarmored') {
+        newParams.hasInnerSheath = true;
+      } else if (newParams.cores === 1 && (key === 'cores' || key === 'armorType' || key === 'standard')) {
+        newParams.hasInnerSheath = false;
       }
 
       return newParams;
     });
   };
 
+  const getCableDesignation = (p: CableDesignParams, r: CalculationResult | null) => {
+    if (!r) return '';
+    
+    if (p.standard.includes('NFA2X-T')) {
+      return `NFA2X-T ${p.cores} x ${p.size} + ${p.earthingSize} mm² ${r.electrical.voltageRating}`;
+    }
+    if (p.standard.includes('NFA2X')) {
+      return `NFA2X ${p.cores} x ${p.size} mm² ${r.electrical.voltageRating}`;
+    }
+
+    if (p.standard.includes('(NYA)') || p.standard.includes('(NYAF)')) {
+      return `${p.conductorMaterial}/${p.insulationMaterial} ${p.cores} x ${p.size} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
+    }
+
+    const fg = p.fireguard ? '/MGT' : (p.hasMgt ? '/MGT' : '');
+    const mvScreen = (p.mvScreenType && p.mvScreenType !== 'None') ? `/${p.mvScreenType}` : '';
+    const overallScreen = (p.hasScreen && p.screenType && p.screenType !== 'None') ? `/${p.screenType}` : '';
+    const separator = (p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored')) ? `/${p.separatorMaterial || 'PVC'}` : '';
+    const armor = p.armorType === 'Unarmored' ? '' : `/${p.armorType}`;
+    
+    let sizeDesignation = `${p.cores} x ${p.size}`;
+    if (p.hasEarthing && p.earthingCores && p.earthingCores > 0 && p.earthingSize && p.earthingSize > 0) {
+      if (p.earthingCores === 1) {
+        sizeDesignation += ` + ${p.earthingSize}`;
+      } else {
+        sizeDesignation += ` + ${p.earthingCores} x ${p.earthingSize}`;
+      }
+    }
+
+    return `${p.conductorMaterial}${fg}/${p.insulationMaterial}${mvScreen}${overallScreen}${separator}${armor}/${p.sheathMaterial} ${sizeDesignation} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
+  };
+
   const handleDownloadReport = () => {
     if (!result) return;
     
     const report = {
-      projectName: "MULTI KABEL Project Report",
+      projectName: projectName,
       date: new Date().toISOString(),
       items: projectItems.length > 0 ? projectItems.map(item => ({
-        designation: `${item.params.conductorMaterial}${item.params.hasMgt ? '/MGT' : ''}/${item.params.insulationMaterial}/${item.params.armorType === 'Unarmored' ? '' : item.params.armorType + '/'}${item.params.sheathMaterial} ${item.params.cores} x ${item.params.size} mm² (${item.params.conductorType}) ${item.result.electrical.voltageRating}`,
+        designation: getCableDesignation(item.params, item.result),
         parameters: item.params,
         result: item.result
       })) : [{
-        designation: `${params.conductorMaterial}${params.hasMgt ? '/MGT' : ''}/${params.insulationMaterial}/${params.armorType === 'Unarmored' ? '' : params.armorType + '/'}${params.sheathMaterial} ${params.cores} x ${params.size} mm² (${params.conductorType}) ${result.electrical.voltageRating}`,
+        designation: getCableDesignation(params, result),
         parameters: params,
         result: result
       }]
@@ -136,30 +445,374 @@ export default function CableDesigner() {
     setProjectItems(prev => prev.filter(item => item.params.id !== id));
   };
 
-  const calculateHPP = (bom: CalculationResult['bom'], params: CableDesignParams) => {
-    const condPrice = params.conductorMaterial === 'Cu' ? materialPrices.Cu : materialPrices.Al;
-    const insPrice = params.insulationMaterial === 'XLPE' ? materialPrices.XLPE : materialPrices.PVC;
-    const armorPrice = materialPrices.Steel;
-    const sheathPrice = materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC;
-    const innerPrice = materialPrices.PVC;
+  const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams) => {
+    const condPrice = (params.conductorMaterial === 'Cu' ? materialPrices.Cu : (params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
+    const insPrice = (materialPrices[params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE);
+    const armorPrice = (params.armorType === 'AWA' ? materialPrices.Al : materialPrices.Steel);
+    const sheathPrice = (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC);
+    const innerPrice = (materialPrices[params.innerSheathMaterial || 'PVC'] || materialPrices.PVC);
+    const separatorPrice = (materialPrices[params.separatorMaterial || 'PVC'] || materialPrices.PVC);
     const semiPrice = materialPrices.SemiCond;
-    const screenPrice = materialPrices.Cu; // Copper screen
+    const screenPrice = (params.screenType === 'CTS' || params.screenType === 'CWS') ? materialPrices.Cu : materialPrices.Steel;
+    const mvScreenPrice = materialPrices.Cu;
     const mgtPrice = materialPrices.MGT;
+    const steelWirePrice = materialPrices.SteelWire || 50000;
 
-    const totalCostKm = 
-      (bom.conductorWeight * condPrice) +
-      (bom.insulationWeight * insPrice) +
-      (bom.armorWeight * armorPrice) +
-      (bom.sheathWeight * sheathPrice) +
-      (bom.innerCoveringWeight * innerPrice) +
-      (bom.semiCondWeight * semiPrice) +
-      (bom.mvScreenWeight * screenPrice) +
-      (bom.mgtWeight * mgtPrice);
-    
-    return totalCostKm / 1000; // per meter
+    const breakdown: any = {
+      conductor: ((bom.conductorWeight - bom.earthingConductorWeight) * condPrice) / 1000,
+      insulation: ((bom.insulationWeight - bom.earthingInsulationWeight) * insPrice) / 1000,
+      armor: (bom.armorWeight * armorPrice) / 1000,
+      sheath: (bom.sheathWeight * sheathPrice) / 1000,
+      innerCovering: (bom.innerCoveringWeight * innerPrice) / 1000,
+      screen: (bom.screenWeight * screenPrice) / 1000,
+      separator: (bom.separatorWeight * separatorPrice) / 1000,
+      semiCond: (bom.semiCondWeight * semiPrice) / 1000,
+      mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
+      mgt: (bom.mgtWeight * mgtPrice) / 1000,
+    };
+
+    if (params.standard.includes('NFA2X-T') && bom.earthingAlWeight !== undefined && bom.earthingSteelWeight !== undefined) {
+      breakdown.earthingAl = (bom.earthingAlWeight * materialPrices.Al) / 1000;
+      breakdown.earthingSteel = (bom.earthingSteelWeight * steelWirePrice) / 1000;
+      breakdown.earthingInsulation = (bom.earthingInsulationWeight * insPrice) / 1000;
+    } else {
+      breakdown.earthingConductor = (bom.earthingConductorWeight * condPrice) / 1000;
+      breakdown.earthingInsulation = (bom.earthingInsulationWeight * insPrice) / 1000;
+    }
+
+    return breakdown;
   };
 
-  const currentHPP = result ? calculateHPP(result.bom, params) : 0;
+  const calculatePacking = (overallDiameter: number, totalWeight: number) => {
+    let standardLength = 300;
+    if (overallDiameter <= 40) standardLength = 1000;
+    else if (overallDiameter <= 50) standardLength = 500;
+
+    const CLEARANCE = 100; // 4cm from top = 40mm radius = 80mm diameter reduction (more realistic than 200mm)
+
+    // Find the smallest drum that can fit this length
+    const sortedDrums = [...drumData].sort((a, b) => {
+      const effD_A = Math.max(0, a.diameterWithCover - CLEARANCE);
+      const effD_B = Math.max(0, b.diameterWithCover - CLEARANCE);
+      const volA = (Math.PI * (Math.pow(effD_A, 2) - Math.pow(a.barrelDiameter, 2)) / 4) * a.outerWidth;
+      const volB = (Math.PI * (Math.pow(effD_B, 2) - Math.pow(b.barrelDiameter, 2)) / 4) * b.outerWidth;
+      return volA - volB;
+    });
+
+    let selectedDrum = sortedDrums[sortedDrums.length - 1]; // Fallback to largest
+    for (const drum of sortedDrums) {
+      const effD = Math.max(0, drum.diameterWithCover - CLEARANCE);
+      if (effD <= drum.barrelDiameter) continue;
+
+      // Bending Radius Constraint: Barrel diameter should be at least 15x cable OD
+      if (drum.barrelDiameter < overallDiameter * 15) continue;
+
+      // Apply 50% safety factor to cable diameter as requested
+      const effectiveOD = overallDiameter +5;
+
+      // Industrial Scale Capacity formula: L = (W * (D^2 - d^2)) / (OD^2 * f)
+      // Dividing by 1000 to convert result from mm to meters. 
+      // This formula compares winding volume to cable volume with a space factor.
+      const capacity = (drum.innerWidth * (Math.pow(effD, 2) - Math.pow(drum.barrelDiameter, 2))) / (1000 * Math.pow(effectiveOD, 2) * 1.15);
+      
+      if (capacity >= standardLength) {
+        selectedDrum = drum;
+        break;
+      }
+    }
+
+    const netWeight = (totalWeight * standardLength) / 1000;
+    const grossWeight = netWeight + selectedDrum.weight;
+    const packingCostPerMeter = selectedDrum.price / standardLength;
+
+    return {
+      standardLength,
+      selectedDrum,
+      netWeight,
+      grossWeight,
+      packingCostPerMeter
+    };
+  };
+
+  const calculateHPP = (res: CalculationResult, par: CableDesignParams) => {
+    const breakdown = calculateCostBreakdown(res.bom, par);
+    const baseHpp = (Object.values(breakdown) as number[]).reduce((a: number, b: number) => a + (typeof b === 'number' ? b : 0), 0);
+    
+    // Add packing cost
+    const packing = calculatePacking(res.spec.overallDiameter, res.bom.totalWeight);
+    const hppWithPacking = baseHpp + packing.packingCostPerMeter;
+    
+    const overheadFactor = 1 + (par.overhead || 0) / 100;
+    return hppWithPacking * overheadFactor;
+  };
+
+  const calculateSellingPrice = (hpp: number, margin: number = 0) => {
+    const price = hpp * (1 + margin / 100);
+    // Round to nearest 10 (1 digit puluhan)
+    return Math.round(price / 10) * 10;
+  };
+
+  const currentHPP = result ? calculateHPP(result, params) : 0;
+  const currentSellingPrice = calculateSellingPrice(currentHPP, params.margin);
+
+  if (showReview) {
+    const totalProjectPrice = projectItems.reduce((acc, item) => {
+      const hpp = calculateHPP(item.result, item.params);
+      return acc + calculateSellingPrice(hpp, item.params.margin);
+    }, 0);
+
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Review Header */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setShowReview(false)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">{projectName}</h1>
+                <p className="text-sm text-slate-500">Project Review & Bill of Materials</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => window.print()}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all uppercase tracking-wider"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <button 
+                onClick={() => setShowReview(false)}
+                className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-md uppercase tracking-wider"
+              >
+                Designer
+              </button>
+            </div>
+          </div>
+
+          {/* Project Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
+              <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Estimated Project HPP (per meter sum)</div>
+              <div className="text-3xl font-bold text-indigo-600 font-mono">
+                Rp {totalProjectPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Items Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <List className="w-5 h-5 text-indigo-600" />
+                Cable Specifications & Costs
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
+                    <th className="px-6 py-4 border-b border-slate-100">Designation</th>
+                    <th className="px-6 py-4 border-b border-slate-100">Dimensions</th>
+                    <th className="px-6 py-4 border-b border-slate-100">Weight</th>
+                    <th className="px-6 py-4 border-b border-slate-100">Packing</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-center">OH (%)</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-center">MG (%)</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">HPP / Meter</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Selling Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {projectItems.map((item, idx) => {
+                    const hpp = calculateHPP(item.result, item.params);
+                    const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
+                    return (
+                      <tr key={item.params.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-xs font-bold text-slate-900">
+                            {getCableDesignation(item.params, item.result)}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1">{item.params.standard}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs text-slate-600">OD: <span className="font-mono text-slate-900">{item.result.spec.overallDiameter.toFixed(2)} mm</span></div>
+                          <div className="text-[10px] text-slate-400">Core: {item.result.spec.coreDiameter.toFixed(2)} mm</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs text-slate-900 font-mono">{Math.round(item.result.bom.totalWeight).toLocaleString()} kg/km</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                            return (
+                              <div className="text-[10px] text-slate-600">
+                                <div className="font-bold text-indigo-600">{packing.selectedDrum.type}</div>
+                                <div className="text-slate-400">{packing.standardLength} m</div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="text-xs text-slate-600 font-mono">{item.params.overhead || 0}%</div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="text-xs text-slate-600 font-mono">{item.params.margin || 0}%</div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-xs font-bold text-slate-400 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-sm font-bold text-indigo-600 font-mono">Rp {sellingPrice.toLocaleString('id-ID')}</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* BOM Summary for Project */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-6">
+              <Package className="w-5 h-5 text-emerald-600" />
+              Consolidated Bill of Materials (Project Total)
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Conductor & Screen */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Conductor & Screen</h3>
+                {Object.entries(projectItems.reduce((acc, item) => {
+                  const condMat = item.params.conductorMaterial === 'Cu' ? 'Copper (Cu)' : 'Aluminum (Al)';
+                  acc[condMat] = (acc[condMat] || 0) + item.result.bom.conductorWeight;
+                  if (item.result.bom.mvScreenWeight > 0) {
+                    const screenMat = item.params.mvScreenType === 'TCWB' ? 'Tinned Copper (TCWB)' : 'Copper Tape/Wire';
+                    acc[screenMat] = (acc[screenMat] || 0) + item.result.bom.mvScreenWeight;
+                  }
+                  return acc;
+                }, {} as Record<string, number>)).map(([mat, weight]) => (
+                  <div key={mat} className="flex justify-between items-center">
+                    <span className="text-sm text-slate-600">{mat}</span>
+                    <span className="text-sm font-bold font-mono">{Math.round(weight as number).toLocaleString()} kg</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Insulation & MGT */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Insulation & Tapes</h3>
+                {Object.entries(projectItems.reduce((acc, item) => {
+                  const insMat = item.params.insulationMaterial;
+                  acc[insMat] = (acc[insMat] || 0) + item.result.bom.insulationWeight;
+                  if (item.result.bom.mgtWeight > 0) {
+                    acc['Mica Glass Tape (MGT)'] = (acc['Mica Glass Tape (MGT)'] || 0) + item.result.bom.mgtWeight;
+                  }
+                  if (item.result.bom.semiCondWeight > 0) {
+                    acc['Semi-conductive Layers'] = (acc['Semi-conductive Layers'] || 0) + item.result.bom.semiCondWeight;
+                  }
+                  return acc;
+                }, {} as Record<string, number>)).map(([mat, weight]) => (
+                  <div key={mat} className="flex justify-between items-center">
+                    <span className="text-sm text-slate-600">{mat}</span>
+                    <span className="text-sm font-bold font-mono">{Math.round(weight as number).toLocaleString()} kg</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Sheaths & Armour */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Sheaths & Armour</h3>
+                {Object.entries(projectItems.reduce((acc, item) => {
+                  // Inner Sheath
+                  if (item.result.bom.innerCoveringWeight > 0) {
+                    const isMat = `${item.params.innerSheathMaterial || 'PVC'} (Inner Sheath / Filler)`;
+                    acc[isMat] = (acc[isMat] || 0) + item.result.bom.innerCoveringWeight;
+                  }
+                  // Armour
+                  if (item.result.bom.armorWeight > 0) {
+                    const armType = `Armour (${item.params.armorType})`;
+                    acc[armType] = (acc[armType] || 0) + item.result.bom.armorWeight;
+                  }
+                  // Outer Sheath
+                  const shMat = `${item.params.sheathMaterial} (Outer)`;
+                  acc[shMat] = (acc[shMat] || 0) + item.result.bom.sheathWeight;
+                  return acc;
+                }, {} as Record<string, number>)).map(([mat, weight]) => (
+                  <div key={mat} className="flex justify-between items-center">
+                    <span className="text-sm text-slate-600">{mat}</span>
+                    <span className="text-sm font-bold font-mono">{Math.round(weight as number).toLocaleString()} kg</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+              {(() => {
+                const totalWeight = projectItems.reduce((acc, item) => acc + item.result.bom.totalWeight, 0);
+                const totalHPP = projectItems.reduce((acc, item) => acc + calculateHPP(item.result, item.params), 0);
+                const totalSellingPrice = projectItems.reduce((acc, item) => {
+                  const hpp = calculateHPP(item.result, item.params);
+                  return acc + calculateSellingPrice(hpp, item.params.margin);
+                }, 0);
+                const totalMargin = totalSellingPrice - totalHPP;
+                const marginPercentage = totalHPP > 0 ? (totalMargin / totalHPP) * 100 : 0;
+
+                return (
+                  <>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-900">Total Project Material Weight</span>
+                      <span className="text-xl font-bold text-indigo-600 font-mono">
+                        {Math.round(totalWeight).toLocaleString()} kg
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-bold text-slate-900">Total Project Cost (HPP)</span>
+                      <span className="text-xl font-bold text-emerald-600 font-mono">
+                        Rp {Math.round(totalHPP).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-bold text-slate-900">Total Project Selling Price</span>
+                      <span className="text-xl font-bold text-indigo-600 font-mono">
+                        Rp {Math.round(totalSellingPrice).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-bold text-slate-900">Total Project Margin</span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xl font-bold text-emerald-600 font-mono">
+                          Rp {Math.round(totalMargin).toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-xs font-bold text-emerald-500 font-mono">
+                          ({marginPercentage.toFixed(2)}%)
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <footer className="text-center py-8 border-t border-slate-200">
+            <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">PT. Multi Kencana Niagatama</div>
+            <div className="text-[9px] text-slate-300 mt-1">Generated on {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          </footer>
+        </div>
+      </div>
+    );
+  }
 
   if (!result) return null;
 
@@ -170,23 +823,37 @@ export default function CableDesigner() {
         {/* Header */}
         <header className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              MULTI KABEL
-            </h1>
-            <div className="text-[10px] text-slate-400 mt-1 font-medium ml-1 uppercase tracking-wider">PT. Multi Kencana Niagatama</div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-100 px-4 py-2 rounded-lg">
-              Standard: {params.standard}
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                CABLE DESIGNER
+              </h1>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Project Name"
+                className="bg-slate-50 border-none text-lg font-semibold text-indigo-600 focus:ring-0 p-0 w-64 placeholder:text-slate-300"
+              />
             </div>
-            <button
-              onClick={handleDownloadReport}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download Report</span>
-            </button>
+            <div className="text-[10px] text-slate-400 mt-1 font-medium ml-1 uppercase tracking-wider">PT. Multi Kencana Niagatama</div>
+            <div className="text-[9px] text-slate-300 ml-1 font-medium">created by Dede Noviyadi</div>
           </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setProjectItems([])}
+                className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 uppercase tracking-wider"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear List
+              </button>
+              <button
+                onClick={handleDownloadReport}
+                className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+            </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -213,27 +880,82 @@ export default function CableDesigner() {
                   <DollarSign className="w-4 h-4" />
                   Prices
                 </button>
+                <button
+                  onClick={() => setActiveTab('drums')}
+                  className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                    activeTab === 'drums' ? 'text-indigo-600 bg-indigo-50/50 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  Drums
+                </button>
               </div>
 
               <div className="p-6">
-                {activeTab === 'config' ? (
+                {activeTab === 'config' && (
                   <div className="space-y-4">
                     {/* Standard Selection */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Standard Reference</label>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Standard Reference</label>
                       <select
                         value={params.standard}
                         onChange={(e) => handleParamChange('standard', e.target.value as CableStandard)}
-                        className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                        className="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 border bg-slate-50 font-medium"
                       >
                         <option value="IEC 60502-1">IEC 60502-1 (Low Voltage)</option>
                         <option value="IEC 60502-2">IEC 60502-2 (Medium Voltage)</option>
+                        <option value="IEC 60092-353">IEC 60092-353 (Marine Cable)</option>
                         <option value="SNI 04-6629.4 (NYM)">SNI 04-6629.4 (NYM)</option>
+                        <option value="SNI 04-6629.3 (NYA)">SNI 04-6629.3 (NYA)</option>
                         <option value="SNI 04-6629.3 (NYAF)">SNI 04-6629.3 (NYAF)</option>
                         <option value="SNI 04-6629.5 (NYMHY)">SNI 04-6629.5 (NYMHY)</option>
-                        <option value="SNI 04-6629.5 (NYYHY)">SNI 04-6629.5 (NYYHY)</option>
+                        <option value="SPLN D3. 010-1 : 2014 (NFA2X)">SPLN D3. 010-1 : 2014 (NFA2X)</option>
+                        <option value="SPLN D3. 010-1 : 2015 (NFA2X-T)">SPLN D3. 010-1 : 2015 (NFA2X-T)</option>
                       </select>
                     </div>
+
+                    {/* Features Section */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">1. Cable Features</label>
+                      <div className="grid grid-cols-1 gap-3">
+                        {/* Fireguard Toggle (Includes MGT) */}
+                        <label className="flex items-center justify-between cursor-pointer group">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-600 group-hover:text-red-600 transition-colors">Fireguard</span>
+                            <span className="text-[10px] text-slate-400 italic">Includes Mica Glass Tape (MGT)</span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={params.fireguard}
+                              onChange={(e) => handleParamChange('fireguard', e.target.checked)}
+                            />
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.fireguard ? 'bg-red-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.fireguard ? 'translate-x-4' : ''}`}></div>
+                          </div>
+                        </label>
+
+                        {/* Stopfire Toggle */}
+                        <label className="flex items-center justify-between cursor-pointer group">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-600 group-hover:text-red-600 transition-colors">Stopfire</span>
+                            <span className="text-[10px] text-slate-400 italic">Sets Sheath to PVC-FR Cat.C</span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={params.stopfire}
+                              onChange={(e) => handleParamChange('stopfire', e.target.checked)}
+                            />
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.stopfire ? 'bg-red-600' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.stopfire ? 'translate-x-4' : ''}`}></div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
 
                     {/* Voltage Selection (Dynamic) */}
                     <div>
@@ -251,196 +973,469 @@ export default function CableDesigner() {
                             <option value="12/20 kV">12/20 kV</option>
                             <option value="18/30 kV">18/30 kV</option>
                           </>
-                        ) : params.standard.includes('NYM') || params.standard.includes('NYMHY') ? (
+                        ) : params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') ? (
                           <option value="300/500 V">300/500 V</option>
-                        ) : params.standard.includes('NYAF') || params.standard.includes('NYYHY') ? (
+                        ) : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? (
                           <option value="450/750 V">450/750 V</option>
-                        ) : (
+                        ) : params.standard.includes('NFA2X') ? (
                           <option value="0.6/1 kV">0.6/1 kV</option>
-                        )}
-                      </select>
-                    </div>
-
-                    <button
-                      onClick={addToProject}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold transition-all shadow-sm active:scale-[0.98]"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add to Project List
-                    </button>
-
-                    {/* Number of Cores */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
-                      <select
-                        value={params.cores}
-                        onChange={(e) => handleParamChange('cores', Number(e.target.value))}
-                        className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                      >
-                        {[1, 2, 3, 4, 5].map((c) => (
-                          <option key={c} value={c}>{c} Core{c > 1 ? 's' : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Cross Section */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Cross Section (mm²)</label>
-                      <select
-                        value={params.size}
-                        onChange={(e) => handleParamChange('size', Number(e.target.value))}
-                        className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                      >
-                        {CABLE_SIZES.map((s) => (
-                          <option key={s} value={s}>{s} mm²</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Conductor Material */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Conductor Material</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['Cu', 'Al'] as ConductorMaterial[]).map((mat) => (
-                          <button
-                            key={mat}
-                            onClick={() => handleParamChange('conductorMaterial', mat)}
-                            className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                              params.conductorMaterial === mat
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {mat === 'Cu' ? 'Copper (Cu)' : 'Aluminum (Al)'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Conductor Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Conductor Type</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['re', 'rm', 'cm', 'sm', 'f'] as ConductorType[]).map((type) => {
-                          const isDisabled = (type === 'sm' && (params.cores === 1 || params.size < 25));
-                          return (
-                            <button
-                              key={type}
-                              disabled={isDisabled}
-                              onClick={() => handleParamChange('conductorType', type)}
-                              className={`py-2 px-2 rounded-xl text-xs font-medium transition-colors ${
-                                params.conductorType === type
-                                  ? 'bg-indigo-600 text-white shadow-md'
-                                  : isDisabled
-                                  ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                              }`}
-                              title={type === 're' ? 'Solid Circular' : type === 'rm' ? 'Stranded Circular' : type === 'cm' ? 'Compacted Stranded' : type === 'sm' ? 'Sector Stranded' : 'Flexible Class 5'}
-                            >
-                              {type === 're' ? 'Solid (re)' : type === 'rm' ? 'Stranded (rm)' : type === 'cm' ? 'Compacted (cm)' : type === 'sm' ? 'Sector (sm)' : 'Flexible (f)'}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Insulation Material */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Insulation Material</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['XLPE', 'PVC'] as InsulationMaterial[]).map((mat) => (
-                          <button
-                            key={mat}
-                            onClick={() => handleParamChange('insulationMaterial', mat)}
-                            className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                              params.insulationMaterial === mat
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {mat}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Armor Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Armor Type</label>
-                      <select
-                        value={params.armorType}
-                        onChange={(e) => handleParamChange('armorType', e.target.value as ArmorType)}
-                        className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                      >
-                        <option value="Unarmored">Unarmored</option>
-                        {params.cores === 1 ? (
-                          <option value="AWA">AWA (Aluminum Wire)</option>
                         ) : (
                           <>
-                            <option value="SWA">SWA (Steel Wire)</option>
-                            <option value="STA">STA (Steel Tape)</option>
-                            <option value="SFA">SFA (Steel Flat & Tape)</option>
-                            <option value="RGB">RGB (Steel Wire & Tape)</option>
-                            <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                            <option value="0.6/1 kV">0.6/1 kV</option>
+                            <option value="450/750 V">450/750 V</option>
+                            <option value="300/500 V">300/500 V</option>
                           </>
                         )}
                       </select>
                     </div>
 
-                    {/* Braid Coverage Input (GSWB only) */}
-                    {params.armorType === 'GSWB' && (
-                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Braid Coverage (%)</label>
-                        <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    {/* Cores and Size in one row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Number of Cores */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
+                        <div className="flex gap-2">
                           <input
-                            type="range"
-                            min="70"
-                            max="95"
-                            step="1"
-                            value={params.braidCoverage || 90}
-                            onChange={(e) => handleParamChange('braidCoverage', Number(e.target.value))}
-                            className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            type="number"
+                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : 1}
+                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 5 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : 80}
+                            value={params.cores}
+                            onChange={(e) => handleParamChange('cores', Number(e.target.value))}
+                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                           />
-                          <span className="text-sm font-mono font-bold text-indigo-600 w-10 text-right">{params.braidCoverage || 90}%</span>
                         </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(params.standard === 'IEC 60502-2' ? [1, 3] : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? [2, 3, 4, 5] : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? [1] : params.standard.includes('NFA2X-T') ? [2, 3] : params.standard.includes('NFA2X') ? [2, 4] : [1, 2, 3, 4, 5]).map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => handleParamChange('cores', c)}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                                params.cores === c 
+                                  ? 'bg-indigo-600 text-white shadow-sm' 
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                        {params.cores > 5 && (
+                          <p className="text-[9px] text-amber-600 mt-1 font-medium italic">
+                            * Max 10 mm²
+                          </p>
+                        )}
                       </div>
-                    )}
 
-                    {/* Sheath Material */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Outer Sheath Material</label>
-                      <select
-                        value={params.sheathMaterial}
-                        onChange={(e) => handleParamChange('sheathMaterial', e.target.value as SheathMaterial)}
-                        className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                      >
-                        <option value="PVC">PVC</option>
-                        <option value="PE">PE</option>
-                        <option value="LSZH">LSZH</option>
-                      </select>
+                      {/* Cross Section */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Cross Section (mm²)</label>
+                        <select
+                          value={params.size}
+                          onChange={(e) => handleParamChange('size', Number(e.target.value))}
+                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                        >
+                          {CABLE_SIZES.filter(s => {
+                            if (params.standard === 'IEC 60502-2') {
+                              return s >= 25;
+                            }
+                            if (params.standard.includes('(NYMHY)')) {
+                              return [0.75, 1, 1.5, 2.5].includes(s);
+                            }
+                            if (params.standard.includes('(NYM)')) {
+                              return [1.5, 2.5, 4, 6, 10, 16].includes(s);
+                            }
+                            if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') {
+                              if (params.cores === 2) return [35, 50, 70].includes(s);
+                              if (params.cores === 3) return [35, 50, 70, 95, 120].includes(s);
+                              return false;
+                            }
+                            if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') {
+                              if (params.cores === 2) return [10, 16].includes(s);
+                              if (params.cores === 4) return [10, 16, 25, 35].includes(s);
+                              return false;
+                            }
+                            if (params.conductorMaterial === 'Al') {
+                              return s >= 10;
+                            }
+                            return params.cores <= 5 || s <= 10;
+                          }).map((s) => (
+                            <option key={s} value={s}>{s} mm²</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    {/* Fire Resistant MGT Toggle */}
-                    {params.standard === 'IEC 60502-1' && (
-                      <div className="pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="flex items-center gap-3 cursor-pointer group">
+                    {/* Earthing Core Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
+                          {params.standard.includes('NFA2X-T') ? '1.1 Messenger Core' : '1.1 Earthing Core'}
+                        </label>
+                        {!params.standard.includes('NFA2X-T') && (
+                          <button
+                            onClick={() => handleParamChange('hasEarthing', !params.hasEarthing)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${params.hasEarthing ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${params.hasEarthing ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {params.hasEarthing && (
+                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
+                            <select
+                              value={params.earthingCores || 0}
+                              disabled={params.standard.includes('NFA2X-T')}
+                              onChange={(e) => handleParamChange('earthingCores', Number(e.target.value))}
+                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                            >
+                              <option value={0}>None</option>
+                              <option value={1}>1 Core</option>
+                              <option value={2}>2 Cores</option>
+                              <option value={3}>3 Cores</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
+                            <select
+                              value={params.earthingSize || 0}
+                              disabled={params.standard.includes('NFA2X-T')}
+                              onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
+                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                            >
+                              <option value={0}>None</option>
+                              {CABLE_SIZES.map((s) => (
+                                <option key={s} value={s}>{s} mm²</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Conductor Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">2. Conductor</label>
+                      
+                      {/* Conductor Material */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['Cu', 'Al', 'TCu'] as ConductorMaterial[]).map((mat) => {
+                            const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || (params.standard.includes('NFA2X') && mat !== 'Al');
+                            return (
+                              <button
+                                key={mat}
+                                disabled={isDisabled}
+                                onClick={() => handleParamChange('conductorMaterial', mat)}
+                                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-colors ${
+                                  params.conductorMaterial === mat
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : isDisabled
+                                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {mat === 'Cu' ? 'Cu' : mat === 'Al' ? 'Al' : 'TCu'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Conductor Type */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['re', 'rm', 'cm', 'sm', 'f'] as ConductorType[]).map((type) => {
+                            let isDisabled = (type === 'sm' && (params.cores === 1 || params.size < 25));
+                            if (params.standard.includes('SNI 04-6629')) {
+                              if (params.standard.includes('(NYM)')) isDisabled = isDisabled || !['re', 'rm'].includes(type);
+                              if (params.standard.includes('(NYAF)') || params.standard.includes('(NYMHY)')) isDisabled = isDisabled || type !== 'f';
+                              if (params.standard.includes('(NYA)')) isDisabled = isDisabled || (type !== 're' && type !== 'rm');
+                            }
+                            if (params.standard === 'IEC 60502-2') isDisabled = isDisabled || type !== 'cm';
+                            
+                            return (
+                              <button
+                                key={type}
+                                disabled={isDisabled}
+                                onClick={() => handleParamChange('conductorType', type)}
+                                className={`py-2 px-2 rounded-xl text-xs font-medium transition-colors ${
+                                  params.conductorType === type
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : isDisabled
+                                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                                title={type === 're' ? 'Solid Circular' : type === 'rm' ? 'Stranded Circular' : type === 'cm' ? 'Compacted Stranded' : type === 'sm' ? 'Sector Stranded' : 'Flexible Class 5'}
+                              >
+                                {type === 're' ? 're' : type === 'rm' ? 'rm' : type === 'cm' ? 'cm' : type === 'sm' ? 'sm' : 'f'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insulation Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3. Insulation</label>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['XLPE', 'PVC'] as InsulationMaterial[]).map((mat) => {
+                            let isDisabled = false;
+                            if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
+                            if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                            
+                            return (
+                              <button
+                                key={mat}
+                                disabled={isDisabled}
+                                onClick={() => handleParamChange('insulationMaterial', mat)}
+                                className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
+                                  params.insulationMaterial === mat
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : isDisabled
+                                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {mat}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inner Sheath Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                          <label className={`flex items-center justify-between cursor-pointer group ${params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Inner Sheath</span>
+                            <div className="relative">
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                disabled={params.armorType !== 'Unarmored'}
+                                checked={params.hasInnerSheath !== false || params.armorType !== 'Unarmored'}
+                                onChange={(e) => handleParamChange('hasInnerSheath', e.target.checked)}
+                              />
+                              <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                          </label>
+                          {(params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
+                              <select
+                                value={params.innerSheathMaterial || 'PVC'}
+                                onChange={(e) => handleParamChange('innerSheathMaterial', e.target.value as SheathMaterial)}
+                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                              >
+                                <option value="PVC">PVC</option>
+                                <option value="PE">PE</option>
+                                <option value="LSZH">LSZH</option>
+                                <option value="SHF1">SHF1</option>
+                                <option value="SHF2">SHF2</option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    {/* Screen Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen</label>
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <label className="flex items-center justify-between cursor-pointer group">
+                          <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Screen</span>
                           <div className="relative">
                             <input
                               type="checkbox"
                               className="sr-only"
-                              checked={params.hasMgt}
-                              onChange={(e) => handleParamChange('hasMgt', e.target.checked)}
+                              checked={params.hasScreen || false}
+                              onChange={(e) => handleParamChange('hasScreen', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.hasMgt ? 'bg-orange-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.hasMgt ? 'translate-x-4' : ''}`}></div>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-slate-700 group-hover:text-orange-600 transition-colors">Fire Resistant (MGT)</span>
-                            <span className="text-[10px] text-slate-400">Add Mica Glass Tape over conductor</span>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.hasScreen ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
+                        {params.hasScreen && (
+                          <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
+                              <select
+                                value={params.screenType || 'CTS'}
+                                onChange={(e) => handleParamChange('screenType', e.target.value as any)}
+                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                              >
+                                <option value="CTS">CTS (Copper Tape Screen)</option>
+                                <option value="CWS">CWS (Copper Wire Screen)</option>
+                              </select>
+                            </div>
+                            {params.screenType === 'CWS' && (
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Size (mm²)</label>
+                                <select
+                                  value={params.screenSize || 16}
+                                  onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
+                                  className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                                >
+                                  {[16, 25, 35, 50, 70, 95, 120, 150].map(s => (
+                                    <option key={s} value={s}>{s} mm²</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Separator Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.2 Separator Sheath</label>
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <label className={`flex items-center justify-between cursor-pointer group ${(params.hasScreen && params.armorType !== 'Unarmored') ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Separator</span>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              disabled={params.hasScreen && params.armorType !== 'Unarmored'}
+                              checked={params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')}
+                              onChange={(e) => handleParamChange('hasSeparator', e.target.checked)}
+                            />
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'translate-x-4' : ''}`}></div>
+                          </div>
+                        </label>
+                        {(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) && (
+                          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
+                            <select
+                              value={params.separatorMaterial || 'PVC'}
+                              onChange={(e) => handleParamChange('separatorMaterial', e.target.value as SheathMaterial)}
+                              className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                            >
+                              <option value="PVC">PVC</option>
+                              <option value="PE">PE</option>
+                              <option value="LSZH">LSZH</option>
+                              <option value="SHF1">SHF1</option>
+                              <option value="SHF2">SHF2</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Armor Section */}
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">5. Armour</label>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                        <select
+                          value={params.armorType}
+                          disabled={params.standard.includes('SNI 04-6629')}
+                          onChange={(e) => handleParamChange('armorType', e.target.value as ArmorType)}
+                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
+                        >
+                          <option value="Unarmored">Unarmored</option>
+                          {params.standard === 'IEC 60092-353' ? (
+                            <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                          ) : params.cores === 1 ? (
+                            <option value="AWA">AWA (Aluminum Wire)</option>
+                          ) : (
+                            <>
+                              <option value="SWA">SWA (Steel Wire)</option>
+                              <option value="STA">STA (Steel Tape)</option>
+                              <option value="SFA">SFA (Steel Flat & Tape)</option>
+                              <option value="RGB">RGB (Steel Wire & Tape)</option>
+                              <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* Braid Coverage Input (GSWB only) */}
+                      {params.armorType === 'GSWB' && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Braid Coverage (%)</label>
+                          <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <input
+                              type="range"
+                              min="70"
+                              max="95"
+                              step="1"
+                              value={params.braidCoverage || 90}
+                              onChange={(e) => handleParamChange('braidCoverage', Number(e.target.value))}
+                              className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                            <span className="text-sm font-mono font-bold text-indigo-600 w-10 text-right">{params.braidCoverage || 90}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Outer Sheath Section */}
+                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">6. Outer Sheath</label>
+                        
+                        {/* Flame Retardant Category */}
+                        <div className={!params.stopfire ? 'opacity-50 pointer-events-none' : ''}>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Flame Retardant Category 
+                            {!params.stopfire && <span className="text-[10px] ml-2 text-slate-400 font-normal">(Enable StopFire first)</span>}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['None', 'Cat.A', 'Cat.B', 'Cat.C'] as FlameRetardantCategory[]).map((cat) => (
+                              <button
+                                key={cat}
+                                disabled={!params.stopfire}
+                                onClick={() => {
+                                  handleParamChange('flameRetardantCategory', cat);
+                                }}
+                                className={`py-2 px-2 rounded-xl text-xs font-medium transition-colors ${
+                                  (params.flameRetardantCategory || 'None') === cat
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {cat === 'None' ? 'Non Category' : cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Sheath Material */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+                          <select
+                            value={params.sheathMaterial}
+                            onChange={(e) => handleParamChange('sheathMaterial', e.target.value as SheathMaterial)}
+                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                          >
+                            <option value="PVC">PVC</option>
+                            <option value="PE">PE</option>
+                            <option value="LSZH">LSZH</option>
+                            <option value="SHF1">SHF1</option>
+                            <option value="SHF2">SHF2</option>
+                            <option value="PVC-FR">PVC-FR</option>
+                            <option value="PVC-FR Cat.A">PVC-FR Cat.A</option>
+                            <option value="PVC-FR Cat.B">PVC-FR Cat.B</option>
+                            <option value="PVC-FR Cat.C">PVC-FR Cat.C</option>
+                          </select>
+                        </div>
                       </div>
                     )}
+
 
                     {/* MV Screen Selection */}
                     {params.standard === 'IEC 60502-2' && (
@@ -480,24 +1475,361 @@ export default function CableDesigner() {
                         )}
                       </div>
                     )}
+
+                    {/* Manual Overrides Section */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 space-y-4 shadow-sm mt-6">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Manual Specifications</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1">Conductor (mm)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder={result.spec.conductorDiameter.toFixed(1)}
+                            value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(1) : ''}
+                            onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? parseFloat(e.target.value) : undefined)}
+                            className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+
+                        {(params.hasMgt || params.fireguard) && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">MGT (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={(result.spec.mgtThickness || 0.2).toFixed(1)}
+                              value={params.manualMgtThickness !== undefined ? params.manualMgtThickness.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualMgtThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+                        )}
+
+                        {params.standard === 'IEC 60502-2' && (
+                          <>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Cond. Screen (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                placeholder={(result.spec.conductorScreenThickness || 0.5).toFixed(1)}
+                                value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Ins. Screen (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                placeholder={(result.spec.insulationScreenThickness || 0.5).toFixed(1)}
+                                value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1">Insulation (mm)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder={result.spec.insulationThickness.toFixed(1)}
+                            value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness.toFixed(1) : ''}
+                            onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                            className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+
+                        {(params.cores > 1 || params.armorType !== 'Unarmored' || params.hasInnerSheath) && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Inner Sheath (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={result.spec.innerCoveringThickness.toFixed(1)}
+                              value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+                        )}
+
+                        {params.armorType !== 'Unarmored' && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Armor (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={result.spec.armorThickness.toFixed(1)}
+                              value={params.manualArmorThickness !== undefined ? params.manualArmorThickness.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+                        )}
+
+                        {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Outer Sheath (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={result.spec.sheathThickness.toFixed(1)}
+                              value={params.manualSheathThickness !== undefined ? params.manualSheathThickness.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Add to Project Button moved to bottom of config */}
+                    <div className="pt-4">
+                      <button
+                        onClick={addToProject}
+                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] uppercase tracking-wider text-sm"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Add to Project
+                      </button>
+                    </div>
                   </div>
-                ) : (
+                )}
+
+                {activeTab === 'prices' && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4">
                       <p className="text-xs text-indigo-700 leading-relaxed">
-                        Update material prices (IDR/kg) to calculate the estimated HPP per meter.
+                        Update material prices (IDR/kg) and densities (g/cm³) to calculate the estimated HPP per meter.
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-indigo-500" />
+                        Overhead Cost (%)
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="0"
+                          max="50"
+                          step="0.5"
+                          value={params.overhead || 0}
+                          onChange={(e) => handleParamChange('overhead', parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                        <div className="flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                          <input
+                            type="number"
+                            value={params.overhead || 0}
+                            onChange={(e) => handleParamChange('overhead', parseFloat(e.target.value))}
+                            className="w-12 bg-transparent border-none p-0 text-sm font-mono font-bold text-indigo-600 focus:ring-0 text-right"
+                          />
+                          <span className="text-sm font-bold text-slate-400">%</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-2 italic">
+                        * Overhead is added to the total material cost (HPP = Material Cost × (1 + Overhead%))
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        Sales Margin (%)
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={params.margin || 0}
+                          onChange={(e) => handleParamChange('margin', parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        />
+                        <div className="flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                          <input
+                            type="number"
+                            value={params.margin || 0}
+                            onChange={(e) => handleParamChange('margin', parseFloat(e.target.value))}
+                            className="w-12 bg-transparent border-none p-0 text-sm font-mono font-bold text-emerald-600 focus:ring-0 text-right"
+                          />
+                          <span className="text-sm font-bold text-slate-400">%</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-2 italic">
+                        * Margin is added to HPP to calculate Selling Price (Price = HPP × (1 + Margin%))
                       </p>
                     </div>
                     
-                    <PriceInput label="Copper (Cu)" value={materialPrices.Cu} onChange={(v) => setMaterialPrices(p => ({...p, Cu: v}))} />
-                    <PriceInput label="Aluminum (Al)" value={materialPrices.Al} onChange={(v) => setMaterialPrices(p => ({...p, Al: v}))} />
-                    <PriceInput label="XLPE" value={materialPrices.XLPE} onChange={(v) => setMaterialPrices(p => ({...p, XLPE: v}))} />
-                    <PriceInput label="PVC" value={materialPrices.PVC} onChange={(v) => setMaterialPrices(p => ({...p, PVC: v}))} />
-                    <PriceInput label="PE" value={materialPrices.PE} onChange={(v) => setMaterialPrices(p => ({...p, PE: v}))} />
-                    <PriceInput label="LSZH" value={materialPrices.LSZH} onChange={(v) => setMaterialPrices(p => ({...p, LSZH: v}))} />
-                    <PriceInput label="Steel (Armour)" value={materialPrices.Steel} onChange={(v) => setMaterialPrices(p => ({...p, Steel: v}))} />
-                    <PriceInput label="Semi-Conductive" value={materialPrices.SemiCond} onChange={(v) => setMaterialPrices(p => ({...p, SemiCond: v}))} />
-                    <PriceInput label="Mica Glass Tape (MGT)" value={materialPrices.MGT} onChange={(v) => setMaterialPrices(p => ({...p, MGT: v}))} />
+                    <div className="space-y-4">
+                      <div className="flex items-end gap-2 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Add New Material</label>
+                          <input 
+                            type="text"
+                            value={newMaterialName}
+                            onChange={(e) => setNewMaterialName(e.target.value)}
+                            placeholder="Material Name (e.g. Nylon)"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm"
+                          />
+                        </div>
+                        <button 
+                          onClick={handleAddMaterial}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Material List</h4>
+                        <button 
+                          onClick={saveMaterialSettings}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 transition-all"
+                        >
+                          <Download className="w-3 h-3" />
+                          Save All Settings
+                        </button>
+                      </div>
+
+                      <div className="space-y-3 pr-2">
+                        {Object.keys(materialPrices).sort().map((mat) => (
+                          <div key={mat} className="relative group">
+                            <MaterialSettingsInput 
+                              label={mat} 
+                              price={materialPrices[mat]} 
+                              density={materialDensities[mat]}
+                              scrap={materialScrap[mat]}
+                              onPriceChange={(v) => setMaterialPrices(p => ({...p, [mat]: v}))} 
+                              onDensityChange={(v) => setMaterialDensities(d => ({...d, [mat]: v}))}
+                              onScrapChange={(v) => setMaterialScrap(s => ({...s, [mat]: v}))}
+                            />
+                            <button 
+                              onClick={() => handleRemoveMaterial(mat)}
+                              className="absolute -right-1 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Remove Material"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'drums' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4">
+                      <p className="text-xs text-indigo-700 leading-relaxed">
+                        Manage drum/haspel data including dimensions, weight, and price.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Drum List</h4>
+                      <button 
+                        onClick={() => setDrumData(INITIAL_DRUM_DATA)}
+                        className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 transition-all"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Reset to Default
+                      </button>
+                    </div>
+
+                    <div className="pr-2 border border-slate-100 rounded-xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px] text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                              <th className="p-2 font-bold text-slate-500 uppercase">Type</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">D (mm)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">d (mm)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">L (mm)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">W (kg)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase text-right">Price (Rp)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {drumData.map((drum, idx) => (
+                              <tr key={drum.type} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                <td className="p-2 font-mono font-bold text-indigo-600">{drum.type}</td>
+                                <td className="p-2">
+                                  <input 
+                                    type="number" 
+                                    value={drum.diameterWithCover ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, diameterWithCover: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-12 bg-transparent border-none p-0 focus:ring-0 font-mono text-slate-600"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    type="number" 
+                                    value={drum.barrelDiameter ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, barrelDiameter: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-12 bg-transparent border-none p-0 focus:ring-0 font-mono text-slate-600"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    type="number" 
+                                    value={drum.outerWidth ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, outerWidth: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-12 bg-transparent border-none p-0 focus:ring-0 font-mono text-slate-600"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    type="number" 
+                                    value={drum.weight ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, weight: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-12 bg-transparent border-none p-0 focus:ring-0 font-mono text-slate-600"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input 
+                                    type="number" 
+                                    value={drum.price ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, price: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-20 bg-transparent border-none p-0 focus:ring-0 font-mono text-slate-600 text-right"
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -515,7 +1847,7 @@ export default function CableDesigner() {
               <div className="flex-1 text-center md:text-left z-10">
                 <h3 className="text-indigo-200 text-sm font-medium uppercase tracking-wider mb-2">Cable Designation</h3>
                 <div className="text-2xl md:text-4xl font-bold tracking-tight font-mono">
-                  {params.conductorMaterial}{params.hasMgt ? '/MGT' : ''}/{params.insulationMaterial}/{params.armorType === 'Unarmored' ? '' : params.armorType + '/'}{params.sheathMaterial} {params.cores} x {params.size} mm² ({params.conductorType}) {result.electrical.voltageRating}
+                  {getCableDesignation(params, result)}
                 </div>
                 <div className="mt-4 inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm">
                   Overall Diameter: <span className="font-bold">{result.spec.overallDiameter} mm</span>
@@ -525,17 +1857,69 @@ export default function CableDesigner() {
               <div className="z-10 bg-white/10 rounded-full backdrop-blur-sm p-4">
                 <CableCrossSection 
                   cores={params.cores} 
+                  earthingCores={params.hasEarthing ? (params.earthingCores || 0) : 0}
                   armorType={params.armorType} 
                   conductorType={params.conductorType} 
                   standard={params.standard}
                   mvScreenType={params.mvScreenType}
-                  hasMgt={params.hasMgt}
+                  hasMgt={params.fireguard}
                   conductorMaterial={params.conductorMaterial}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* General Data & Features */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-indigo-500" />
+                    General Data
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                    <span>Standard</span>
+                    <span className="font-mono text-slate-900">{params.standard}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                    <span>Voltage Rating</span>
+                    <span className="font-mono text-slate-900">{params.voltage}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                    <span>Conductor</span>
+                    <span className="font-mono text-slate-900">{params.cores} x {params.size} mm² {params.conductorMaterial} ({params.conductorType})</span>
+                  </div>
+                  <SpecRow label="Max Operating Temperature" value={result.general.maxOperatingTemp} unit="°C" precision={0} />
+                  <SpecRow label="Max Short Circuit Temp" value={result.general.shortCircuitTemp} unit="°C" precision={0} />
+                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                    <span>Standard Compliance</span>
+                    <span className="font-mono text-slate-900 text-xs">{result.general.standardReference}</span>
+                  </div>
+                  
+                  <div className="pt-2 mt-2 border-t border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Applied Features</span>
+                    <div className="flex flex-wrap gap-2">
+                      {params.fireguard && (
+                        <span className="bg-red-50 text-red-700 text-[10px] font-bold px-3 py-1 rounded-lg border border-red-100 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                          FireGuard®
+                        </span>
+                      )}
+                      {params.stopfire && (
+                        <span className="bg-rose-50 text-rose-700 text-[10px] font-bold px-3 py-1 rounded-lg border border-rose-100 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                          StopFire®
+                        </span>
+                      )}
+                      {!params.fireguard && (params.flameRetardantCategory === 'None' || !params.flameRetardantCategory) && !params.stopfire && (
+                        <span className="text-[10px] text-slate-400 italic">No special features applied</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Technical Specification */}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
@@ -545,54 +1929,144 @@ export default function CableDesigner() {
                   </h2>
                 </div>
                 
-                <div className="space-y-3">
-                  <SpecRow label="Conductor Diameter" value={result.spec.conductorDiameter} unit="mm" />
-                  {result.spec.mgtThickness && (
-                    <SpecRow label="Mica Glass Tape (MGT)" value={result.spec.mgtThickness} unit="mm" />
-                  )}
-                  {result.spec.conductorScreenThickness && (
-                    <SpecRow label="Conductor Screen Thickness" value={result.spec.conductorScreenThickness} unit="mm" />
-                  )}
-                  <SpecRow label="Insulation Thickness" value={result.spec.insulationThickness} unit="mm" />
-                  {result.spec.insulationScreenThickness && (
-                    <SpecRow label="Insulation Screen Thickness" value={result.spec.insulationScreenThickness} unit="mm" />
-                  )}
-                  <SpecRow label="Core Diameter" value={result.spec.coreDiameter} unit="mm" />
-                  
-                  {result.spec.mvScreenDiameter && (
-                    <SpecRow label={`Metallic Screen (${params.mvScreenType})`} value={result.spec.mvScreenDiameter} unit="mm" />
-                  )}
+                <div className="space-y-4">
+                  {/* Phase Core Group */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
+                    <h3 className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                      Phase Core ({params.cores} x {params.size} mm²)
+                    </h3>
+                    <SpecRow label="Conductor Construction" value={`${result.spec.phaseCore.wireCount} x ${result.spec.phaseCore.wireDiameter.toFixed(2)}`} unit="mm" />
+                    <SpecRow label="Conductor Diameter" value={result.spec.phaseCore.conductorDiameter} unit="mm" />
+                    <SpecRow label="Insulation Thickness" value={result.spec.phaseCore.insulationThickness} unit="mm" />
+                    <SpecRow label="Core Diameter" value={result.spec.phaseCore.coreDiameter} unit="mm" />
+                  </div>
 
-                  {params.cores > 1 && (
-                    <SpecRow label="Laid Up Diameter" value={result.spec.laidUpDiameter} unit="mm" />
-                  )}
-                  
-                  {params.armorType !== 'Unarmored' && params.cores > 1 && (
-                    <SpecRow label="Inner Covering Thickness" value={result.spec.innerCoveringThickness} unit="mm" />
-                  )}
-                  
-                  {params.armorType !== 'Unarmored' && (
-                    <>
-                      <SpecRow label="Diameter Under Armor" value={result.spec.diameterUnderArmor} unit="mm" />
-                      {result.spec.braidWireDiameter ? (
+                  {/* Earthing Core Group */}
+                  {result.spec.earthingCore && (
+                    <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 space-y-2">
+                      <h3 className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        {params.standard.includes('NFA2X-T') ? 'Messenger Core' : 'Earthing Core'} ({params.earthingCores} x {params.earthingSize} mm²)
+                      </h3>
+                      {result.spec.earthingCore.alWireCount && result.spec.earthingCore.steelWireCount ? (
                         <>
-                          <SpecRow label="Braid Wire Diameter" value={result.spec.braidWireDiameter} unit="mm" />
-                          {result.spec.braidCoverage && (
-                            <SpecRow label="Braid Coverage" value={result.spec.braidCoverage} unit="%" precision={0} />
-                          )}
+                          <SpecRow label="Aluminium Wire" value={`${result.spec.earthingCore.alWireCount} x ${result.spec.earthingCore.alWireDiameter?.toFixed(2)}`} unit="mm" />
+                          <SpecRow label="Steel Wire" value={`${result.spec.earthingCore.steelWireCount} x ${result.spec.earthingCore.steelWireDiameter?.toFixed(2)}`} unit="mm" />
                         </>
                       ) : (
-                        <SpecRow label="Armor Wire/Tape Thickness" value={result.spec.armorThickness} unit="mm" />
+                        <SpecRow label="Conductor Construction" value={`${result.spec.earthingCore.wireCount} x ${result.spec.earthingCore.wireDiameter.toFixed(2)}`} unit="mm" />
                       )}
-                      <SpecRow label="Diameter Over Armor" value={result.spec.diameterOverArmor} unit="mm" />
-                    </>
+                      <SpecRow label="Conductor Diameter" value={result.spec.earthingCore.conductorDiameter} unit="mm" />
+                      <SpecRow label="Insulation Thickness" value={result.spec.earthingCore.insulationThickness} unit="mm" />
+                      <SpecRow label="Core Diameter" value={result.spec.earthingCore.coreDiameter} unit="mm" />
+                    </div>
                   )}
-                  
-                  <SpecRow label="Outer Sheath Thickness" value={result.spec.sheathThickness} unit="mm" />
-                  <div className="pt-2 mt-2 border-t border-slate-100">
-                    <SpecRow label="Overall Diameter (Approx)" value={result.spec.overallDiameter} unit="mm" isBold />
+
+                  <div className="space-y-3 pt-2">
+                    {result.spec.mgtThickness && (
+                      <SpecRow label="Mica Glass Tape (MGT)" value={result.spec.mgtThickness} unit="mm" />
+                    )}
+                    {result.spec.conductorScreenThickness && (
+                      <SpecRow label="Conductor Screen Thickness" value={result.spec.conductorScreenThickness} unit="mm" />
+                    )}
+                    {result.spec.insulationScreenThickness && (
+                      <SpecRow label="Insulation Screen Thickness" value={result.spec.insulationScreenThickness} unit="mm" />
+                    )}
+                    
+                    {result.spec.mvScreenDiameter && (
+                      <SpecRow label={`Metallic Screen (${params.mvScreenType})`} value={result.spec.mvScreenDiameter} unit="mm" />
+                    )}
+
+                    {params.cores > 1 && (
+                      <SpecRow label="Laid Up Diameter" value={result.spec.laidUpDiameter} unit="mm" />
+                    )}
+                    
+                    {result.spec.innerCoveringThickness > 0 && (
+                      <SpecRow label="Inner Covering Thickness" value={result.spec.innerCoveringThickness} unit="mm" />
+                    )}
+                    
+                    {result.spec.screenThickness && (
+                      <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.spec.screenThickness} unit="mm" />
+                    )}
+                    {result.spec.separatorThickness && (
+                      <SpecRow label="Separator Sheath Thickness" value={result.spec.separatorThickness} unit="mm" />
+                    )}
+                    {params.armorType !== 'Unarmored' && (
+                      <>
+                        <SpecRow label="Diameter Under Armor" value={result.spec.diameterUnderArmor} unit="mm" />
+                        {result.spec.braidWireDiameter ? (
+                          <>
+                            <SpecRow label="Braid Wire Diameter" value={result.spec.braidWireDiameter} unit="mm" />
+                            {result.spec.braidCoverage && (
+                              <SpecRow label="Braid Coverage" value={result.spec.braidCoverage} unit="%" precision={0} />
+                            )}
+                          </>
+                        ) : (
+                          <SpecRow label="Armor Wire/Tape Thickness" value={result.spec.armorThickness} unit="mm" />
+                        )}
+                        <SpecRow label="Diameter Over Armor" value={result.spec.diameterOverArmor} unit="mm" />
+                      </>
+                    )}
+                    
+                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                      <SpecRow label="Outer Sheath Thickness" value={result.spec.sheathThickness} unit="mm" />
+                    )}
+                    <div className="pt-2 mt-2 border-t border-slate-100">
+                      <div className="flex justify-between items-start py-1">
+                        <span className="text-sm text-slate-600 font-bold">Overall Diameter (Approx)</span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-mono text-slate-900 font-bold">
+                            {result.spec.overallDiameter.toFixed(1)} mm
+                          </span>
+                          {result.spec.overallDiameterMin && result.spec.overallDiameterMax && (
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              Standard: {result.spec.overallDiameterMin} - {result.spec.overallDiameterMax} mm
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Packing Data */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Package className="w-5 h-5 text-amber-500" />
+                    Packing Data
+                  </h2>
+                </div>
+                {(() => {
+                  const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight);
+                  return (
+                    <div className="space-y-3">
+                      <SpecRow label="Standard Length" value={packing.standardLength} unit="m" precision={0} />
+                      <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                        <span>Drum Type</span>
+                        <span className="font-mono text-slate-900">{packing.selectedDrum.type}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                        <span>Drum Dimensions</span>
+                        <span className="font-mono text-slate-900">
+                          {packing.selectedDrum.diameterWithCover / 10} x {packing.selectedDrum.outerWidth / 10} cm
+                        </span>
+                      </div>
+                      <SpecRow label="Net Weight" value={packing.netWeight} unit="kg" />
+                      <SpecRow label="Gross Weight" value={packing.grossWeight} unit="kg" />
+                      <div className="pt-2 mt-2 border-t border-slate-100">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Packing Cost</span>
+                          <span className="font-mono text-slate-900 font-bold">
+                            Rp {Math.round(packing.packingCostPerMeter).toLocaleString('id-ID')} / m
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Bill of Material */}
@@ -605,28 +2079,57 @@ export default function CableDesigner() {
                 </div>
                 
                 <div className="space-y-3">
-                  <SpecRow label={`Conductor (${params.conductorMaterial})`} value={result.bom.conductorWeight} unit="kg/km" />
+                  <SpecRow label={`Conductor (${params.conductorMaterial})`} value={result.bom.conductorWeight - result.bom.earthingConductorWeight} unit="kg/km" />
+                  {result.bom.earthingConductorWeight > 0 && (
+                    <>
+                      {params.standard.includes('NFA2X-T') && result.bom.earthingAlWeight && result.bom.earthingSteelWeight ? (
+                        <>
+                          <SpecRow label="Messenger Conductor (Aluminum)" value={result.bom.earthingAlWeight} unit="kg/km" />
+                          <SpecRow label="Messenger Conductor (Steel)" value={result.bom.earthingSteelWeight} unit="kg/km" />
+                        </>
+                      ) : (
+                        <SpecRow 
+                          label={params.standard.includes('NFA2X-T') ? "Messenger Conductor (Al+Steel)" : `Earthing Conductor (${params.conductorMaterial})`} 
+                          value={result.bom.earthingConductorWeight} 
+                          unit="kg/km" 
+                        />
+                      )}
+                    </>
+                  )}
                   {result.bom.mgtWeight > 0 && (
                     <SpecRow label="Mica Glass Tape (MGT)" value={result.bom.mgtWeight} unit="kg/km" />
                   )}
                   {result.bom.semiCondWeight > 0 && (
                     <SpecRow label="Semi-conductive Layers" value={result.bom.semiCondWeight} unit="kg/km" />
                   )}
-                  <SpecRow label={`Insulation (${params.insulationMaterial})`} value={result.bom.insulationWeight} unit="kg/km" />
+                  <SpecRow label={`Insulation (${params.insulationMaterial})`} value={result.bom.insulationWeight - result.bom.earthingInsulationWeight} unit="kg/km" />
+                  {result.bom.earthingInsulationWeight > 0 && (
+                    <SpecRow label={`Earthing Insulation (${params.insulationMaterial})`} value={result.bom.earthingInsulationWeight} unit="kg/km" />
+                  )}
                   
                   {result.bom.mvScreenWeight > 0 && (
                     <SpecRow label={`Metallic Screen (${params.mvScreenType})`} value={result.bom.mvScreenWeight} unit="kg/km" />
                   )}
 
-                  {params.armorType !== 'Unarmored' && params.cores > 1 && (
+                  {result.bom.innerCoveringWeight > 0 && (
                     <SpecRow label="Inner Covering (PVC)" value={result.bom.innerCoveringWeight} unit="kg/km" />
+                  )}
+                  
+                  {result.bom.screenWeight > 0 && (
+                    <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.bom.screenWeight} unit="kg/km" />
+                  )}
+                  
+                  {result.bom.separatorWeight > 0 && (
+                    <SpecRow label="Separator Sheath" value={result.bom.separatorWeight} unit="kg/km" />
                   )}
                   
                   {params.armorType !== 'Unarmored' && (
                     <SpecRow label={`Armor (${params.armorType})`} value={result.bom.armorWeight} unit="kg/km" />
                   )}
                   
-                  <SpecRow label={`Outer Sheath (${params.sheathMaterial})`} value={result.bom.sheathWeight} unit="kg/km" />
+                  {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                    <SpecRow label={`Outer Sheath (${params.sheathMaterial})`} value={result.bom.sheathWeight} unit="kg/km" />
+                  )}
                   
                   <div className="pt-2 mt-2 border-t border-slate-100">
                     <SpecRow label="Total Cable Weight (Approx)" value={result.bom.totalWeight} unit="kg/km" isBold />
@@ -645,8 +2148,15 @@ export default function CableDesigner() {
                 
                 <div className="space-y-3">
                   <SpecRow label="Max DC Resistance @ 20°C" value={result.electrical.maxDcResistance} unit="Ω/km" precision={4} />
-                  <SpecRow label="Current Capacity (In Air)" value={result.electrical.currentCapacityAir} unit="A" precision={0} />
-                  <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                  <SpecRow 
+                    label={params.standard.includes('NFA2X') ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
+                    value={result.electrical.currentCapacityAir} 
+                    unit="A" 
+                    precision={0} 
+                  />
+                  {!params.standard.includes('NFA2X') && (
+                    <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                  )}
                   <div className="flex justify-between items-center py-1 text-sm text-slate-600">
                     <span>Test Voltage (5 min)</span>
                     <span className="font-mono text-slate-900">{result.electrical.testVoltage}</span>
@@ -666,66 +2176,72 @@ export default function CableDesigner() {
                 <div className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="text-xs text-slate-500 uppercase tracking-wider mb-1 font-semibold">Estimated HPP per Meter</div>
-                    <div className="text-3xl font-bold text-indigo-600 font-mono">
+                    <div className="text-xl font-bold text-slate-600 font-mono">
                       Rp {currentHPP.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Conductor Cost:</span>
-                      <span className="font-mono">Rp {((result.bom.conductorWeight * (params.conductorMaterial === 'Cu' ? materialPrices.Cu : materialPrices.Al)) / 1000).toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Insulation Cost:</span>
-                      <span className="font-mono">Rp {((result.bom.insulationWeight * (params.insulationMaterial === 'XLPE' ? materialPrices.XLPE : materialPrices.PVC)) / 1000).toLocaleString('id-ID')}</span>
-                    </div>
-                    {result.bom.armorWeight > 0 && (
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>Armor Cost:</span>
-                        <span className="font-mono">Rp {((result.bom.armorWeight * materialPrices.Steel) / 1000).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    {result.bom.mvScreenWeight > 0 && (
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>Screen Cost:</span>
-                        <span className="font-mono">Rp {((result.bom.mvScreenWeight * materialPrices.Cu) / 1000).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    {result.bom.mgtWeight > 0 && (
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>MGT Cost:</span>
-                        <span className="font-mono">Rp {((result.bom.mgtWeight * materialPrices.MGT) / 1000).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Sheath Cost:</span>
-                      <span className="font-mono">Rp {((result.bom.sheathWeight * (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC)) / 1000).toLocaleString('id-ID')}</span>
+                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <div className="text-xs text-indigo-500 uppercase tracking-wider mb-1 font-bold">Estimated Selling Price</div>
+                    <div className="text-3xl font-bold text-indigo-600 font-mono">
+                      Rp {currentSellingPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* General Data */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Info className="w-5 h-5 text-blue-500" />
-                    General Data
-                  </h2>
-                </div>
-                
-                <div className="space-y-3">
-                  <SpecRow label="Max Operating Temperature" value={result.general.maxOperatingTemp} unit="°C" precision={0} />
-                  <SpecRow label="Max Short Circuit Temp" value={result.general.shortCircuitTemp} unit="°C" precision={0} />
-                  <SpecRow label="Min Bending Radius" value={result.general.minBendingRadius} unit="mm" />
-                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
-                    <span>Standard Compliance</span>
-                    <span className="font-mono text-slate-900 text-xs">{result.general.standardReference}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
-                    <span>Flame Retardant</span>
-                    <span className="font-mono text-slate-900 text-xs">{result.general.flameRetardant}</span>
+                  <div className="pt-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Cost Breakdown (per Meter)</span>
+                    <div className="space-y-2">
+                      {(() => {
+                        const breakdown = calculateCostBreakdown(result.bom, params);
+                        const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight);
+                        const items = [
+                          { label: `Phase Conductor (${params.conductorMaterial})`, cost: breakdown.conductor },
+                          ...(params.standard.includes('NFA2X-T') && breakdown.earthingAl !== undefined ? [
+                            { label: `Messenger (Aluminum)`, cost: breakdown.earthingAl },
+                            { label: `Messenger (Steel Wire)`, cost: breakdown.earthingSteel },
+                          ] : [
+                            { label: `Earthing Conductor (${params.conductorMaterial})`, cost: breakdown.earthingConductor },
+                          ]),
+                          { label: `Mica Glass Tape (MGT)`, cost: breakdown.mgt },
+                          { label: `Semi-conductive Layers`, cost: breakdown.semiCond },
+                          { label: `Phase Insulation (${params.insulationMaterial})`, cost: breakdown.insulation },
+                          { label: `Earthing Insulation (${params.insulationMaterial})`, cost: breakdown.earthingInsulation },
+                          { label: `Metallic Screen (${params.mvScreenType})`, cost: breakdown.mvScreen },
+                          { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
+                          { label: `Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`, cost: breakdown.screen },
+                          { label: `Separator Sheath (${params.separatorMaterial || 'PVC'})`, cost: breakdown.separator },
+                          { label: `Armor (${params.armorType})`, cost: breakdown.armor },
+                          { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
+                          { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
+                        ].filter(item => item.cost > 0);
+
+                        const totalMaterialCost = items.reduce((acc, item) => acc + item.cost, 0);
+                        const overheadCost = totalMaterialCost * (params.overhead || 0) / 100;
+
+                        return (
+                          <>
+                            {items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between text-[11px] text-slate-600">
+                                <span>{item.label}</span>
+                                <span className="font-mono text-slate-900">Rp {item.cost.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
+                              </div>
+                            ))}
+                            <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between text-[11px] text-slate-400 italic">
+                              <span>Overhead ({params.overhead}%)</span>
+                              <span className="font-mono">Rp {overheadCost.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="pt-2 mt-1 border-t border-indigo-100 flex justify-between text-xs font-bold text-indigo-600">
+                              <span>Total HPP</span>
+                              <span className="font-mono">Rp {currentHPP.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-xs font-bold text-emerald-600">
+                              <span>Margin ({params.margin}%):</span>
+                              <span className="font-mono">Rp {(currentSellingPrice - currentHPP).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -758,7 +2274,7 @@ export default function CableDesigner() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                       <div className="font-mono text-xs font-bold text-slate-900 mb-1 pr-6">
-                        {item.params.conductorMaterial}{item.params.hasMgt ? '/MGT' : ''}/{item.params.insulationMaterial}/{item.params.armorType === 'Unarmored' ? '' : item.params.armorType + '/'}{item.params.sheathMaterial} {item.params.cores} x {item.params.size} mm² ({item.params.conductorType}) {item.result.electrical.voltageRating}
+                        {getCableDesignation(item.params, item.result)}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold border border-indigo-100">
@@ -806,7 +2322,7 @@ export default function CableDesigner() {
                         </div>
                         <div className="flex justify-between text-[10px] font-bold text-indigo-600 col-span-2 mt-1">
                           <span>HPP per Meter:</span>
-                          <span className="font-mono">Rp {calculateHPP(item.result.bom, item.params).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                          <span className="font-mono">Rp {calculateHPP(item.result, item.params).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                         </div>
                       </div>
                     </div>
@@ -814,11 +2330,11 @@ export default function CableDesigner() {
                   
                   <div className="pt-4 mt-4 border-t border-slate-100">
                     <button
-                      onClick={handleDownloadReport}
+                      onClick={() => setShowReview(true)}
                       className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold transition-all shadow-sm"
                     >
-                      <Download className="w-5 h-5" />
-                      Download Report
+                      <FileText className="w-5 h-5" />
+                      Review Project
                     </button>
                   </div>
                 </div>
@@ -838,30 +2354,75 @@ export default function CableDesigner() {
   );
 }
 
-function SpecRow({ label, value, unit, isBold = false, precision = 2 }: { label: string; value: number; unit: string; isBold?: boolean; precision?: number }) {
+function SpecRow({ label, value, unit, isBold = false, precision = 1 }: { label: string; value: number | string; unit: string; isBold?: boolean; precision?: number }) {
   return (
     <div className={`flex justify-between items-center py-1 ${isBold ? 'font-bold text-slate-900' : 'text-sm text-slate-600'}`}>
       <span>{label}</span>
       <span className="font-mono text-slate-900">
-        {value.toFixed(precision)} <span className="text-slate-400 text-xs ml-1">{unit}</span>
+        {typeof value === 'number' ? value.toFixed(precision) : value} <span className="text-slate-400 text-xs ml-1">{unit}</span>
       </span>
     </div>
   );
 }
 
-function PriceInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function MaterialSettingsInput({ 
+  label, 
+  price, 
+  density, 
+  scrap,
+  onPriceChange, 
+  onDensityChange,
+  onScrapChange
+}: { 
+  label: string; 
+  price: number; 
+  density: number; 
+  scrap: number;
+  onPriceChange: (v: number) => void; 
+  onDensityChange: (v: number) => void; 
+  onScrapChange: (v: number) => void;
+}) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <span className="text-slate-400 text-xs">Rp</span>
+    <div className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg border border-slate-100 hover:border-slate-200 transition-all">
+      <div className="col-span-3">
+        <label className="block text-[10px] font-bold text-slate-700 truncate" title={label}>{label}</label>
+      </div>
+      <div className="col-span-3 relative">
+        <div className="absolute inset-y-0 left-0 pl-1.5 flex items-center pointer-events-none">
+          <span className="text-slate-400 text-[8px]">Rp</span>
         </div>
         <input
           type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono"
+          value={price ?? 0}
+          onChange={(e) => onPriceChange(Number(e.target.value))}
+          className="w-full pl-5 pr-1 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          placeholder="Price"
+        />
+      </div>
+      <div className="col-span-3 relative">
+        <div className="absolute inset-y-0 right-0 pr-1.5 flex items-center pointer-events-none">
+          <span className="text-slate-400 text-[7px]">g/cm³</span>
+        </div>
+        <input
+          type="number"
+          step="0.01"
+          value={density ?? 0}
+          onChange={(e) => onDensityChange(Number(e.target.value))}
+          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          placeholder="Density"
+        />
+      </div>
+      <div className="col-span-3 relative">
+        <div className="absolute inset-y-0 right-0 pr-1.5 flex items-center pointer-events-none">
+          <span className="text-slate-400 text-[7px]">%Sc</span>
+        </div>
+        <input
+          type="number"
+          step="0.1"
+          value={scrap ?? 0}
+          onChange={(e) => onScrapChange(Number(e.target.value))}
+          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          placeholder="Scrap"
         />
       </div>
     </div>
