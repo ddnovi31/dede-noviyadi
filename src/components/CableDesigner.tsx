@@ -300,6 +300,7 @@ export default function CableDesigner() {
           newParams.insulationMaterial = 'PVC';
           newParams.armorType = 'Unarmored';
           if (newParams.standard.includes('(NYM)')) {
+            newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 5) newParams.cores = 5;
             if (newParams.size < 1.5) newParams.size = 1.5;
@@ -314,10 +315,12 @@ export default function CableDesigner() {
               newParams.conductorType = 'rm';
             }
           } else if (newParams.standard.includes('(NYAF)')) {
+            newParams.hasEarthing = false;
             newParams.cores = 1;
             newParams.conductorType = 'f';
             newParams.voltage = '450/750 V';
           } else if (newParams.standard.includes('(NYA)')) {
+            newParams.hasEarthing = false;
             newParams.cores = 1;
             if (newParams.size <= 10) {
               newParams.conductorType = 're';
@@ -326,6 +329,7 @@ export default function CableDesigner() {
             }
             newParams.voltage = '450/750 V';
           } else if (newParams.standard.includes('(NYMHY)')) {
+            newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 5) newParams.cores = 5;
             if (newParams.size > 2.5) newParams.size = 2.5;
@@ -1066,54 +1070,56 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Earthing Core Section */}
-                    <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          {params.standard.includes('NFA2X-T') ? '1.1 Messenger Core' : '1.1 Earthing Core'}
-                        </label>
-                        {!params.standard.includes('NFA2X-T') && (
-                          <button
-                            onClick={() => handleParamChange('hasEarthing', !params.hasEarthing)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${params.hasEarthing ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${params.hasEarthing ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
+                    {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            {params.standard.includes('NFA2X-T') ? '1.1 Messenger Core' : '1.1 Earthing Core'}
+                          </label>
+                          {!params.standard.includes('NFA2X-T') && (
+                            <button
+                              onClick={() => handleParamChange('hasEarthing', !params.hasEarthing)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${params.hasEarthing ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${params.hasEarthing ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                          )}
+                        </div>
+                        
+                        {params.hasEarthing && (
+                          <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
+                              <select
+                                value={params.earthingCores || 0}
+                                disabled={params.standard.includes('NFA2X-T')}
+                                onChange={(e) => handleParamChange('earthingCores', Number(e.target.value))}
+                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                              >
+                                <option value={0}>None</option>
+                                <option value={1}>1 Core</option>
+                                <option value={2}>2 Cores</option>
+                                <option value={3}>3 Cores</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
+                              <select
+                                value={params.earthingSize || 0}
+                                disabled={params.standard.includes('NFA2X-T')}
+                                onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
+                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                              >
+                                <option value={0}>None</option>
+                                {CABLE_SIZES.map((s) => (
+                                  <option key={s} value={s}>{s} mm²</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                         )}
                       </div>
-                      
-                      {params.hasEarthing && (
-                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
-                            <select
-                              value={params.earthingCores || 0}
-                              disabled={params.standard.includes('NFA2X-T')}
-                              onChange={(e) => handleParamChange('earthingCores', Number(e.target.value))}
-                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
-                            >
-                              <option value={0}>None</option>
-                              <option value={1}>1 Core</option>
-                              <option value={2}>2 Cores</option>
-                              <option value={3}>3 Cores</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
-                            <select
-                              value={params.earthingSize || 0}
-                              disabled={params.standard.includes('NFA2X-T')}
-                              onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
-                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
-                            >
-                              <option value={0}>None</option>
-                              {CABLE_SIZES.map((s) => (
-                                <option key={s} value={s}>{s} mm²</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Conductor Section */}
                     <div className="space-y-4 border-t border-slate-100 pt-4">
@@ -1157,6 +1163,7 @@ export default function CableDesigner() {
                               if (params.standard.includes('(NYA)')) isDisabled = isDisabled || (type !== 're' && type !== 'rm');
                             }
                             if (params.standard === 'IEC 60502-2') isDisabled = isDisabled || type !== 'cm';
+                            if (params.standard.includes('NFA2X')) isDisabled = isDisabled || !['cm', 'rm'].includes(type);
                             
                             return (
                               <button
@@ -1186,28 +1193,34 @@ export default function CableDesigner() {
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
                         <div className="grid grid-cols-2 gap-2">
-                          {(['XLPE', 'PVC'] as InsulationMaterial[]).map((mat) => {
-                            let isDisabled = false;
-                            if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
-                            if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                          {(() => {
+                            const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                            const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
+                            const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
                             
-                            return (
-                              <button
-                                key={mat}
-                                disabled={isDisabled}
-                                onClick={() => handleParamChange('insulationMaterial', mat)}
-                                className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                                  params.insulationMaterial === mat
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : isDisabled
-                                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {mat}
-                              </button>
-                            );
-                          })}
+                            return availableCompounds.map((mat) => {
+                              let isDisabled = false;
+                              if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
+                              if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                              
+                              return (
+                                <button
+                                  key={mat}
+                                  disabled={isDisabled}
+                                  onClick={() => handleParamChange('insulationMaterial', mat)}
+                                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
+                                    params.insulationMaterial === mat
+                                      ? 'bg-indigo-600 text-white shadow-md'
+                                      : isDisabled
+                                      ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  {mat}
+                                </button>
+                              );
+                            });
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1238,11 +1251,14 @@ export default function CableDesigner() {
                                 onChange={(e) => handleParamChange('innerSheathMaterial', e.target.value as SheathMaterial)}
                                 className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
                               >
-                                <option value="PVC">PVC</option>
-                                <option value="PE">PE</option>
-                                <option value="LSZH">LSZH</option>
-                                <option value="SHF1">SHF1</option>
-                                <option value="SHF2">SHF2</option>
+                                {(() => {
+                                  const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                  const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
+                                  const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                                  return availableCompounds.map(mat => (
+                                    <option key={mat} value={mat}>{mat}</option>
+                                  ));
+                                })()}
                               </select>
                             </div>
                           )}
@@ -1324,11 +1340,14 @@ export default function CableDesigner() {
                               onChange={(e) => handleParamChange('separatorMaterial', e.target.value as SheathMaterial)}
                               className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
                             >
-                              <option value="PVC">PVC</option>
-                              <option value="PE">PE</option>
-                              <option value="LSZH">LSZH</option>
-                              <option value="SHF1">SHF1</option>
-                              <option value="SHF2">SHF2</option>
+                              {(() => {
+                                const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
+                                const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                                return availableCompounds.map(mat => (
+                                  <option key={mat} value={mat}>{mat}</option>
+                                ));
+                              })()}
                             </select>
                           </div>
                         )}
@@ -1422,15 +1441,14 @@ export default function CableDesigner() {
                             onChange={(e) => handleParamChange('sheathMaterial', e.target.value as SheathMaterial)}
                             className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                           >
-                            <option value="PVC">PVC</option>
-                            <option value="PE">PE</option>
-                            <option value="LSZH">LSZH</option>
-                            <option value="SHF1">SHF1</option>
-                            <option value="SHF2">SHF2</option>
-                            <option value="PVC-FR">PVC-FR</option>
-                            <option value="PVC-FR Cat.A">PVC-FR Cat.A</option>
-                            <option value="PVC-FR Cat.B">PVC-FR Cat.B</option>
-                            <option value="PVC-FR Cat.C">PVC-FR Cat.C</option>
+                            {(() => {
+                              const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                              const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
+                              const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                              return availableCompounds.map(mat => (
+                                <option key={mat} value={mat}>{mat}</option>
+                              ));
+                            })()}
                           </select>
                         </div>
                       </div>
@@ -1702,27 +1720,42 @@ export default function CableDesigner() {
                         </button>
                       </div>
 
-                      <div className="space-y-3 pr-2">
-                        {Object.keys(materialPrices).sort().map((mat) => (
-                          <div key={mat} className="relative group">
-                            <MaterialSettingsInput 
-                              label={mat} 
-                              price={materialPrices[mat]} 
-                              density={materialDensities[mat]}
-                              scrap={materialScrap[mat]}
-                              onPriceChange={(v) => setMaterialPrices(p => ({...p, [mat]: v}))} 
-                              onDensityChange={(v) => setMaterialDensities(d => ({...d, [mat]: v}))}
-                              onScrapChange={(v) => setMaterialScrap(s => ({...s, [mat]: v}))}
-                            />
-                            <button 
-                              onClick={() => handleRemoveMaterial(mat)}
-                              className="absolute -right-1 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                              title="Remove Material"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
+                      <div className="space-y-6 pr-2">
+                        {[
+                          { title: 'Conductor', items: ['Cu', 'Al', 'TCu'] },
+                          { title: 'Compound', items: ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'] },
+                          { title: 'Armour', items: ['Steel', 'SteelWire', 'TCWB'] },
+                          { title: 'Screen', items: ['SemiCond', 'MGT'] },
+                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT'].includes(m)) }
+                        ].map(category => {
+                          const categoryMaterials = category.items.filter(mat => materialPrices[mat] !== undefined).sort();
+                          if (categoryMaterials.length === 0) return null;
+                          return (
+                            <div key={category.title} className="space-y-3">
+                              <h5 className="text-xs font-bold text-slate-500 border-b border-slate-100 pb-1">{category.title}</h5>
+                              {categoryMaterials.map((mat) => (
+                                <div key={mat} className="relative group">
+                                  <MaterialSettingsInput 
+                                    label={mat} 
+                                    price={materialPrices[mat]} 
+                                    density={materialDensities[mat]}
+                                    scrap={materialScrap[mat]}
+                                    onPriceChange={(v) => setMaterialPrices(p => ({...p, [mat]: v}))} 
+                                    onDensityChange={(v) => setMaterialDensities(d => ({...d, [mat]: v}))}
+                                    onScrapChange={(v) => setMaterialScrap(s => ({...s, [mat]: v}))}
+                                  />
+                                  <button 
+                                    onClick={() => handleRemoveMaterial(mat)}
+                                    className="absolute -right-1 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Remove Material"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

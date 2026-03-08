@@ -1,8 +1,8 @@
 export type ConductorMaterial = 'Cu' | 'Al' | 'TCu';
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
-export type InsulationMaterial = 'XLPE' | 'PVC' | 'EPR' | 'HEPR';
+export type InsulationMaterial = string;
 export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB';
-export type SheathMaterial = 'PVC' | 'PE' | 'LSZH' | 'PVC-FR' | 'PVC-FR Cat.A' | 'PVC-FR Cat.B' | 'PVC-FR Cat.C' | 'SHF1' | 'SHF2';
+export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
 export type ScreenType = 'None' | 'CTS' | 'CWS';
