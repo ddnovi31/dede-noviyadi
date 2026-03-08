@@ -1,4 +1,4 @@
-export type ConductorMaterial = 'Cu' | 'Al' | 'TCu';
+export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
 export type InsulationMaterial = string;
 export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB';

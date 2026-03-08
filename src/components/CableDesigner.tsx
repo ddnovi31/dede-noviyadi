@@ -53,6 +53,7 @@ export default function CableDesigner() {
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
   const [showReview, setShowReview] = useState(false);
   const [newMaterialName, setNewMaterialName] = useState('');
+  const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
 
   const [drumData, setDrumData] = useState<DrumData[]>(() => {
     const saved = localStorage.getItem('cable_drum_data');
@@ -146,10 +147,16 @@ export default function CableDesigner() {
     return scrap;
   });
 
+  const [materialCategories, setMaterialCategories] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('cable_material_categories');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const saveMaterialSettings = () => {
     localStorage.setItem('cable_material_prices', JSON.stringify(materialPrices));
     localStorage.setItem('cable_material_densities', JSON.stringify(materialDensities));
     localStorage.setItem('cable_material_scrap', JSON.stringify(materialScrap));
+    localStorage.setItem('cable_material_categories', JSON.stringify(materialCategories));
     
     // Simple feedback
     const btn = document.activeElement as HTMLButtonElement;
@@ -174,6 +181,7 @@ export default function CableDesigner() {
     setMaterialPrices(prev => ({ ...prev, [name]: 0 }));
     setMaterialDensities(prev => ({ ...prev, [name]: 1 }));
     setMaterialScrap(prev => ({ ...prev, [name]: 0 }));
+    setMaterialCategories(prev => ({ ...prev, [name]: newMaterialCategory }));
     setNewMaterialName('');
   };
 
@@ -182,9 +190,11 @@ export default function CableDesigner() {
       const { [name]: _, ...restPrices } = materialPrices;
       const { [name]: __, ...restDensities } = materialDensities;
       const { [name]: ___, ...restScrap } = materialScrap;
+      const { [name]: ____, ...restCategories } = materialCategories;
       setMaterialPrices(restPrices);
       setMaterialDensities(restDensities as MaterialDensities);
       setMaterialScrap(restScrap);
+      setMaterialCategories(restCategories);
     }
   };
 
@@ -198,6 +208,19 @@ export default function CableDesigner() {
   }, [params, materialDensities, materialScrap]);
 
   const handleParamChange = (key: keyof CableDesignParams, value: any) => {
+    if (value === 'ADD_NEW_COMPOUND') {
+      setActiveTab('prices');
+      setNewMaterialCategory('Compound Sheath');
+      setTimeout(() => document.getElementById('new-material-input')?.focus(), 100);
+      return;
+    }
+    if (value === 'ADD_NEW_COMPOUND_INSULATION') {
+      setActiveTab('prices');
+      setNewMaterialCategory('Compound Insulation');
+      setTimeout(() => document.getElementById('new-material-input')?.focus(), 100);
+      return;
+    }
+    
     setParams((prev) => {
       let processedValue = value;
       
@@ -1129,25 +1152,41 @@ export default function CableDesigner() {
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
                         <div className="grid grid-cols-3 gap-2">
-                          {(['Cu', 'Al', 'TCu'] as ConductorMaterial[]).map((mat) => {
-                            const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || (params.standard.includes('NFA2X') && mat !== 'Al');
-                            return (
-                              <button
-                                key={mat}
-                                disabled={isDisabled}
-                                onClick={() => handleParamChange('conductorMaterial', mat)}
-                                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-colors ${
-                                  params.conductorMaterial === mat
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : isDisabled
-                                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {mat === 'Cu' ? 'Cu' : mat === 'Al' ? 'Al' : 'TCu'}
-                              </button>
-                            );
-                          })}
+                          {(() => {
+                            const conductorMaterials = ['Cu', 'Al', 'TCu'];
+                            const customConductors = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Conductor');
+                            const availableConductors = Array.from(new Set([...conductorMaterials, ...customConductors])).filter(mat => materialPrices[mat] !== undefined);
+                            
+                            return availableConductors.map((mat) => {
+                              const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || (params.standard.includes('NFA2X') && mat !== 'Al');
+                              return (
+                                <button
+                                  key={mat}
+                                  disabled={isDisabled}
+                                  onClick={() => handleParamChange('conductorMaterial', mat as ConductorMaterial)}
+                                  className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-colors ${
+                                    params.conductorMaterial === mat
+                                      ? 'bg-indigo-600 text-white shadow-md'
+                                      : isDisabled
+                                      ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  {mat === 'Cu' ? 'Cu' : mat === 'Al' ? 'Al' : mat === 'TCu' ? 'TCu' : mat}
+                                </button>
+                              );
+                            });
+                          })()}
+                          <button
+                            onClick={() => {
+                              setActiveTab('prices');
+                              setNewMaterialCategory('Conductor');
+                              setTimeout(() => document.getElementById('new-material-input')?.focus(), 100);
+                            }}
+                            className="py-2 px-2 rounded-xl text-[11px] font-bold transition-colors bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 border-dashed"
+                          >
+                            + Add New
+                          </button>
                         </div>
                       </div>
 
@@ -1192,11 +1231,15 @@ export default function CableDesigner() {
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3. Insulation</label>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={params.insulationMaterial}
+                          onChange={(e) => handleParamChange('insulationMaterial', e.target.value)}
+                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                        >
                           {(() => {
                             const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                            const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
-                            const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                            const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation');
+                            const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                             
                             return availableCompounds.map((mat) => {
                               let isDisabled = false;
@@ -1204,24 +1247,14 @@ export default function CableDesigner() {
                               if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
                               
                               return (
-                                <button
-                                  key={mat}
-                                  disabled={isDisabled}
-                                  onClick={() => handleParamChange('insulationMaterial', mat)}
-                                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                                    params.insulationMaterial === mat
-                                      ? 'bg-indigo-600 text-white shadow-md'
-                                      : isDisabled
-                                      ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
+                                <option key={mat} value={mat} disabled={isDisabled}>
                                   {mat}
-                                </button>
+                                </option>
                               );
                             });
                           })()}
-                        </div>
+                          <option value="ADD_NEW_COMPOUND_INSULATION" className="text-indigo-600 font-bold">+ Add New Material...</option>
+                        </select>
                       </div>
                     </div>
 
@@ -1253,12 +1286,13 @@ export default function CableDesigner() {
                               >
                                 {(() => {
                                   const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                  const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
-                                  const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                                  const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                                  const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                                   return availableCompounds.map(mat => (
                                     <option key={mat} value={mat}>{mat}</option>
                                   ));
                                 })()}
+                                <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
                               </select>
                             </div>
                           )}
@@ -1342,12 +1376,13 @@ export default function CableDesigner() {
                             >
                               {(() => {
                                 const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
-                                const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                                const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                                const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                                 return availableCompounds.map(mat => (
                                   <option key={mat} value={mat}>{mat}</option>
                                 ));
                               })()}
+                              <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
                             </select>
                           </div>
                         )}
@@ -1443,8 +1478,8 @@ export default function CableDesigner() {
                           >
                             {(() => {
                               const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                              const otherMaterials = Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT', ...compoundMaterials].includes(m));
-                              const availableCompounds = [...compoundMaterials, ...otherMaterials].filter(mat => materialPrices[mat] !== undefined);
+                              const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                              const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                               return availableCompounds.map(mat => (
                                 <option key={mat} value={mat}>{mat}</option>
                               ));
@@ -1692,17 +1727,33 @@ export default function CableDesigner() {
                       <div className="flex items-end gap-2 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <div className="flex-1">
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Add New Material</label>
-                          <input 
-                            type="text"
-                            value={newMaterialName}
-                            onChange={(e) => setNewMaterialName(e.target.value)}
-                            placeholder="Material Name (e.g. Nylon)"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm"
-                          />
+                          <div className="flex flex-col gap-2">
+                            <input 
+                              id="new-material-input"
+                              type="text"
+                              value={newMaterialName}
+                              onChange={(e) => setNewMaterialName(e.target.value)}
+                              placeholder="Material Name (e.g. Nylon)"
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm"
+                            />
+                            <select
+                              value={newMaterialCategory}
+                              onChange={(e) => setNewMaterialCategory(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                            >
+                              <option value="Conductor">Conductor</option>
+                              <option value="Compound Insulation">Compound Insulation</option>
+                              <option value="Compound Filler">Compound Filler</option>
+                              <option value="Compound Sheath">Compound Sheath</option>
+                              <option value="Armour">Armour</option>
+                              <option value="Screen">Screen</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
                         </div>
                         <button 
                           onClick={handleAddMaterial}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 h-[38px]"
                         >
                           <Plus className="w-4 h-4" />
                           Add
@@ -1722,11 +1773,13 @@ export default function CableDesigner() {
 
                       <div className="space-y-6 pr-2">
                         {[
-                          { title: 'Conductor', items: ['Cu', 'Al', 'TCu'] },
-                          { title: 'Compound', items: ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'] },
-                          { title: 'Armour', items: ['Steel', 'SteelWire', 'TCWB'] },
-                          { title: 'Screen', items: ['SemiCond', 'MGT'] },
-                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT'].includes(m)) }
+                          { title: 'Conductor', items: Array.from(new Set(['Cu', 'Al', 'TCu', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Conductor')])) },
+                          { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
+                          { title: 'Compound Filler', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Filler')])) },
+                          { title: 'Compound Sheath', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath')])) },
+                          { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'TCWB', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
+                          { title: 'Screen', items: Array.from(new Set(['SemiCond', 'MGT', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
+                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
                         ].map(category => {
                           const categoryMaterials = category.items.filter(mat => materialPrices[mat] !== undefined).sort();
                           if (categoryMaterials.length === 0) return null;
@@ -1921,7 +1974,11 @@ export default function CableDesigner() {
                   </div>
                   <div className="flex justify-between items-center py-1 text-sm text-slate-600">
                     <span>Conductor</span>
-                    <span className="font-mono text-slate-900">{params.cores} x {params.size} mm² {params.conductorMaterial} ({params.conductorType})</span>
+                    <span className="font-mono text-slate-900">
+                      {params.cores} x {params.size} mm²
+                      {params.earthingCores > 0 && params.earthingSize > 0 && ` + ${params.earthingCores} x ${params.earthingSize} mm²`}
+                      {' '}{params.conductorMaterial} ({params.conductorType})
+                    </span>
                   </div>
                   <SpecRow label="Max Operating Temperature" value={result.general.maxOperatingTemp} unit="°C" precision={0} />
                   <SpecRow label="Max Short Circuit Temp" value={result.general.shortCircuitTemp} unit="°C" precision={0} />
