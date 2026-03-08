@@ -319,6 +319,36 @@ const RESISTANCE_CU: Record<number, number> = {
   400: 0.0470, 500: 0.0366, 630: 0.0283
 };
 
+const RESISTANCE_CU_CLASS5: Record<number, number> = {
+  0.75: 26.0, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.30, 10: 1.91, 16: 1.21, 
+  25: 0.780, 35: 0.554, 50: 0.386, 70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 
+  185: 0.106, 240: 0.0801, 300: 0.0641, 400: 0.0486, 500: 0.0384, 630: 0.0287
+};
+
+const CLASS5_CONSTRUCTION: Record<number, { wireCount: number, wireDiameter: number }> = {
+  0.75: { wireCount: 24, wireDiameter: 0.20 },
+  1: { wireCount: 32, wireDiameter: 0.20 },
+  1.5: { wireCount: 30, wireDiameter: 0.25 },
+  2.5: { wireCount: 50, wireDiameter: 0.25 },
+  4: { wireCount: 56, wireDiameter: 0.30 },
+  6: { wireCount: 84, wireDiameter: 0.30 },
+  10: { wireCount: 80, wireDiameter: 0.40 },
+  16: { wireCount: 126, wireDiameter: 0.40 },
+  25: { wireCount: 196, wireDiameter: 0.40 },
+  35: { wireCount: 276, wireDiameter: 0.40 },
+  50: { wireCount: 396, wireDiameter: 0.40 },
+  70: { wireCount: 360, wireDiameter: 0.50 },
+  95: { wireCount: 475, wireDiameter: 0.50 },
+  120: { wireCount: 608, wireDiameter: 0.50 },
+  150: { wireCount: 756, wireDiameter: 0.50 },
+  185: { wireCount: 925, wireDiameter: 0.50 },
+  240: { wireCount: 1221, wireDiameter: 0.50 },
+  300: { wireCount: 1525, wireDiameter: 0.50 },
+  400: { wireCount: 2035, wireDiameter: 0.50 },
+  500: { wireCount: 2540, wireDiameter: 0.50 },
+  630: { wireCount: 3200, wireDiameter: 0.50 },
+};
+
 const CURRENT_CAPACITY_AIR_CU: Record<number, number> = {
   1.5: 24, 2.5: 32, 4: 42, 6: 54, 10: 75, 16: 100, 25: 135, 35: 165, 50: 200, 
   70: 255, 95: 315, 120: 365, 150: 420, 185: 485, 240: 575, 300: 665, 
@@ -447,10 +477,29 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   // 1. Conductor
   let conductorDiameter = effectiveParams.manualConductorDiameter || data.diameter;
   let wireCount = (effectiveParams.conductorType === 're' ? 1 : 7);
-  if (effectiveParams.conductorType === 'f') wireCount = Math.ceil(effectiveParams.size / 0.2); // Approximation for flexible
   let wireDiameter = Math.sqrt((4 * effectiveParams.size) / (Math.PI * wireCount));
 
-  let maxDcResistance = effectiveParams.conductorMaterial === 'Cu' ? (RESISTANCE_CU[effectiveParams.size] || 0) : (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
+  if (effectiveParams.conductorType === 'f') {
+    const class5 = CLASS5_CONSTRUCTION[effectiveParams.size];
+    if (class5) {
+      wireCount = class5.wireCount;
+      wireDiameter = class5.wireDiameter;
+    } else {
+      wireCount = Math.ceil(effectiveParams.size / 0.2);
+      wireDiameter = Math.sqrt((4 * effectiveParams.size) / (Math.PI * wireCount));
+    }
+  }
+
+  let maxDcResistance = 0;
+  if (effectiveParams.conductorMaterial === 'Cu') {
+    if (effectiveParams.conductorType === 'f') {
+      maxDcResistance = RESISTANCE_CU_CLASS5[effectiveParams.size] || (RESISTANCE_CU[effectiveParams.size] || 0);
+    } else {
+      maxDcResistance = RESISTANCE_CU[effectiveParams.size] || 0;
+    }
+  } else {
+    maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
+  }
   let currentCapacityAir = effectiveParams.conductorMaterial === 'Cu' 
     ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_CU[effectiveParams.size]) || 0 
     : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_AL[effectiveParams.size]) || 0;
@@ -520,8 +569,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       earthingSteelWireDiameter = abcTData.messenger.steelWireDiameter;
     } else {
       earthingWireCount = (effectiveParams.conductorType === 're' ? 1 : 7);
-      if (effectiveParams.conductorType === 'f') earthingWireCount = Math.ceil(earthingSize / 0.2);
-      earthingWireDiameter = Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
+      if (effectiveParams.conductorType === 'f') {
+        const class5 = CLASS5_CONSTRUCTION[earthingSize];
+        if (class5) {
+          earthingWireCount = class5.wireCount;
+          earthingWireDiameter = class5.wireDiameter;
+        } else {
+          earthingWireCount = Math.ceil(earthingSize / 0.2);
+          earthingWireDiameter = Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
+        }
+      } else {
+        earthingWireDiameter = Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
+      }
 
       if (effectiveParams.conductorType === 're') {
         earthingConductorDiameter = Math.sqrt((4 * earthingSize) / Math.PI);

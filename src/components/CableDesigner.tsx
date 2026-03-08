@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw } from 'lucide-react';
 import {
   calculateCable,
   CableDesignParams,
@@ -17,6 +17,74 @@ import {
 } from '../utils/cableCalculations';
 import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
+
+const DEFAULT_MATERIAL_PRICES = {
+  Cu: 155000,
+  Al: 45000,
+  XLPE: 35000,
+  PVC: 25000,
+  PE: 30000,
+  LSZH: 45000,
+  Steel: 18000,
+  SteelWire: 50000,
+  SemiCond: 65000,
+  MGT: 120000,
+  TCu: 165000,
+  'PVC-FR Cat.A': 35000,
+  'PVC-FR Cat.B': 32000,
+  'PVC-FR Cat.C': 30000,
+  'PVC-FR': 28000,
+  SHF1: 45000,
+  SHF2: 48000,
+  EPR: 42000,
+  HEPR: 45000,
+  TCWB: 165000,
+};
+
+const DEFAULT_MATERIAL_DENSITIES = {
+  Cu: 8.89,
+  Al: 2.7,
+  XLPE: 0.92,
+  PVC: 1.45,
+  PE: 0.95,
+  LSZH: 1.5,
+  Steel: 7.85,
+  SteelWire: 7.85,
+  SemiCond: 1.15,
+  MGT: 2.2,
+  TCu: 8.89,
+  'PVC-FR Cat.A': 1.45,
+  'PVC-FR Cat.B': 1.45,
+  'PVC-FR Cat.C': 1.45,
+  'PVC-FR': 1.45,
+  SHF1: 1.5,
+  SHF2: 1.6,
+  EPR: 1.3,
+  HEPR: 1.3,
+  TCWB: 8.89,
+};
+
+const DEFAULT_MATERIAL_SCRAP = {
+  Cu: 2.5,
+  Al: 2.5,
+  XLPE: 5,
+  PVC: 5,
+  PE: 5,
+  LSZH: 5,
+  Steel: 2.5,
+  SteelWire: 2.5,
+  SemiCond: 5,
+  MGT: 5,
+  TCu: 2.5,
+  'PVC-FR Cat.A': 5,
+  'PVC-FR Cat.B': 5,
+  'PVC-FR Cat.C': 5,
+  SHF1: 5,
+  SHF2: 5,
+  EPR: 5,
+  HEPR: 5,
+  TCWB: 2.5,
+};
 
 export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>({
@@ -54,6 +122,19 @@ export default function CableDesigner() {
   const [showReview, setShowReview] = useState(false);
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
 
   const [drumData, setDrumData] = useState<DrumData[]>(() => {
     const saved = localStorage.getItem('cable_drum_data');
@@ -66,83 +147,21 @@ export default function CableDesigner() {
 
   const [materialPrices, setMaterialPrices] = useState(() => {
     const saved = localStorage.getItem('cable_material_prices');
-    const prices = saved ? JSON.parse(saved) : {
-      Cu: 155000,
-      Al: 45000,
-      XLPE: 35000,
-      PVC: 25000,
-      PE: 30000,
-      LSZH: 45000,
-      Steel: 18000,
-      SteelWire: 50000,
-      SemiCond: 65000,
-      MGT: 120000,
-      TCu: 165000,
-      'PVC-FR Cat.A': 35000,
-      'PVC-FR Cat.B': 32000,
-      'PVC-FR Cat.C': 30000,
-      'PVC-FR': 28000,
-      SHF1: 45000,
-      SHF2: 48000,
-      EPR: 42000,
-      HEPR: 45000,
-      TCWB: 165000,
-    };
+    const prices = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_PRICES;
     if (!prices.SteelWire) prices.SteelWire = 50000;
     return prices;
   });
 
   const [materialDensities, setMaterialDensities] = useState<MaterialDensities>(() => {
     const saved = localStorage.getItem('cable_material_densities');
-    const densities = saved ? JSON.parse(saved) : {
-      Cu: 8.89,
-      Al: 2.7,
-      XLPE: 0.92,
-      PVC: 1.45,
-      PE: 0.95,
-      LSZH: 1.5,
-      Steel: 7.85,
-      SteelWire: 7.85,
-      SemiCond: 1.15,
-      MGT: 2.2,
-      TCu: 8.89,
-      'PVC-FR Cat.A': 1.45,
-      'PVC-FR Cat.B': 1.45,
-      'PVC-FR Cat.C': 1.45,
-      'PVC-FR': 1.45,
-      SHF1: 1.5,
-      SHF2: 1.6,
-      EPR: 1.3,
-      HEPR: 1.3,
-      TCWB: 8.89,
-    };
+    const densities = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_DENSITIES;
     if (!densities.SteelWire) densities.SteelWire = 7.85;
     return densities;
   });
 
   const [materialScrap, setMaterialScrap] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('cable_material_scrap');
-    const scrap = saved ? JSON.parse(saved) : {
-      Cu: 2.5,
-      Al: 2.5,
-      XLPE: 5,
-      PVC: 5,
-      PE: 5,
-      LSZH: 5,
-      Steel: 2.5,
-      SteelWire: 2.5,
-      SemiCond: 5,
-      MGT: 5,
-      TCu: 2.5,
-      'PVC-FR Cat.A': 5,
-      'PVC-FR Cat.B': 5,
-      'PVC-FR Cat.C': 5,
-      SHF1: 5,
-      SHF2: 5,
-      EPR: 5,
-      HEPR: 5,
-      TCWB: 2.5,
-    };
+    const scrap = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_SCRAP;
     if (!scrap.SteelWire) scrap.SteelWire = 2.5;
     return scrap;
   });
@@ -175,7 +194,13 @@ export default function CableDesigner() {
     if (!newMaterialName.trim()) return;
     const name = newMaterialName.trim();
     if (materialPrices[name]) {
-      alert('Material already exists');
+      setConfirmModal({
+        show: true,
+        title: 'Material Exists',
+        message: `Material "${name}" already exists in the database.`,
+        onConfirm: () => setConfirmModal(prev => ({ ...prev, show: false })),
+        type: 'info'
+      });
       return;
     }
     setMaterialPrices(prev => ({ ...prev, [name]: 0 }));
@@ -186,16 +211,43 @@ export default function CableDesigner() {
   };
 
   const handleRemoveMaterial = (name: string) => {
-    if (confirm(`Are you sure you want to remove ${name}?`)) {
-      const { [name]: _, ...restPrices } = materialPrices;
-      const { [name]: __, ...restDensities } = materialDensities;
-      const { [name]: ___, ...restScrap } = materialScrap;
-      const { [name]: ____, ...restCategories } = materialCategories;
-      setMaterialPrices(restPrices);
-      setMaterialDensities(restDensities as MaterialDensities);
-      setMaterialScrap(restScrap);
-      setMaterialCategories(restCategories);
-    }
+    setConfirmModal({
+      show: true,
+      title: 'Remove Material',
+      message: `Are you sure you want to remove "${name}"? This action cannot be undone.`,
+      onConfirm: () => {
+        const { [name]: _, ...restPrices } = materialPrices;
+        const { [name]: __, ...restDensities } = materialDensities;
+        const { [name]: ___, ...restScrap } = materialScrap;
+        const { [name]: ____, ...restCategories } = materialCategories;
+        setMaterialPrices(restPrices);
+        setMaterialDensities(restDensities as MaterialDensities);
+        setMaterialScrap(restScrap);
+        setMaterialCategories(restCategories);
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      },
+      type: 'danger'
+    });
+  };
+
+  const handleResetToDefault = () => {
+    setConfirmModal({
+      show: true,
+      title: 'Reset to Defaults',
+      message: 'Are you sure you want to reset all material settings to factory defaults? All custom materials and prices will be lost.',
+      onConfirm: () => {
+        setMaterialPrices(DEFAULT_MATERIAL_PRICES);
+        setMaterialDensities(DEFAULT_MATERIAL_DENSITIES);
+        setMaterialScrap(DEFAULT_MATERIAL_SCRAP);
+        setMaterialCategories({});
+        localStorage.removeItem('cable_material_prices');
+        localStorage.removeItem('cable_material_densities');
+        localStorage.removeItem('cable_material_scrap');
+        localStorage.removeItem('cable_material_categories');
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      },
+      type: 'danger'
+    });
   };
 
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
@@ -845,6 +897,39 @@ export default function CableDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${confirmModal.type === 'danger' ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                  {confirmModal.type === 'danger' ? <Trash2 className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">{confirmModal.title}</h3>
+              </div>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                {confirmModal.message}
+              </p>
+            </div>
+            <div className="bg-slate-50 p-4 flex gap-3 justify-end">
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                className="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className={`px-6 py-2 rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${confirmModal.type === 'danger' ? 'bg-red-600 hover:bg-red-700 shadow-red-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
+              >
+                {confirmModal.type === 'danger' ? 'Confirm' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
@@ -1762,13 +1847,22 @@ export default function CableDesigner() {
 
                       <div className="flex items-center justify-between mb-2 px-1">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Material List</h4>
-                        <button 
-                          onClick={saveMaterialSettings}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 transition-all"
-                        >
-                          <Download className="w-3 h-3" />
-                          Save All Settings
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={handleResetToDefault}
+                            className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 transition-all"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Reset to Default
+                          </button>
+                          <button 
+                            onClick={saveMaterialSettings}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 transition-all"
+                          >
+                            <Download className="w-3 h-3" />
+                            Save All Settings
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-6 pr-2">
@@ -1799,7 +1893,7 @@ export default function CableDesigner() {
                                   />
                                   <button 
                                     onClick={() => handleRemoveMaterial(mat)}
-                                    className="absolute -right-1 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="absolute -right-1 top-0 p-1 text-slate-300 hover:text-red-500 transition-all"
                                     title="Remove Material"
                                   >
                                     <Trash2 className="w-3 h-3" />
@@ -1972,14 +2066,29 @@ export default function CableDesigner() {
                     <span>Voltage Rating</span>
                     <span className="font-mono text-slate-900">{params.voltage}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
-                    <span>Conductor</span>
-                    <span className="font-mono text-slate-900">
-                      {params.cores} x {params.size} mm²
-                      {params.earthingCores > 0 && params.earthingSize > 0 && ` + ${params.earthingCores} x ${params.earthingSize} mm²`}
-                      {' '}{params.conductorMaterial} ({params.conductorType})
-                    </span>
-                  </div>
+                  {params.earthingCores > 0 && params.earthingSize > 0 ? (
+                    <>
+                      <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                        <span>Phase Conductor</span>
+                        <span className="font-mono text-slate-900">
+                          {params.cores} x {params.size} mm² {params.conductorMaterial} ({params.conductorType})
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                        <span>Earthing Conductor</span>
+                        <span className="font-mono text-slate-900">
+                          {params.earthingCores} x {params.earthingSize} mm² {params.conductorMaterial} ({params.conductorType})
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                      <span>Conductor</span>
+                      <span className="font-mono text-slate-900">
+                        {params.cores} x {params.size} mm² {params.conductorMaterial} ({params.conductorType})
+                      </span>
+                    </div>
+                  )}
                   <SpecRow label="Max Operating Temperature" value={result.general.maxOperatingTemp} unit="°C" precision={0} />
                   <SpecRow label="Max Short Circuit Temp" value={result.general.shortCircuitTemp} unit="°C" precision={0} />
                   <div className="flex justify-between items-center py-1 text-sm text-slate-600">
