@@ -122,6 +122,13 @@ export default function CableDesigner() {
   const [showReview, setShowReview] = useState(false);
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
+  const [quickEdit, setQuickEdit] = useState<{
+    title: string;
+    value: number;
+    unit: string;
+    step: number;
+    onSave: (v: number) => void;
+  } | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     title: string;
@@ -897,6 +904,67 @@ export default function CableDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      {/* Quick Edit Modal */}
+      {quickEdit && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{quickEdit.title}</h3>
+                <button 
+                  onClick={() => setQuickEdit(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 rotate-45" />
+                </button>
+              </div>
+              <div className="relative">
+                <input 
+                  autoFocus
+                  type="number"
+                  step={quickEdit.step}
+                  defaultValue={quickEdit.value}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      quickEdit.onSave(Number((e.target as HTMLInputElement).value));
+                      setQuickEdit(null);
+                    }
+                    if (e.key === 'Escape') setQuickEdit(null);
+                  }}
+                  className="w-full px-4 py-4 text-2xl font-mono font-bold text-indigo-600 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-indigo-500 focus:ring-0 transition-all text-center"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <span className="text-slate-400 font-bold">{quickEdit.unit}</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-3 text-center uppercase tracking-widest font-bold">
+                Press Enter to Save • Esc to Cancel
+              </p>
+            </div>
+            <div className="bg-slate-50 p-4 flex gap-3">
+              <button 
+                onClick={() => setQuickEdit(null)}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  const input = document.querySelector('input[type="number"]') as HTMLInputElement;
+                  if (input) {
+                    quickEdit.onSave(Number(input.value));
+                    setQuickEdit(null);
+                  }
+                }}
+                className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-200 active:scale-95"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal */}
       {confirmModal.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1890,6 +1958,7 @@ export default function CableDesigner() {
                                     onPriceChange={(v) => setMaterialPrices(p => ({...p, [mat]: v}))} 
                                     onDensityChange={(v) => setMaterialDensities(d => ({...d, [mat]: v}))}
                                     onScrapChange={(v) => setMaterialScrap(s => ({...s, [mat]: v}))}
+                                    onQuickEdit={(title, value, unit, step, onSave) => setQuickEdit({ title, value, unit, step, onSave })}
                                   />
                                   <button 
                                     onClick={() => handleRemoveMaterial(mat)}
@@ -2571,7 +2640,8 @@ function MaterialSettingsInput({
   scrap,
   onPriceChange, 
   onDensityChange,
-  onScrapChange
+  onScrapChange,
+  onQuickEdit
 }: { 
   label: string; 
   price: number; 
@@ -2580,6 +2650,7 @@ function MaterialSettingsInput({
   onPriceChange: (v: number) => void; 
   onDensityChange: (v: number) => void; 
   onScrapChange: (v: number) => void;
+  onQuickEdit: (title: string, value: number, unit: string, step: number, onSave: (v: number) => void) => void;
 }) {
   return (
     <div className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg border border-slate-100 hover:border-slate-200 transition-all">
@@ -2593,9 +2664,14 @@ function MaterialSettingsInput({
         <input
           type="number"
           value={price ?? 0}
+          onFocus={(e) => {
+            e.target.blur();
+            onQuickEdit(`${label} Price`, price, 'Rp', 100, onPriceChange);
+          }}
           onChange={(e) => onPriceChange(Number(e.target.value))}
-          className="w-full pl-5 pr-1 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          className="w-full pl-5 pr-1 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono cursor-pointer hover:bg-slate-50"
           placeholder="Price"
+          readOnly
         />
       </div>
       <div className="col-span-3 relative">
@@ -2606,9 +2682,14 @@ function MaterialSettingsInput({
           type="number"
           step="0.01"
           value={density ?? 0}
+          onFocus={(e) => {
+            e.target.blur();
+            onQuickEdit(`${label} Density`, density, 'g/cm³', 0.01, onDensityChange);
+          }}
           onChange={(e) => onDensityChange(Number(e.target.value))}
-          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono cursor-pointer hover:bg-slate-50"
           placeholder="Density"
+          readOnly
         />
       </div>
       <div className="col-span-3 relative">
@@ -2619,9 +2700,14 @@ function MaterialSettingsInput({
           type="number"
           step="0.1"
           value={scrap ?? 0}
+          onFocus={(e) => {
+            e.target.blur();
+            onQuickEdit(`${label} Scrap`, scrap, '%', 0.1, onScrapChange);
+          }}
           onChange={(e) => onScrapChange(Number(e.target.value))}
-          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono"
+          className="w-full pl-1.5 pr-7 py-1 rounded-md border border-slate-200 focus:ring-1 focus:ring-indigo-500 text-[10px] font-mono cursor-pointer hover:bg-slate-50"
           placeholder="Scrap"
+          readOnly
         />
       </div>
     </div>
