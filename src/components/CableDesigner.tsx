@@ -175,15 +175,15 @@ export default function CableDesigner() {
     if (isABC) return 'Black';
     if (isMV) return 'Standard';
     
-    if (cores === 1) return 'BLACK';
-    if (cores === 2) return 'BLUE, BLACK';
-    if (cores === 3) return 'BROWN, BLACK, GREY';
-    if (cores === 4) return 'BLUE, BROWN, BLACK, GREY';
+    if (cores === 1) return 'Black';
+    if (cores === 2) return 'Blue, Black';
+    if (cores === 3) return 'Brown, Black, Grey';
+    if (cores === 4) return 'Blue, Brown, Black, Grey';
     if (cores === 5) {
-      if (hasEarthing) return 'BLACK WITH NUMBERING';
-      return 'BLUE, BROWN, BLACK, GREY, Y/G';
+      if (hasEarthing) return 'Black with Numbering';
+      return 'Blue, Brown, Black, Grey, Y/G';
     }
-    if (cores > 5) return 'BLACK WITH NUMBERING';
+    if (cores > 5) return 'Black with Numbering';
     return 'Standard (IEC)';
   };
 
@@ -1054,7 +1054,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 break-after-page">
+              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 print:break-after-page print-scale">
                 <div className="text-center mb-6 space-y-1">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Technical Specifications</h2>
                   <p className="text-xs text-slate-600 font-medium">
@@ -1133,7 +1133,7 @@ export default function CableDesigner() {
                     {/* Conductor (Phase) */}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? 4 : 3}></td>
-                      <td className="border border-slate-400 p-2 font-bold">• Conductor (Phase)</td>
+                      <td className="border border-slate-400 p-2 font-bold">• Conductor{p.hasEarthing ? ' (Phase)' : ''}</td>
                       <td className="border border-slate-400 p-2 text-center"></td>
                       {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                     </tr>
@@ -1187,7 +1187,7 @@ export default function CableDesigner() {
                     {/* Insulation (Phase) */}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
-                      <td className="border border-slate-400 p-2 font-bold">• Insulation (Phase)</td>
+                      <td className="border border-slate-400 p-2 font-bold">• Insulation{p.hasEarthing ? ' (Phase)' : ''}</td>
                       <td className="border border-slate-400 p-2 text-center"></td>
                       {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                     </tr>
@@ -1239,16 +1239,27 @@ export default function CableDesigner() {
                     {p.hasEarthing && (
                       <>
                         <tr>
-                          <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
                           <td className="border border-slate-400 p-2 font-bold">• Conductor (Earth)</td>
                           <td className="border border-slate-400 p-2 text-center"></td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Material / Shape of Conductor</td>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Conductor</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.conductorMaterial} ({p.conductorType})</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.conductorMaterial} ({p.conductorMaterial === 'Cu' ? 'Copper' : 'Aluminium'})</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Shape of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              {p.conductorType === 're' ? 'Round Solid' : 
+                               p.conductorType === 'rm' ? 'Round Stranded' : 
+                               p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} ({p.conductorType})
+                            </td>
                           ))}
                         </tr>
                         <tr>
@@ -1371,7 +1382,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Separator Sheath */}
-                    {(p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored') || p.cores > 1) && (
+                    {(p.standard === 'IEC 60502-1' && (p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored'))) && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
@@ -1642,6 +1653,8 @@ export default function CableDesigner() {
   }
 
   if (!result) return null;
+
+  const isIEC60502_1 = params.standard === 'IEC 60502-1';
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
@@ -2205,23 +2218,24 @@ export default function CableDesigner() {
                       </div>
 
                     {/* Screen Section */}
-                    <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen</label>
+                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isIEC60502_1 ? 'opacity-50' : ''}`}>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen {!isIEC60502_1 && '(IEC 60502-1 Only)'}</label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                        <label className="flex items-center justify-between cursor-pointer group">
+                        <label className={`flex items-center justify-between ${!isIEC60502_1 ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                           <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Screen</span>
                           <div className="relative">
                             <input
                               type="checkbox"
                               className="sr-only"
-                              checked={params.hasScreen || false}
+                              disabled={!isIEC60502_1}
+                              checked={isIEC60502_1 && (params.hasScreen || false)}
                               onChange={(e) => handleParamChange('hasScreen', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.hasScreen ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${isIEC60502_1 && params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isIEC60502_1 && params.hasScreen ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {params.hasScreen && (
+                        {isIEC60502_1 && params.hasScreen && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-3">
                             <div>
                               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
@@ -2254,24 +2268,24 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Separator Section */}
-                    <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.2 Separator Sheath</label>
+                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isIEC60502_1 ? 'opacity-50' : ''}`}>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.2 Separator Sheath {!isIEC60502_1 && '(IEC 60502-1 Only)'}</label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                        <label className={`flex items-center justify-between cursor-pointer group ${(params.hasScreen && params.armorType !== 'Unarmored') ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <label className={`flex items-center justify-between ${(!isIEC60502_1 || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                           <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Separator</span>
                           <div className="relative">
                             <input
                               type="checkbox"
                               className="sr-only"
-                              disabled={params.hasScreen && params.armorType !== 'Unarmored'}
-                              checked={params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')}
+                              disabled={!isIEC60502_1 || (params.hasScreen && params.armorType !== 'Unarmored')}
+                              checked={isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))}
                               onChange={(e) => handleParamChange('hasSeparator', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {(params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) && (
+                        {isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
                             <select

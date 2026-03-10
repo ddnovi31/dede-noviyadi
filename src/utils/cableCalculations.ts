@@ -940,7 +940,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let screenThickness = effectiveParams.manualScreenThickness || 0;
   let diameterOverOverallScreen = diameterUnderArmor;
 
-  if (effectiveParams.hasScreen && effectiveParams.screenType && effectiveParams.screenType !== 'None') {
+  const isIEC60502_1 = effectiveParams.standard === 'IEC 60502-1';
+
+  if (isIEC60502_1 && effectiveParams.hasScreen && effectiveParams.screenType && effectiveParams.screenType !== 'None') {
     if (effectiveParams.screenType === 'CTS') {
       screenThickness = 0.2; // Effective thickness with overlap
       diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
@@ -966,8 +968,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let diameterOverSeparator = diameterOverOverallScreen;
 
   // Auto-separator logic: if cable has screen and armor
-  const autoSeparator = effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
-  const needsSeparator = effectiveParams.hasSeparator || autoSeparator;
+  const autoSeparator = isIEC60502_1 && effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
+  const needsSeparator = isIEC60502_1 && (effectiveParams.hasSeparator || autoSeparator);
 
   if (needsSeparator) {
     if (!effectiveParams.manualSeparatorThickness) {

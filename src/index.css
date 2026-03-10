@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-scale {
+    /* Scale down slightly to ensure it fits on one page */
+    transform: scale(0.95);
+    transform-origin: top center;
+    width: 105%; /* Compensate for scale to fill width */
+  }
+  .break-after-page {
+    page-break-after: always;
+  }
+}
