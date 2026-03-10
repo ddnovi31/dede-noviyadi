@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2 } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2 } from 'lucide-react';
 import {
   calculateCable,
   CableDesignParams,
@@ -110,37 +110,39 @@ const DEFAULT_MATERIAL_SCRAP = {
   RGB: 2.5,
 };
 
+const DEFAULT_PARAMS: CableDesignParams = {
+  projectName: 'New Project',
+  cores: 3,
+  size: 50,
+  conductorMaterial: 'Cu',
+  conductorType: 'rm',
+  insulationMaterial: 'XLPE',
+  armorType: 'SWA',
+  sheathMaterial: 'PVC',
+  voltage: '0.6/1 kV',
+  standard: 'IEC 60502-1',
+  braidCoverage: 90,
+  mvScreenType: 'None',
+  mvScreenSize: 16,
+  hasMgt: false,
+  fireguard: false,
+  stopfire: false,
+  hasInnerSheath: true,
+  innerSheathMaterial: 'PVC',
+  flameRetardantCategory: 'None',
+  overhead: 10,
+  margin: 15,
+  hasScreen: false,
+  screenType: 'CTS',
+  screenSize: 16,
+  hasSeparator: false,
+  separatorMaterial: 'PVC',
+  earthingCores: 0,
+  earthingSize: 0,
+};
+
 export default function CableDesigner() {
-  const [params, setParams] = useState<CableDesignParams>({
-    projectName: 'New Project',
-    cores: 3,
-    size: 50,
-    conductorMaterial: 'Cu',
-    conductorType: 'rm',
-    insulationMaterial: 'XLPE',
-    armorType: 'SWA',
-    sheathMaterial: 'PVC',
-    voltage: '0.6/1 kV',
-    standard: 'IEC 60502-1',
-    braidCoverage: 90,
-    mvScreenType: 'None',
-    mvScreenSize: 16,
-    hasMgt: false,
-    fireguard: false,
-    stopfire: false,
-    hasInnerSheath: true,
-    innerSheathMaterial: 'PVC',
-    flameRetardantCategory: 'None',
-    overhead: 10,
-    margin: 15,
-    hasScreen: false,
-    screenType: 'CTS',
-    screenSize: 16,
-    hasSeparator: false,
-    separatorMaterial: 'PVC',
-    earthingCores: 0,
-    earthingSize: 0,
-  });
+  const [params, setParams] = useState<CableDesignParams>(DEFAULT_PARAMS);
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(false);
@@ -148,6 +150,17 @@ export default function CableDesigner() {
   const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
+  const [printedSheets, setPrintedSheets] = useState<Set<number>>(new Set());
+  const [printingGroupId, setPrintingGroupId] = useState<number | null>(null);
+
+  const handlePrintSheet = (groupIdx: number) => {
+    setPrintingGroupId(groupIdx);
+    setPrintedSheets(prev => new Set(prev).add(groupIdx));
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintingGroupId(null), 100);
+    }, 100);
+  };
   const [quickEdit, setQuickEdit] = useState<{
     title: string;
     value: number;
@@ -621,6 +634,7 @@ export default function CableDesigner() {
   const addToProject = () => {
     if (!result) return;
     setProjectItems(prev => [...prev, { params: { ...params, id: crypto.randomUUID() }, result }]);
+    setParams(prev => ({ ...DEFAULT_PARAMS, projectName: prev.projectName }));
   };
 
   const removeFromProject = (id: string) => {
@@ -777,7 +791,10 @@ export default function CableDesigner() {
             </div>
             <div className="flex items-center gap-3">
               <button 
-                onClick={() => window.print()}
+                onClick={() => {
+                  setPrintingGroupId(null);
+                  setTimeout(() => window.print(), 100);
+                }}
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all uppercase tracking-wider"
               >
                 <Printer className="w-4 h-4" />
@@ -1054,7 +1071,22 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 print:break-after-page print-scale">
+              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 print:break-after-page print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+                <div className="flex justify-between items-center mb-6 print:hidden">
+                  <div>
+                    {printedSheets.has(groupIdx) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-md uppercase tracking-wider">
+                        <CheckCircle2 className="w-3 h-3" /> Printed
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handlePrintSheet(groupIdx)}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
+                  >
+                    <Printer className="w-3 h-3" /> Print This Sheet
+                  </button>
+                </div>
                 <div className="text-center mb-6 space-y-1">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Technical Specifications</h2>
                   <p className="text-xs text-slate-600 font-medium">
@@ -1098,9 +1130,15 @@ export default function CableDesigner() {
                           else if (p.sheathMaterial.includes('CAT.C')) std += ', IEC 60332-3-24';
                           else std += ', IEC 60332-1';
                         }
+                        const editKey = `${key}-standard-${idx}`;
                         return (
                           <td key={idx} className="border border-slate-400 p-2 text-center">
-                            {std}
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? std}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
                           </td>
                         );
                       })}
@@ -1109,11 +1147,21 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">3</td>
                       <td className="border border-slate-400 p-2 font-medium">Type & Size of Cable</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
-                          {constructionName} {sizeDesignation} mm² ({p.conductorType})
-                        </td>
-                      ))}
+                      {items.map((item, idx) => {
+                        let itemSizeDesignation = `${item.params.cores} x ${item.params.size}`;
+                        if (item.params.hasEarthing && item.params.earthingCores && item.params.earthingCores > 0 && item.params.earthingSize && item.params.earthingSize > 0) {
+                          if (item.params.earthingCores === 1) {
+                            itemSizeDesignation += ` + ${item.params.earthingSize}`;
+                          } else {
+                            itemSizeDesignation += ` + ${item.params.earthingCores} x ${item.params.earthingSize}`;
+                          }
+                        }
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+                            {constructionName} {itemSizeDesignation} mm²
+                          </td>
+                        );
+                      })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center">4</td>
@@ -1491,7 +1539,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center"></td>
                       <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-[8px]">
+                      <td colSpan={items.length} className="border border-slate-400 p-1 text-center font-bold text-[10px]">
                         {(() => {
                           const editKey = `${key}-marking`;
                           let stds = p.standard;
@@ -1503,7 +1551,7 @@ export default function CableDesigner() {
                             else stds += ' IEC 60332-1';
                           }
                           const construction = constructionName;
-                          const sizeStr = `${sizeDesignation} mm² (${p.conductorType})`;
+                          const sizeStr = `${sizeDesignation} mm²`;
                           const defaultMarking = `${stds} MULTI KABEL ${construction} ${sizeStr} ${p.voltage} MADE IN INDONESIA`;
                           
                           return (
@@ -1563,8 +1611,17 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 pl-4">- Drum Type</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       {items.map((item, idx) => {
-                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.type}</td>;
+                        const editKey = `${key}-drum-type-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? 'Wooden Drum'}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
                       })}
                     </tr>
                     <tr>
