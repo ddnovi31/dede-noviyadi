@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2 } from 'lucide-react';
 import {
   calculateCable,
   CableDesignParams,
@@ -143,6 +143,7 @@ export default function CableDesigner() {
   });
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
+  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
@@ -158,7 +159,7 @@ export default function CableDesigner() {
     title: string;
     message: string;
     onConfirm: () => void;
-    type: 'danger' | 'info';
+    type: 'danger' | 'info' | 'warning';
   }>({
     show: false,
     title: '',
@@ -322,9 +323,9 @@ export default function CableDesigner() {
   }, [params, materialDensities, materialScrap]);
 
   const handleParamChange = (key: keyof CableDesignParams, value: any) => {
-    if (value === 'ADD_NEW_COMPOUND') {
+    if (value === 'ADD_NEW_COMPOUND' || value === 'ADD_NEW_OUTER_SHEATH') {
       setActiveTab('prices');
-      setNewMaterialCategory('Compound Sheath');
+      setNewMaterialCategory('Compound (Filler/Sheath)');
       setTimeout(() => document.getElementById('new-material-input')?.focus(), 100);
       return;
     }
@@ -1102,9 +1103,9 @@ export default function CableDesigner() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Configuration & Prices Panel */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-3'} space-y-6 transition-all duration-300`}>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="flex border-b border-slate-100">
+              <div className="flex border-b border-slate-100 items-center pr-2">
                 <button
                   onClick={() => setActiveTab('config')}
                   className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
@@ -1131,6 +1132,13 @@ export default function CableDesigner() {
                 >
                   <Package className="w-4 h-4" />
                   Drums
+                </button>
+                <button
+                  onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                  className="p-2 ml-1 hover:bg-indigo-50 rounded-lg transition-all text-slate-400 hover:text-indigo-600 hidden lg:flex items-center justify-center border border-transparent hover:border-indigo-100"
+                  title={isConfigExpanded ? "Collapse View" : "Expand View"}
+                >
+                  {isConfigExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
               </div>
 
@@ -1708,9 +1716,14 @@ export default function CableDesigner() {
                                 materialCategories[m] === 'Compound (Filler/Sheath)'
                               );
                               const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
-                              return availableCompounds.map(mat => (
-                                <option key={mat} value={mat}>{mat}</option>
-                              ));
+                              return (
+                                <>
+                                  {availableCompounds.map(mat => (
+                                    <option key={mat} value={mat}>{mat}</option>
+                                  ))}
+                                  <option value="ADD_NEW_OUTER_SHEATH" className="text-indigo-600 font-bold">+ Add New Material</option>
+                                </>
+                              );
                             })()}
                           </select>
                         </div>
@@ -2159,7 +2172,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Results Panel */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
             
             {/* Cable Designation */}
             <div className="bg-indigo-600 rounded-2xl p-6 shadow-md text-white flex flex-col md:flex-row justify-between items-center relative overflow-hidden gap-6">
@@ -2590,7 +2603,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Project List Section (Right Side) */}
-          <div className="lg:col-span-4">
+          <div className={`${isConfigExpanded ? 'hidden' : 'lg:col-span-4'} transition-all duration-300`}>
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 h-full">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold flex items-center gap-2">
