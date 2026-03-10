@@ -29,6 +29,7 @@ export default function CableCrossSection({
   
   const isMV = standard === 'IEC 60502-2';
   const isABC = standard.includes('NFA2X');
+  const isNYAF = standard.includes('(NYAF)');
   const conductorColor = conductorMaterial === 'Cu' ? '#b45309' : '#e2e8f0';
   const screenColor = '#d97706'; // Copper color for screen
   const mgtColor = '#fbbf24'; // Gold/Amber for Mica
@@ -40,39 +41,55 @@ export default function CableCrossSection({
     const positions: { x: number, y: number, r: number, angle: number, isEarth?: boolean }[] = [];
     
     const totalCores = cores + earthingCores;
+    const displayCores = totalCores > 7 ? 7 : totalCores;
 
     if (isABC) {
       coreRadius = innerRadius * 0.45;
       distance = innerRadius - coreRadius;
-    } else if (totalCores === 1) {
+    } else if (displayCores === 1) {
       coreRadius = innerRadius - 5;
       distance = 0;
-    } else if (totalCores === 2) {
+    } else if (displayCores === 2) {
       coreRadius = innerRadius / 2 - 2;
       distance = coreRadius + 1;
-    } else if (totalCores === 3) {
+    } else if (displayCores === 3) {
       coreRadius = innerRadius * 0.46;
       distance = innerRadius - coreRadius - 2;
-    } else if (totalCores === 4) {
+    } else if (displayCores === 4) {
       coreRadius = innerRadius * 0.41;
       distance = innerRadius - coreRadius - 2;
-    } else if (totalCores === 5) {
+    } else if (displayCores === 5) {
       coreRadius = innerRadius * 0.35;
       distance = innerRadius - coreRadius - 2;
     } else {
+      // For 7 cores (1 center + 6 outer)
       coreRadius = innerRadius * 0.3;
-      distance = innerRadius - coreRadius - 2;
+      distance = coreRadius * 2.1;
     }
 
-    for (let i = 0; i < totalCores; i++) {
-      const angle = (i * 360) / totalCores - 90;
-      const rad = (angle * Math.PI) / 180;
-      const isEarth = i >= cores;
+    for (let i = 0; i < displayCores; i++) {
+      let angle = (i * 360) / displayCores - 90;
+      let rad = (angle * Math.PI) / 180;
+      let currentDistance = distance;
+      let currentRadius = coreRadius;
+
+      // For 7 cores, arrange as 1 center + 6 outer
+      if (displayCores === 7) {
+        if (i === 0) {
+          currentDistance = 0;
+        } else {
+          angle = ((i - 1) * 360) / 6 - 90;
+          rad = (angle * Math.PI) / 180;
+          currentDistance = distance;
+        }
+      }
+
+      const isEarth = i >= cores && i < displayCores;
       
       positions.push({
-        x: center + distance * Math.cos(rad),
-        y: center + distance * Math.sin(rad),
-        r: isEarth && isABC ? coreRadius * 1.1 : (isEarth ? coreRadius * 0.8 : coreRadius), // Messenger is often larger
+        x: center + currentDistance * Math.cos(rad),
+        y: center + currentDistance * Math.sin(rad),
+        r: isEarth && isABC ? currentRadius * 1.1 : (isEarth ? currentRadius * 0.8 : currentRadius),
         angle: angle,
         isEarth
       });
@@ -81,14 +98,20 @@ export default function CableCrossSection({
   };
 
   const { positions: corePositions, coreRadius } = getCoreLayout();
-  const outerSheathColor = isMV ? '#ef4444' : '#1e293b'; // Red for MV, Dark for others
+  
+  // Outer sheath color logic
+  let outerSheathColor = '#1e293b'; // Default dark
+  if (isMV) outerSheathColor = '#ef4444'; // Red for MV
+  if (hasMgt) outerSheathColor = '#f97316'; // Orange for Fireguard
+  
+  const sheathGradientStart = isMV ? '#ff6b6b' : (hasMgt ? '#fb923c' : '#334155');
 
   return (
     <div className="flex justify-center items-center">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl">
         <defs>
           <radialGradient id="sheathGradient" cx="40%" cy="40%" r="60%">
-            <stop offset="0%" stopColor={isMV ? '#ff6b6b' : '#334155'} />
+            <stop offset="0%" stopColor={sheathGradientStart} />
             <stop offset="100%" stopColor={outerSheathColor} />
           </radialGradient>
         </defs>
@@ -158,8 +181,13 @@ export default function CableCrossSection({
         
         {/* Cores */}
         {corePositions.map((pos, i) => {
-          const insulationColor = pos.isEarth ? (isABC ? '#000000' : '#fbbf24') : getInsulationColor(i, cores, standard);
+          let insulationColor = pos.isEarth ? (isABC ? '#000000' : '#fbbf24') : getInsulationColor(i, cores, standard);
           
+          // NYAF special color: Yellow
+          if (isNYAF) {
+            insulationColor = '#fbbf24';
+          }
+
           if (conductorType === 'sm' && cores >= 3) {
             // Sector shape logic
             const startAngle = pos.angle - (180 / cores) + 8;
@@ -200,8 +228,8 @@ export default function CableCrossSection({
               {/* Core Insulation */}
               <circle cx={pos.x} cy={pos.y} r={pos.r} fill={insulationColor} stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
               
-              {/* Green Stripe for Earth Core */}
-              {pos.isEarth && (
+              {/* Green Stripe for Earth Core or NYAF */}
+              {(pos.isEarth || isNYAF) && (
                 <g transform={`rotate(${pos.angle + 45}, ${pos.x}, ${pos.y})`}>
                   <rect x={pos.x - pos.r} y={pos.y - pos.r * 0.2} width={pos.r * 2} height={pos.r * 0.4} fill="#22c55e" />
                 </g>

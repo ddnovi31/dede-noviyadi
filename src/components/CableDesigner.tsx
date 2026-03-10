@@ -145,6 +145,7 @@ export default function CableDesigner() {
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
   const [quickEdit, setQuickEdit] = useState<{
@@ -550,6 +551,27 @@ export default function CableDesigner() {
     return `${p.conductorMaterial}${fg}/${p.insulationMaterial}${mvScreen}${overallScreen}${separator}${armor}/${p.sheathMaterial} ${sizeDesignation} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
   };
 
+  const getConstructionKey = (p: CableDesignParams) => {
+    return [
+      p.standard,
+      p.voltage,
+      p.conductorMaterial,
+      p.conductorType,
+      p.insulationMaterial,
+      p.hasInnerSheath,
+      p.innerSheathMaterial,
+      p.armorType,
+      p.sheathMaterial,
+      p.hasMgt,
+      p.hasScreen,
+      p.screenType,
+      p.mvScreenType,
+      p.fireguard,
+      p.stopfire,
+      p.flameRetardantCategory
+    ].join('|');
+  };
+
   const handleDownloadReport = () => {
     if (!result) return;
     
@@ -711,9 +733,16 @@ export default function CableDesigner() {
       return acc + calculateSellingPrice(hpp, item.params.margin);
     }, 0);
 
+    const groupedItems = projectItems.reduce((acc, item) => {
+      const key = getConstructionKey(item.params);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {} as Record<string, {params: CableDesignParams, result: CalculationResult}[]>);
+
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-8">
           {/* Review Header */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-4">
@@ -745,19 +774,47 @@ export default function CableDesigner() {
             </div>
           </div>
 
-          {/* Project Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
-              <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
-            </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Estimated Project HPP (per meter sum)</div>
-              <div className="text-3xl font-bold text-indigo-600 font-mono">
-                Rp {totalProjectPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </div>
-            </div>
+          {/* Review Tabs */}
+          <div className="flex gap-1 bg-slate-200/50 p-1 rounded-2xl w-fit">
+            <button
+              onClick={() => setReviewTab('summary')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                reviewTab === 'summary' 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Project Summary
+            </button>
+            <button
+              onClick={() => setReviewTab('specifications')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                reviewTab === 'specifications' 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Technical Specifications
+            </button>
           </div>
+
+          {reviewTab === 'summary' ? (
+            <>
+              {/* Project Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
+                  <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Estimated Project HPP (per meter sum)</div>
+                  <div className="text-3xl font-bold text-indigo-600 font-mono">
+                    Rp {totalProjectPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+              </div>
 
           {/* Detailed Items Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -953,6 +1010,513 @@ export default function CableDesigner() {
               })()}
             </div>
           </div>
+        </>
+      ) : (
+        <div className="space-y-12">
+          {Object.keys(groupedItems).map((key, groupIdx) => {
+            const items = groupedItems[key];
+            const firstItem = items[0];
+            const p = firstItem.params;
+            
+            const isMV = p.standard === 'IEC 60502-2';
+            const isABC = p.standard.includes('NFA2X');
+            const hasOuterSheath = !p.standard.includes('NYAF') && !isABC;
+
+            // Get construction name (material part of designation)
+            const designation = getCableDesignation(p, firstItem.result);
+            const constructionName = designation.split(' ')[0];
+
+            return (
+              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto">
+                <div className="text-center mb-6 space-y-1">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Technical Specifications</h2>
+                  <p className="text-xs text-slate-600 font-medium">
+                    {isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'} ({p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)
+                  </p>
+                </div>
+
+                <table className="w-full border-collapse border border-slate-400 text-[10px]">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="border border-slate-400 p-2 w-10 text-center">No</th>
+                      <th className="border border-slate-400 p-2 text-left w-48">Description</th>
+                      <th className="border border-slate-400 p-2 w-16 text-center">Unit</th>
+                      {items.map((item, idx) => (
+                        <th key={idx} className="border border-slate-400 p-2 text-center min-w-[120px]">
+                          Specification
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* 1. General Info */}
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center">1</td>
+                      <td className="border border-slate-400 p-2 font-medium">Product Brand</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((_, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">MULTI KABEL</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center">2</td>
+                      <td className="border border-slate-400 p-2 font-medium">Standard Reference</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((item, idx) => {
+                        let std = item.result.general.standardReference;
+                        if (p.sheathMaterial.includes('PVC-FR')) {
+                          if (p.sheathMaterial.includes('CAT.A')) std += ', IEC 60332-3-22';
+                          else if (p.sheathMaterial.includes('CAT.B')) std += ', IEC 60332-3-23';
+                          else if (p.sheathMaterial.includes('CAT.C')) std += ', IEC 60332-3-24';
+                          else std += ', IEC 60332-1';
+                        }
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            {std}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center">3</td>
+                      <td className="border border-slate-400 p-2 font-medium">Type & Size of Cable</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+                          {getCableDesignation(p, item.result)}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center">4</td>
+                      <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
+                      <td className="border border-slate-400 p-2 text-center">kV</td>
+                      {items.map((_, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.voltage}</td>
+                      ))}
+                    </tr>
+
+                    {/* 5. Constructional Data */}
+                    <tr className="bg-slate-50">
+                      <td className="border border-slate-400 p-2 text-center font-bold">5</td>
+                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Constructional Data :</td>
+                    </tr>
+                    
+                    {/* Conductor (Phase) */}
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? 4 : 3}></td>
+                      <td className="border border-slate-400 p-2 font-bold">• Conductor (Phase)</td>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-4">- Material of Conductor</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((_, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.conductorMaterial} ({p.conductorMaterial === 'Cu' ? 'Copper' : 'Aluminium'})</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-4">- Shape of Conductor</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((_, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">
+                          {p.conductorType === 're' ? 'Round Solid' : 
+                           p.conductorType === 'rm' ? 'Round Stranded' : 
+                           p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} ({p.conductorType})
+                        </td>
+                      ))}
+                    </tr>
+                    {isMV && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 pl-4">- Conductor Screen</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">Semi-conductive</td>
+                        ))}
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Diameter of Conductor (Approx.)</td>
+                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.conductorDiameter.toFixed(2)}</td>
+                      ))}
+                    </tr>
+
+                    {p.fireguard && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 font-bold">• Fire Barrier</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">MGT (Mica Glass Tape)</td>
+                        ))}
+                      </tr>
+                    )}
+
+                    {/* Insulation (Phase) */}
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
+                      <td className="border border-slate-400 p-2 font-bold">• Insulation (Phase)</td>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-4">- Material of Insulation</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((_, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.insulationMaterial}</td>
+                      ))}
+                    </tr>
+                    {isMV && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 pl-4">- Insulation Screen</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">Semi-conductive</td>
+                        ))}
+                      </tr>
+                    )}
+                    {!isMV && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 pl-4">- Colour of Insulation</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            {isABC ? 'Black' : p.hasEarthing ? 'Standard + Y/G' : 'Standard (IEC)'}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-4">- Thickness of Insulation (Nom.)</td>
+                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.insulationThickness.toFixed(1)}</td>
+                      ))}
+                    </tr>
+
+                    {/* Conductor & Insulation (Earth) */}
+                    {p.hasEarthing && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Conductor (Earth)</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material / Shape of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.conductorMaterial} ({p.conductorType})</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Diameter of Conductor (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.conductorDiameter.toFixed(2) || '-'}</td>
+                          ))}
+                        </tr>
+
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Insulation (Earth)</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.insulationMaterial}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Colour of Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">Yellow/Green</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Insulation (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.insulationThickness.toFixed(1) || '-'}</td>
+                          ))}
+                        </tr>
+                      </>
+                    )}
+
+                    {/* Metallic Screen */}
+                    {(isMV || p.hasScreen) && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 font-bold">• Metallic Screen</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => {
+                          const screenText = isMV 
+                            ? (p.mvScreenType === 'CTS' ? 'CTS' : `${p.mvScreenType === 'CWS' ? 'Copper Wire Screen' : p.mvScreenType} (${p.mvScreenSize} mm²)`)
+                            : (p.screenType === 'CTS' ? 'CTS' : `${p.screenType} (${p.screenSize} mm²)`);
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              {screenText}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    )}
+
+                    {/* Separator */}
+                    {p.hasSeparator && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 font-bold">• Separator Tape</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((_, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">{p.separatorMaterial || 'Polyester Tape'}</td>
+                        ))}
+                      </tr>
+                    )}
+
+                    {/* Inner Sheath */}
+                    {p.hasInnerSheath && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Inner Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Inner Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.innerSheathMaterial}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Inner Sheath (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.innerCoveringThickness.toFixed(1)}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Colour of Inner Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">Black</td>
+                          ))}
+                        </tr>
+                      </>
+                    )}
+
+                    {/* Armouring */}
+                    {p.armorType !== 'Unarmored' && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Armouring</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Armour</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Diameter of Armour (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.armorThickness.toFixed(2)}</td>
+                          ))}
+                        </tr>
+                      </>
+                    )}
+
+                    {/* Outer Sheath */}
+                    {hasOuterSheath && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Outer Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Outer Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.sheathMaterial}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Outer Sheath (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.sheathThickness.toFixed(1)}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Colour of Outer Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              {p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black'}
+                            </td>
+                          ))}
+                        </tr>
+                      </>
+                    )}
+
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 font-medium">Overall Diameter of Cable (Approx.)</td>
+                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">{item.result.spec.overallDiameter.toFixed(1)}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-[8px]">
+                        {p.standard} MULTI KABEL {getCableDesignation(p, items[0].result)} {p.voltage} MADE IN INDONESIA
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 font-medium">Weight of Cable (Approx.)</td>
+                      <td className="border border-slate-400 p-2 text-center">Kg/Km</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(item.result.bom.totalWeight).toLocaleString()}</td>
+                      ))}
+                    </tr>
+
+                    {/* 6. Packing */}
+                    <tr className="bg-slate-50">
+                      <td className="border border-slate-400 p-2 text-center font-bold">6</td>
+                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Packing :</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Standard Length</td>
+                      <td className="border border-slate-400 p-2 text-center">meter</td>
+                      {items.map((item, idx) => {
+                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.standardLength}</td>;
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Diameter of Drum</td>
+                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      {items.map((item, idx) => {
+                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.diameterWithCover}</td>;
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Width of Drum</td>
+                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      {items.map((item, idx) => {
+                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.innerWidth}</td>;
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Drum Type</td>
+                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      {items.map((item, idx) => {
+                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.type}</td>;
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Weight per Drum (Approx.)</td>
+                      <td className="border border-slate-400 p-2 text-center">Kg</td>
+                      {items.map((item, idx) => {
+                        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                        const cableWeight = (item.result.bom.totalWeight * packing.standardLength) / 1000;
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(cableWeight + packing.selectedDrum.weight)}</td>;
+                      })}
+                    </tr>
+
+                    {/* 7. Electrical Data */}
+                    <tr className="bg-slate-50">
+                      <td className="border border-slate-400 p-2 text-center font-bold">7</td>
+                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Electrical Data :</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- AC Test Voltage</td>
+                      <td className="border border-slate-400 p-2 text-center">kV/5 Min</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.testVoltage}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Max. D.C Resistance of Conductor at 20°C</td>
+                      <td className="border border-slate-400 p-2 text-center">Ohm/Km</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.maxDcResistance}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                      <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity at 30°C</td>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-8">In Ground</td>
+                      <td className="border border-slate-400 p-2 text-center">A</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 pl-8">In Air</td>
+                      <td className="border border-slate-400 p-2 text-center">A</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 pl-4">- Max. Short Circuit Rating of Conductor</td>
+                      <td className="border border-slate-400 p-2 text-center">kA / sec</td>
+                      {items.map((item, idx) => {
+                        const isXLPE = p.insulationMaterial === 'XLPE' || p.insulationMaterial === 'EPR';
+                        const isCu = p.conductorMaterial === 'Cu';
+                        let k = 115;
+                        if (isCu) k = isXLPE ? 143 : 115;
+                        else k = isXLPE ? 94 : 76;
+                        
+                        const sc = (k * item.params.size) / 1000;
+                        return <td key={idx} className="border border-slate-400 p-2 text-center">{sc.toFixed(2)}</td>;
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
           {/* Footer */}
           <footer className="text-center py-8 border-t border-slate-200">
