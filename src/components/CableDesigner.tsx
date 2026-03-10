@@ -146,7 +146,12 @@ export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>(DEFAULT_PARAMS);
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
-  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
+  const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
   const [showReview, setShowReview] = useState(false);
   const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
   const [newMaterialName, setNewMaterialName] = useState('');
@@ -1962,11 +1967,18 @@ export default function CableDesigner() {
                 Clear List
               </button>
               <button
-                onClick={handleDownloadReport}
-                className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
+                onClick={handleLoadProjects}
+                className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 uppercase tracking-wider"
               >
-                <Download className="w-4 h-4" />
-                Export
+                <FolderOpen className="w-4 h-4" />
+                Open Project
+              </button>
+              <button
+                onClick={handleSaveProject}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
+              >
+                <Save className="w-4 h-4" />
+                Save Project
               </button>
             </div>
         </header>
@@ -1974,7 +1986,16 @@ export default function CableDesigner() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Configuration & Prices Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-3'} space-y-6 transition-all duration-300`}>
+          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-3'} space-y-6 transition-all duration-300 relative`}>
+            {/* Floating Expand Button */}
+            <button
+              onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+              className="absolute -right-4 top-4 z-50 p-2 bg-white shadow-md rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hidden lg:flex items-center justify-center transition-all hover:scale-110"
+              title={isConfigExpanded ? "Collapse View" : "Expand View"}
+            >
+              {isConfigExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="flex border-b border-slate-100 items-center pr-2">
                 <button
@@ -2012,13 +2033,6 @@ export default function CableDesigner() {
                 >
                   <Database className="w-4 h-4" />
                   Settings
-                </button>
-                <button
-                  onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-                  className="p-2 ml-1 hover:bg-indigo-50 rounded-lg transition-all text-slate-400 hover:text-indigo-600 hidden lg:flex items-center justify-center border border-transparent hover:border-indigo-100"
-                  title={isConfigExpanded ? "Collapse View" : "Expand View"}
-                >
-                  {isConfigExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
               </div>
 
