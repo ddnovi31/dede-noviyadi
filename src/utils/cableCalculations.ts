@@ -105,6 +105,14 @@ export interface MaterialDensities {
   EPR: number;
   HEPR: number;
   TCWB: number;
+  CTS: number;
+  CWS: number;
+  STA: number;
+  SWA: number;
+  AWA: number;
+  GSWB: number;
+  SFA: number;
+  RGB: number;
 }
 
 const DEFAULT_DENSITIES: MaterialDensities = {
@@ -128,6 +136,14 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   EPR: 1.3,
   HEPR: 1.3,
   TCWB: 8.89,
+  CTS: 8.89,
+  CWS: 8.89,
+  STA: 7.85,
+  SWA: 7.85,
+  AWA: 2.7,
+  GSWB: 7.85,
+  SFA: 7.85,
+  RGB: 7.85,
 };
 
 // Laying up factors for multi-core cables (approximate)
@@ -930,12 +946,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
       const meanDiameter = diameterUnderArmor + screenThickness;
       const area = Math.PI * meanDiameter * 0.1 * 1.25; // 0.1mm tape, 25% overlap
-      screenWeight = area * densities.Cu;
+      screenWeight = area * (densities.CTS || densities.Cu);
     } else if (effectiveParams.screenType === 'CWS') {
       const cwsSize = effectiveParams.screenSize || 16;
       // Copper Wire Screen weight calculation
       // Weight (kg/km) = Area (mm2) * Density (kg/dm3) * Lay Factor (approx 1.1)
-      screenWeight = cwsSize * densities.Cu * 1.1;
+      screenWeight = cwsSize * (densities.CWS || densities.Cu) * 1.1;
       
       // Approximate thickness based on wire diameter for that size
       // 16mm2 -> ~0.7mm, 25mm2 -> ~0.9mm, 35mm2 -> ~1.1mm
@@ -993,7 +1009,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + armorThickness;
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
-    const armorDensity = effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel;
+    const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
     armorWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
   } else if (effectiveParams.armorType === 'STA') {
     if (!effectiveParams.manualArmorThickness) {
@@ -1008,7 +1024,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness;
-    armorWeight = tapeArea * densities.Steel;
+    armorWeight = tapeArea * (densities.STA || densities.Steel);
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
     // Flat wire approx 0.8mm, Tape approx 0.2mm
@@ -1022,7 +1038,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2; // Overlap
     
-    armorWeight = (flatArea + tapeArea) * densities.Steel;
+    armorWeight = (flatArea + tapeArea) * (densities.SFA || densities.Steel);
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
     // Wire approx 1.25mm, Tape approx 0.2mm
@@ -1037,7 +1053,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2;
     
-    armorWeight = (wireArea + tapeArea) * densities.Steel;
+    armorWeight = (wireArea + tapeArea) * (densities.RGB || densities.Steel);
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
     
@@ -1066,7 +1082,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const n = Math.ceil((coverage * 2 * Math.PI * meanBraidDiameter * Math.cos(braidAngleDeg * Math.PI / 180)) / (carriers * wireDia));
     
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
-    const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : densities.Steel;
+    const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (densities.GSWB || densities.Steel);
     
     armorWeight = (n * carriers) * wireArea * armorDensity * layFactor;
     
@@ -1225,9 +1241,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorWeight: Number(applyScrap(totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
       insulationWeight: Number(applyScrap(totalInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
       innerCoveringWeight: Number(applyScrap(innerCoveringWeight, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
-      screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'Cu' : 'Steel').toFixed(1)),
+      screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
       separatorWeight: Number(applyScrap(separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
-      armorWeight: Number(applyScrap(armorWeight, effectiveParams.armorType === 'AWA' ? 'Al' : 'Steel').toFixed(1)),
+      armorWeight: Number(applyScrap(armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : 'Steel')))))).toFixed(1)),
       sheathWeight: Number(applyScrap(sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
       semiCondWeight: Number(applyScrap(totalSemiCondWeight, 'SemiCond').toFixed(1)),
       mvScreenWeight: Number(applyScrap(totalMvScreenWeight, 'Cu').toFixed(1)),

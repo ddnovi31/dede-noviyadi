@@ -39,6 +39,14 @@ const DEFAULT_MATERIAL_PRICES = {
   EPR: 42000,
   HEPR: 45000,
   TCWB: 165000,
+  CTS: 160000,
+  CWS: 158000,
+  STA: 22000,
+  SWA: 50000,
+  AWA: 48000,
+  GSWB: 25000,
+  SFA: 24000,
+  RGB: 26000,
 };
 
 const DEFAULT_MATERIAL_DENSITIES = {
@@ -62,6 +70,14 @@ const DEFAULT_MATERIAL_DENSITIES = {
   EPR: 1.3,
   HEPR: 1.3,
   TCWB: 8.89,
+  CTS: 8.89,
+  CWS: 8.89,
+  STA: 7.85,
+  SWA: 7.85,
+  AWA: 2.7,
+  GSWB: 7.85,
+  SFA: 7.85,
+  RGB: 7.85,
 };
 
 const DEFAULT_MATERIAL_SCRAP = {
@@ -84,6 +100,14 @@ const DEFAULT_MATERIAL_SCRAP = {
   EPR: 5,
   HEPR: 5,
   TCWB: 2.5,
+  CTS: 2.5,
+  CWS: 2.5,
+  STA: 2.5,
+  SWA: 2.5,
+  AWA: 2.5,
+  GSWB: 2.5,
+  SFA: 2.5,
+  RGB: 2.5,
 };
 
 export default function CableDesigner() {
@@ -152,24 +176,39 @@ export default function CableDesigner() {
     localStorage.setItem('cable_drum_data', JSON.stringify(drumData));
   }, [drumData]);
 
-  const [materialPrices, setMaterialPrices] = useState(() => {
+  const [materialPrices, setMaterialPrices] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('cable_material_prices');
-    const prices = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_PRICES;
-    if (!prices.SteelWire) prices.SteelWire = 50000;
+    const prices = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_PRICES };
+    // Merge with defaults to ensure new materials are added
+    Object.keys(DEFAULT_MATERIAL_PRICES).forEach(key => {
+      if (prices[key] === undefined) {
+        prices[key] = DEFAULT_MATERIAL_PRICES[key as keyof typeof DEFAULT_MATERIAL_PRICES];
+      }
+    });
     return prices;
   });
 
   const [materialDensities, setMaterialDensities] = useState<MaterialDensities>(() => {
     const saved = localStorage.getItem('cable_material_densities');
-    const densities = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_DENSITIES;
-    if (!densities.SteelWire) densities.SteelWire = 7.85;
+    const densities = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_DENSITIES };
+    // Merge with defaults to ensure new materials are added
+    Object.keys(DEFAULT_MATERIAL_DENSITIES).forEach(key => {
+      if (densities[key as keyof MaterialDensities] === undefined) {
+        densities[key as keyof MaterialDensities] = DEFAULT_MATERIAL_DENSITIES[key as keyof typeof DEFAULT_MATERIAL_DENSITIES];
+      }
+    });
     return densities;
   });
 
   const [materialScrap, setMaterialScrap] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('cable_material_scrap');
-    const scrap = saved ? JSON.parse(saved) : DEFAULT_MATERIAL_SCRAP;
-    if (!scrap.SteelWire) scrap.SteelWire = 2.5;
+    const scrap = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_SCRAP };
+    // Merge with defaults to ensure new materials are added
+    Object.keys(DEFAULT_MATERIAL_SCRAP).forEach(key => {
+      if (scrap[key] === undefined) {
+        scrap[key] = DEFAULT_MATERIAL_SCRAP[key as keyof typeof DEFAULT_MATERIAL_SCRAP];
+      }
+    });
     return scrap;
   });
 
@@ -177,6 +216,22 @@ export default function CableDesigner() {
     const saved = localStorage.getItem('cable_material_categories');
     return saved ? JSON.parse(saved) : {};
   });
+
+  const resetToDefaults = () => {
+    setConfirmModal({
+      show: true,
+      title: 'Reset to Defaults',
+      message: 'Are you sure you want to reset all material prices, densities, and scrap factors to their default values? This will overwrite your current settings.',
+      onConfirm: () => {
+        setMaterialPrices({ ...DEFAULT_MATERIAL_PRICES });
+        setMaterialDensities({ ...DEFAULT_MATERIAL_DENSITIES });
+        setMaterialScrap({ ...DEFAULT_MATERIAL_SCRAP });
+        setMaterialCategories({});
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      },
+      type: 'warning'
+    });
+  };
 
   const saveMaterialSettings = () => {
     localStorage.setItem('cable_material_prices', JSON.stringify(materialPrices));
@@ -534,12 +589,20 @@ export default function CableDesigner() {
   const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams) => {
     const condPrice = (params.conductorMaterial === 'Cu' ? materialPrices.Cu : (params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
     const insPrice = (materialPrices[params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE);
-    const armorPrice = (params.armorType === 'AWA' ? materialPrices.Al : materialPrices.Steel);
+    const armorPrice = (
+      params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
+      params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
+      params.armorType === 'STA' ? (materialPrices.STA || materialPrices.Steel) : 
+      params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.Steel) : 
+      params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.Steel) : 
+      params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.Steel) : 
+      materialPrices.Steel
+    );
     const sheathPrice = (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC);
     const innerPrice = (materialPrices[params.innerSheathMaterial || 'PVC'] || materialPrices.PVC);
     const separatorPrice = (materialPrices[params.separatorMaterial || 'PVC'] || materialPrices.PVC);
     const semiPrice = materialPrices.SemiCond;
-    const screenPrice = (params.screenType === 'CTS' || params.screenType === 'CWS') ? materialPrices.Cu : materialPrices.Steel;
+    const screenPrice = params.screenType === 'CTS' ? (materialPrices.CTS || materialPrices.Cu) : (params.screenType === 'CWS' ? (materialPrices.CWS || materialPrices.Cu) : materialPrices.Steel);
     const mvScreenPrice = materialPrices.Cu;
     const mgtPrice = materialPrices.MGT;
     const steelWirePrice = materialPrices.SteelWire || 50000;
@@ -1390,7 +1453,7 @@ export default function CableDesigner() {
                           className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                         >
                           {(() => {
-                            const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                            const compoundMaterials = ['XLPE', 'PVC', 'EPR'];
                             const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation');
                             const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                             
@@ -1438,8 +1501,12 @@ export default function CableDesigner() {
                                 className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
                               >
                                 {(() => {
-                                  const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                  const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                                  const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                  const customCompounds = Object.keys(materialPrices).filter(m => 
+                                    materialCategories[m] === 'Compound Filler' || 
+                                    materialCategories[m] === 'Compound Sheath' || 
+                                    materialCategories[m] === 'Compound (Filler/Sheath)'
+                                  );
                                   const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                                   return availableCompounds.map(mat => (
                                     <option key={mat} value={mat}>{mat}</option>
@@ -1528,8 +1595,12 @@ export default function CableDesigner() {
                               className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
                             >
                               {(() => {
-                                const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                                const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                const customCompounds = Object.keys(materialPrices).filter(m => 
+                                  materialCategories[m] === 'Compound Filler' || 
+                                  materialCategories[m] === 'Compound Sheath' || 
+                                  materialCategories[m] === 'Compound (Filler/Sheath)'
+                                );
                                 const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                                 return availableCompounds.map(mat => (
                                   <option key={mat} value={mat}>{mat}</option>
@@ -1630,8 +1701,12 @@ export default function CableDesigner() {
                             className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                           >
                             {(() => {
-                              const compoundMaterials = ['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                              const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath');
+                              const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                              const customCompounds = Object.keys(materialPrices).filter(m => 
+                                materialCategories[m] === 'Compound Filler' || 
+                                materialCategories[m] === 'Compound Sheath' || 
+                                materialCategories[m] === 'Compound (Filler/Sheath)'
+                              );
                               const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                               return availableCompounds.map(mat => (
                                 <option key={mat} value={mat}>{mat}</option>
@@ -1896,8 +1971,7 @@ export default function CableDesigner() {
                             >
                               <option value="Conductor">Conductor</option>
                               <option value="Compound Insulation">Compound Insulation</option>
-                              <option value="Compound Filler">Compound Filler</option>
-                              <option value="Compound Sheath">Compound Sheath</option>
+                              <option value="Compound (Filler/Sheath)">Compound (Filler/Sheath)</option>
                               <option value="Armour">Armour</option>
                               <option value="Screen">Screen</option>
                               <option value="Other">Other</option>
@@ -1936,12 +2010,11 @@ export default function CableDesigner() {
                       <div className="space-y-6 pr-2">
                         {[
                           { title: 'Conductor', items: Array.from(new Set(['Cu', 'Al', 'TCu', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Conductor')])) },
-                          { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
-                          { title: 'Compound Filler', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Filler')])) },
-                          { title: 'Compound Sheath', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Sheath')])) },
-                          { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'TCWB', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
-                          { title: 'Screen', items: Array.from(new Set(['SemiCond', 'MGT', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
-                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'TCWB', 'SemiCond', 'MGT'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
+                          { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'PVC', 'EPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
+                          { title: 'Compound (Filler/Sheath)', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Filler' || materialCategories[m] === 'Compound Sheath' || materialCategories[m] === 'Compound (Filler/Sheath)')])) },
+                          { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
+                          { title: 'Screen', items: Array.from(new Set(['SemiCond', 'MGT', 'CTS', 'CWS', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
+                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'SemiCond', 'MGT', 'CTS', 'CWS'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
                         ].map(category => {
                           const categoryMaterials = category.items.filter(mat => materialPrices[mat] !== undefined).sort();
                           if (categoryMaterials.length === 0) return null;
