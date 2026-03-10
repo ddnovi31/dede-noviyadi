@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2 } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen } from 'lucide-react';
 import {
   calculateCable,
   CableDesignParams,
@@ -17,6 +17,7 @@ import {
 } from '../utils/cableCalculations';
 import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
+import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject } from '../lib/db';
 
 const DEFAULT_MATERIAL_PRICES = {
   Cu: 155000,
@@ -144,7 +145,7 @@ const DEFAULT_PARAMS: CableDesignParams = {
 export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>(DEFAULT_PARAMS);
 
-  const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums'>('config');
+  const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
@@ -152,6 +153,9 @@ export default function CableDesigner() {
   const [newMaterialCategory, setNewMaterialCategory] = useState('Compound Insulation');
   const [printedSheets, setPrintedSheets] = useState<Set<number>>(new Set());
   const [printingGroupId, setPrintingGroupId] = useState<number | null>(null);
+  const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
 
   const handlePrintSheet = (groupIdx: number) => {
     setPrintingGroupId(groupIdx);
@@ -160,6 +164,70 @@ export default function CableDesigner() {
       window.print();
       setTimeout(() => setPrintingGroupId(null), 100);
     }, 100);
+  };
+
+  const handleInitDB = async () => {
+    try {
+      await initDB();
+      alert('Database initialized successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to initialize database.');
+    }
+  };
+
+  const handleSaveProject = async () => {
+    if (projectItems.length === 0) {
+      alert('No items to save.');
+      return;
+    }
+    try {
+      const id = projectId || crypto.randomUUID();
+      const project: SavedProject = {
+        id,
+        name: projectName,
+        items: projectItems,
+        updatedAt: Date.now(),
+      };
+      await saveProjectToDB(project);
+      setProjectId(id);
+      alert('Project saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save project.');
+    }
+  };
+
+  const handleLoadProjects = async () => {
+    try {
+      const projects = await getProjectsFromDB();
+      setSavedProjects(projects.sort((a, b) => b.updatedAt - a.updatedAt));
+      setShowProjectsModal(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load projects.');
+    }
+  };
+
+  const handleOpenProject = (project: SavedProject) => {
+    setProjectName(project.name);
+    setProjectItems(project.items);
+    setProjectId(project.id);
+    setShowProjectsModal(false);
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this project?')) return;
+    try {
+      await deleteProjectFromDB(id);
+      setSavedProjects(prev => prev.filter(p => p.id !== id));
+      if (projectId === id) {
+        setProjectId(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete project.');
+    }
   };
   const [quickEdit, setQuickEdit] = useState<{
     title: string;
@@ -773,10 +841,10 @@ export default function CableDesigner() {
     }, {} as Record<string, {params: CableDesignParams, result: CalculationResult}[]>);
 
     return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900 print:bg-white print:p-0">
+        <div className="max-w-6xl mx-auto space-y-8 print:space-y-0 print:max-w-none">
           {/* Review Header */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 print:hidden">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setShowReview(false)}
@@ -810,7 +878,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Review Tabs */}
-          <div className="flex gap-1 bg-slate-200/50 p-1 rounded-2xl w-fit">
+          <div className="flex gap-1 bg-slate-200/50 p-1 rounded-2xl w-fit print:hidden">
             <button
               onClick={() => setReviewTab('summary')}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
@@ -835,10 +903,9 @@ export default function CableDesigner() {
             </button>
           </div>
 
-          {reviewTab === 'summary' ? (
-            <>
-              {/* Project Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={reviewTab === 'summary' ? 'block print:hidden' : 'hidden print:hidden'}>
+            {/* Project Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
                   <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
@@ -1045,10 +1112,10 @@ export default function CableDesigner() {
               })()}
             </div>
           </div>
-        </>
-      ) : (
-        <div className="space-y-12">
-          {Object.keys(groupedItems).map((key, groupIdx) => {
+          </div>
+
+          <div className={reviewTab === 'specifications' ? 'space-y-12 print:block' : 'hidden print:block space-y-12'}>
+            {Object.keys(groupedItems).map((key, groupIdx) => {
             const items = groupedItems[key];
             const firstItem = items[0];
             const p = firstItem.params;
@@ -1094,7 +1161,7 @@ export default function CableDesigner() {
                   </p>
                 </div>
 
-                <table className="w-full border-collapse border border-slate-400 text-[10px]">
+                <table className="w-full border-collapse border border-slate-400 text-[10px] [&_td]:!py-1 [&_th]:!py-1">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="border border-slate-400 p-2 w-10 text-center">No</th>
@@ -1697,10 +1764,9 @@ export default function CableDesigner() {
             );
           })}
         </div>
-      )}
 
           {/* Footer */}
-          <footer className="text-center py-8 border-t border-slate-200">
+          <footer className="text-center py-8 border-t border-slate-200 print:hidden">
             <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">PT. Multi Kencana Niagatama</div>
             <div className="text-[9px] text-slate-300 mt-1">Generated on {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
           </footer>
@@ -1715,6 +1781,64 @@ export default function CableDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      {/* Load Projects Modal */}
+      {showProjectsModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-indigo-600" />
+                Open Project
+              </h3>
+              <button 
+                onClick={() => setShowProjectsModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <Plus className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              {savedProjects.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Database className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                  <p>No saved projects found in local database.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedProjects.map((project) => (
+                    <div key={project.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{project.name || 'Untitled Project'}</h4>
+                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                          <span>{project.items.length} items</span>
+                          <span>•</span>
+                          <span>{new Date(project.updatedAt).toLocaleString('id-ID')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleOpenProject(project)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                        >
+                          Open
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Edit Modal */}
       {quickEdit && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -1726,7 +1850,7 @@ export default function CableDesigner() {
                   onClick={() => setQuickEdit(null)}
                   className="text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4 rotate-45" />
+                  <Plus className="w-4 h-4 rotate-45" />
                 </button>
               </div>
               <div className="relative">
@@ -1879,6 +2003,15 @@ export default function CableDesigner() {
                 >
                   <Package className="w-4 h-4" />
                   Drums
+                </button>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                    activeTab === 'settings' ? 'text-indigo-600 bg-indigo-50/50 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Database className="w-4 h-4" />
+                  Settings
                 </button>
                 <button
                   onClick={() => setIsConfigExpanded(!isConfigExpanded)}
@@ -2911,6 +3044,51 @@ export default function CableDesigner() {
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4">
+                      <p className="text-xs text-indigo-700 leading-relaxed">
+                        Manage local database and projects.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
+                        <h3 className="text-sm font-bold text-slate-900 mb-2">Database Management</h3>
+                        <p className="text-xs text-slate-500 mb-4">Initialize or clear the local database used for storing projects.</p>
+                        <button
+                          onClick={handleInitDB}
+                          className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Database className="w-4 h-4" />
+                          Create / Reset Database
+                        </button>
+                      </div>
+
+                      <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
+                        <h3 className="text-sm font-bold text-slate-900 mb-2">Project Management</h3>
+                        <p className="text-xs text-slate-500 mb-4">Save your current project or load a previously saved project.</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveProject}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save Project
+                          </button>
+                          <button
+                            onClick={handleLoadProjects}
+                            className="flex-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                            Open Project
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
