@@ -169,6 +169,24 @@ export default function CableDesigner() {
     type: 'info'
   });
 
+  const [specEdits, setSpecEdits] = useState<Record<string, any>>({});
+
+  const getDefaultInsulationColor = (cores: number, hasEarthing: boolean, isMV: boolean, isABC: boolean) => {
+    if (isABC) return 'Black';
+    if (isMV) return 'Standard';
+    
+    if (cores === 1) return 'BLACK';
+    if (cores === 2) return 'BLUE, BLACK';
+    if (cores === 3) return 'BROWN, BLACK, GREY';
+    if (cores === 4) return 'BLUE, BROWN, BLACK, GREY';
+    if (cores === 5) {
+      if (hasEarthing) return 'BLACK WITH NUMBERING';
+      return 'BLUE, BROWN, BLACK, GREY, Y/G';
+    }
+    if (cores > 5) return 'BLACK WITH NUMBERING';
+    return 'Standard (IEC)';
+  };
+
   const [drumData, setDrumData] = useState<DrumData[]>(() => {
     const saved = localStorage.getItem('cable_drum_data');
     return saved ? JSON.parse(saved) : INITIAL_DRUM_DATA;
@@ -1026,8 +1044,17 @@ export default function CableDesigner() {
             const designation = getCableDesignation(p, firstItem.result);
             const constructionName = designation.split(' ')[0];
 
+            let sizeDesignation = `${p.cores} x ${p.size}`;
+            if (p.hasEarthing && p.earthingCores && p.earthingCores > 0 && p.earthingSize && p.earthingSize > 0) {
+              if (p.earthingCores === 1) {
+                sizeDesignation += ` + ${p.earthingSize}`;
+              } else {
+                sizeDesignation += ` + ${p.earthingCores} x ${p.earthingSize}`;
+              }
+            }
+
             return (
-              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto">
+              <div key={groupIdx} className="bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 break-after-page">
                 <div className="text-center mb-6 space-y-1">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Technical Specifications</h2>
                   <p className="text-xs text-slate-600 font-medium">
@@ -1064,6 +1091,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       {items.map((item, idx) => {
                         let std = item.result.general.standardReference;
+                        if (p.fireguard) std += ', IEC 60331';
                         if (p.sheathMaterial.includes('PVC-FR')) {
                           if (p.sheathMaterial.includes('CAT.A')) std += ', IEC 60332-3-22';
                           else if (p.sheathMaterial.includes('CAT.B')) std += ', IEC 60332-3-23';
@@ -1083,7 +1111,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       {items.map((item, idx) => (
                         <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
-                          {getCableDesignation(p, item.result)}
+                          {constructionName} {sizeDesignation} mm² ({p.conductorType})
                         </td>
                       ))}
                     </tr>
@@ -1183,11 +1211,20 @@ export default function CableDesigner() {
                       <tr>
                         <td className="border border-slate-400 p-2 pl-4">- Colour of Insulation</td>
                         <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((_, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">
-                            {isABC ? 'Black' : p.hasEarthing ? 'Standard + Y/G' : 'Standard (IEC)'}
-                          </td>
-                        ))}
+                        {items.map((_, idx) => {
+                          const defaultColor = getDefaultInsulationColor(p.cores, p.hasEarthing, isMV, isABC);
+                          const editKey = `${key}-insulation-color-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? defaultColor}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
                     <tr>
@@ -1254,33 +1291,40 @@ export default function CableDesigner() {
 
                     {/* Metallic Screen */}
                     {(isMV || p.hasScreen) && (
-                      <tr>
-                        <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 font-bold">• Metallic Screen</td>
-                        <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((_, idx) => {
-                          const screenText = isMV 
-                            ? (p.mvScreenType === 'CTS' ? 'CTS' : `${p.mvScreenType === 'CWS' ? 'Copper Wire Screen' : p.mvScreenType} (${p.mvScreenSize} mm²)`)
-                            : (p.screenType === 'CTS' ? 'CTS' : `${p.screenType} (${p.screenSize} mm²)`);
-                          return (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Metallic Screen</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => (
                             <td key={idx} className="border border-slate-400 p-2 text-center">
-                              {screenText}
+                              {isMV ? p.mvScreenType : p.screenType}
                             </td>
-                          );
-                        })}
-                      </tr>
-                    )}
-
-                    {/* Separator */}
-                    {p.hasSeparator && (
-                      <tr>
-                        <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 font-bold">• Separator Tape</td>
-                        <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((_, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">{p.separatorMaterial || 'Polyester Tape'}</td>
-                        ))}
-                      </tr>
+                          ))}
+                        </tr>
+                        {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">- Thickness of Tape</td>
+                            <td className="border border-slate-400 p-2 text-center">mm</td>
+                            {items.map((_, idx) => (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>
+                            ))}
+                          </tr>
+                        )}
+                        {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">- Cross-sectional Area</td>
+                            <td className="border border-slate-400 p-2 text-center">mm²</td>
+                            {items.map((_, idx) => (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {isMV ? p.mvScreenSize : p.screenSize}
+                              </td>
+                            ))}
+                          </tr>
+                        )}
+                      </>
                     )}
 
                     {/* Inner Sheath */}
@@ -1309,8 +1353,46 @@ export default function CableDesigner() {
                         <tr>
                           <td className="border border-slate-400 p-2 pl-4">- Colour of Inner Sheath</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
+                          {items.map((_, idx) => {
+                            const editKey = `${key}-inner-sheath-color-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? 'Black'}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </>
+                    )}
+
+                    {/* Separator Sheath */}
+                    {(p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored') || p.cores > 1) && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                          <td className="border border-slate-400 p-2 font-bold">• Separator Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Material of Separator Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">Black</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.separatorMaterial || 'Polyester Tape'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Separator Sheath</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              {item.result.spec.separatorThickness?.toFixed(1) || '0.1'}
+                            </td>
                           ))}
                         </tr>
                       </>
@@ -1368,11 +1450,20 @@ export default function CableDesigner() {
                         <tr>
                           <td className="border border-slate-400 p-2 pl-4">- Colour of Outer Sheath</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              {p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black'}
-                            </td>
-                          ))}
+                          {items.map((_, idx) => {
+                            const defaultColor = p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black';
+                            const editKey = `${key}-outer-sheath-color-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultColor}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                       </>
                     )}
@@ -1390,7 +1481,29 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-[8px]">
-                        {p.standard} MULTI KABEL {getCableDesignation(p, items[0].result)} {p.voltage} MADE IN INDONESIA
+                        {(() => {
+                          const editKey = `${key}-marking`;
+                          let stds = p.standard;
+                          if (p.fireguard) stds += ' IEC 60331';
+                          if (p.sheathMaterial.includes('PVC-FR')) {
+                            if (p.sheathMaterial.includes('CAT.A')) stds += ' IEC 60332-3-22';
+                            else if (p.sheathMaterial.includes('CAT.B')) stds += ' IEC 60332-3-23';
+                            else if (p.sheathMaterial.includes('CAT.C')) stds += ' IEC 60332-3-24';
+                            else stds += ' IEC 60332-1';
+                          }
+                          const construction = constructionName;
+                          const sizeStr = `${sizeDesignation} mm² (${p.conductorType})`;
+                          const defaultMarking = `${stds} MULTI KABEL ${construction} ${sizeStr} ${p.voltage} MADE IN INDONESIA`;
+                          
+                          return (
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? defaultMarking}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-bold outline-none"
+                            />
+                          );
+                        })()}
                       </td>
                     </tr>
                     <tr>
