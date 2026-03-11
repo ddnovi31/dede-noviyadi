@@ -847,10 +847,10 @@ export default function CableDesigner() {
 
     const groupedItemsList: {key: string, items: {params: CableDesignParams, result: CalculationResult}[]}[] = [];
     (Object.entries(groupedItemsRaw) as [string, {params: CableDesignParams, result: CalculationResult}[]][]).forEach(([key, items]) => {
-      for (let i = 0; i < items.length; i += 7) {
+      for (let i = 0; i < items.length; i += 6) {
         groupedItemsList.push({
-          key: items.length > 7 ? `${key}-part-${Math.floor(i/7) + 1}` : key,
-          items: items.slice(i, i + 7)
+          key: items.length > 6 ? `${key}-part-${Math.floor(i/6) + 1}` : key,
+          items: items.slice(i, i + 6)
         });
       }
     });

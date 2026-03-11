@@ -11,7 +11,7 @@
   }
   .print-scale {
     /* Scale down to ensure it fits on one page */
-    transform: scale(0.9);
+    transform: scale(0.85);
     transform-origin: top center;
     width: 100% !important;
     page-break-inside: avoid;
@@ -21,15 +21,22 @@
   }
   @page landscape-page {
     size: A4 landscape;
-    margin: 3mm; /* Smaller margin to maximize space */
+    margin: 3mm;
   }
   .print-landscape-page.print-scale {
-    transform: scale(0.82); /* Further reduced to fit more rows/columns */
+    transform: scale(0.78); /* Further reduced for landscape */
   }
-  .print-landscape-page td, .print-landscape-page th {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-    font-size: 10px !important;
+  /* Global print table adjustments for vertical space */
+  .print-scale td, .print-scale th {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+  .print-scale input {
+    font-size: 9px !important;
   }
   .break-after-page {
     page-break-after: always;
