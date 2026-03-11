@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale } from 'lucide-react';
 import {
   calculateCable,
+  CABLE_DATA,
   CableDesignParams,
   CalculationResult,
   CABLE_SIZES,
@@ -140,6 +141,7 @@ const DEFAULT_PARAMS: CableDesignParams = {
   separatorMaterial: 'PVC',
   earthingCores: 0,
   earthingSize: 0,
+  mode: 'standard',
 };
 
 export default function CableDesigner() {
@@ -453,12 +455,41 @@ export default function CableDesigner() {
         'manualArmorThickness', 
         'manualConductorScreenThickness', 
         'manualInsulationScreenThickness', 
-        'manualMgtThickness'
+        'manualMgtThickness',
+        'manualWireDiameter',
+        'manualEarthingWireDiameter',
+        'manualEarthingConductorDiameter',
+        'manualEarthingInsulationThickness',
+        'manualLaidUpDiameter',
+        'manualDiameterUnderArmor',
+        'manualDiameterOverArmor',
+        'manualOverallDiameter',
+        'manualMvScreenThickness',
+        'manualScreenThickness',
+        'manualSeparatorThickness',
+        'manualScreenWireDiameter',
+        'manualMvScreenWireDiameter'
       ].includes(key)) {
         processedValue = Math.round(value * 10) / 10;
       }
 
       const newParams = { ...prev, [key]: processedValue };
+
+      // Advance Mode Defaults
+      if (key === 'mode' && value === 'advance') {
+        const sizeData = CABLE_DATA.find(d => d.size === newParams.size);
+        if (sizeData) {
+          // Default wire diameter based on 7 strands for small sizes, 19 for medium, 37 for large
+          let strands = 7;
+          if (newParams.size > 50) strands = 19;
+          if (newParams.size > 150) strands = 37;
+          
+          newParams.manualWireDiameter = Number((sizeData.diameter / Math.sqrt(strands)).toFixed(2));
+          newParams.manualInsulationThickness = newParams.insulationMaterial === 'XLPE' ? sizeData.xlpeThick : sizeData.pvcThick;
+          // Conductor diameter is auto, so we don't set manualConductorDiameter
+          newParams.manualConductorDiameter = undefined;
+        }
+      }
       
       // Feature Logic
       if (key === 'fireguard') {
@@ -2046,6 +2077,36 @@ export default function CableDesigner() {
               <div className="p-6">
                 {activeTab === 'config' && (
                   <div className="space-y-4">
+                    {/* Design Mode Toggle */}
+                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-indigo-900 uppercase tracking-widest">Design Mode</span>
+                      </div>
+                      <div className="flex bg-white p-1 rounded-xl border border-indigo-100 shadow-sm">
+                        <button
+                          onClick={() => handleParamChange('mode', 'standard')}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                            params.mode === 'standard'
+                              ? 'bg-indigo-600 text-white shadow-sm'
+                              : 'text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          Standard
+                        </button>
+                        <button
+                          onClick={() => handleParamChange('mode', 'advance')}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                            params.mode === 'advance'
+                              ? 'bg-indigo-600 text-white shadow-sm'
+                              : 'text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          Advance
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Standard Selection */}
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Standard Reference</label>
@@ -2266,6 +2327,63 @@ export default function CableDesigner() {
                             </div>
                           </div>
                         )}
+
+                        {/* Advanced Earthing Parameters */}
+                        {params.mode === 'advance' && params.hasEarthing && (
+                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced Earthing Parameters</label>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Count</label>
+                                <input
+                                  type="number"
+                                  value={params.manualEarthingWireCount || ''}
+                                  placeholder="7"
+                                  onChange={(e) => handleParamChange('manualEarthingWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Dia (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={params.manualEarthingWireDiameter || ''}
+                                  placeholder="Auto"
+                                  onChange={(e) => handleParamChange('manualEarthingWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cond Dia (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={params.manualEarthingConductorDiameter || ''}
+                                  placeholder="Auto"
+                                  onChange={(e) => handleParamChange('manualEarthingConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Insul Thick (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={params.manualEarthingInsulationThickness || ''}
+                                  placeholder="Auto"
+                                  onChange={(e) => handleParamChange('manualEarthingInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                            </div>
+                            <p className="text-[9px] text-indigo-400 mt-1 italic text-center">Formulas: Standard Earthing Calculations</p>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2349,6 +2467,66 @@ export default function CableDesigner() {
                           })}
                         </div>
                       </div>
+
+                      {/* Advanced Conductor Parameters */}
+                      {params.mode === 'advance' && (
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced Conductor Parameters</label>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Count</label>
+                              <input
+                                type="number"
+                                value={params.manualWireCount || ''}
+                                placeholder={params.conductorType === 're' ? '1' : '7'}
+                                onChange={(e) => handleParamChange('manualWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                              <p className="text-[9px] text-indigo-400 mt-1 italic">Formula: Standard</p>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Dia (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={params.manualWireDiameter || ''}
+                                placeholder="Auto"
+                                onChange={(e) => handleParamChange('manualWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                              <p className="text-[9px] text-indigo-400 mt-1 italic">Formula: √((4*S)/(π*n))</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Conductor Dia (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualConductorDiameter || ''}
+                              placeholder="Auto"
+                              onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
+                            <p className="text-[9px] text-indigo-400 mt-1 italic">Formula: Standard Table</p>
+                          </div>
+
+                          {params.standard === 'IEC 60502-2' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cond. Screen Thickness (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={params.manualConductorScreenThickness || ''}
+                                placeholder={(result.spec.conductorScreenThickness || 0).toFixed(1)}
+                                onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Insulation Section */}
@@ -2381,7 +2559,142 @@ export default function CableDesigner() {
                           <option value="ADD_NEW_COMPOUND_INSULATION" className="text-indigo-600 font-bold">+ Add New Material...</option>
                         </select>
                       </div>
+
+                      {/* Advanced Insulation Parameters */}
+                      {params.mode === 'advance' && (
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced Insulation Parameters</label>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Insulation Thickness (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualInsulationThickness || ''}
+                              placeholder="Auto"
+                              onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
+                            <p className="text-[9px] text-indigo-400 mt-1 italic">Formula: Standard Table</p>
+                          </div>
+
+                          {params.standard === 'IEC 60502-2' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Ins. Screen Thickness (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={params.manualInsulationScreenThickness || ''}
+                                placeholder={(result.spec.insulationScreenThickness || 0).toFixed(1)}
+                                onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    {/* MV Screen Selection (Moved after Insulation) */}
+                    {params.standard === 'IEC 60502-2' && (
+                      <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3.1 Metallic Screen (MV)</label>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {(['CTS', 'CWS'] as MvScreenType[]).map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleParamChange('mvScreenType', type)}
+                                  className={`py-2 px-4 rounded-xl text-xs font-bold transition-all uppercase tracking-wider ${
+                                    params.mvScreenType === type
+                                      ? 'bg-indigo-600 text-white shadow-md'
+                                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {type === 'CTS' ? 'Copper Tape' : 'Copper Wire'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {params.mvScreenType === 'CWS' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Screen Size (mm²)</label>
+                              <select
+                                value={params.mvScreenSize}
+                                onChange={(e) => handleParamChange('mvScreenSize', Number(e.target.value))}
+                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-white"
+                              >
+                                {[16, 25, 35, 50, 70, 95].map((s) => (
+                                  <option key={s} value={s}>{s} mm²</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          {params.mode === 'advance' && (
+                            <div className="pt-2 border-t border-slate-200 space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Metallic Screen Thickness (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={params.manualMvScreenThickness || ''}
+                                  placeholder={(result.spec.mvScreenThickness || 0).toFixed(1)}
+                                  onChange={(e) => handleParamChange('manualMvScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                              {params.mvScreenType === 'CWS' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Count (n)</label>
+                                    <input
+                                      type="number"
+                                      value={params.manualMvScreenWireCount || ''}
+                                      placeholder="24"
+                                      onChange={(e) => handleParamChange('manualMvScreenWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                      className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Diameter (d)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={params.manualMvScreenWireDiameter || ''}
+                                      placeholder="0.8"
+                                      onChange={(e) => handleParamChange('manualMvScreenWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                      className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cabling Diameter Section (Advance Mode Only) */}
+                    {params.mode === 'advance' && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">3.2 Cabling Diameter</label>
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cabling Dia (mm)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={params.manualLaidUpDiameter || ''}
+                            placeholder={result.spec.laidUpDiameter.toFixed(1)}
+                            onChange={(e) => handleParamChange('manualLaidUpDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                            className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                          />
+                          <p className="text-[9px] text-indigo-400 mt-1 italic">Formula: D_core * Factor</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Inner Sheath Section */}
                     <div className="space-y-4 border-t border-slate-100 pt-4">
@@ -2426,6 +2739,20 @@ export default function CableDesigner() {
                             </div>
                           )}
                         </div>
+                        
+                        {params.mode === 'advance' && (params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Inner Sheath Thickness (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualInnerSheathThickness || ''}
+                              placeholder={result.spec.innerCoveringThickness.toFixed(1)}
+                              onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
+                          </div>
+                        )}
                       </div>
 
                     {/* Screen Section */}
@@ -2471,6 +2798,46 @@ export default function CableDesigner() {
                                     <option key={s} value={s}>{s} mm²</option>
                                   ))}
                                 </select>
+                              </div>
+                            )}
+                            {params.mode === 'advance' && (
+                              <div className="pt-2 border-t border-slate-200 space-y-3">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Screen Thickness (mm)</label>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={params.manualScreenThickness || ''}
+                                    placeholder={(result.spec.screenThickness || 0).toFixed(1)}
+                                    onChange={(e) => handleParamChange('manualScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                  />
+                                </div>
+                                {params.screenType === 'CWS' && (
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Count (n)</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualScreenWireCount || ''}
+                                        placeholder="24"
+                                        onChange={(e) => handleParamChange('manualScreenWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Diameter (d)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualScreenWireDiameter || ''}
+                                        placeholder="0.8"
+                                        onChange={(e) => handleParamChange('manualScreenWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2520,6 +2887,19 @@ export default function CableDesigner() {
                             </select>
                           </div>
                         )}
+                        {params.mode === 'advance' && (isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) && (
+                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Separator Thickness (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualSeparatorThickness || ''}
+                              placeholder={(result.spec.separatorThickness || 0).toFixed(1)}
+                              onChange={(e) => handleParamChange('manualSeparatorThickness', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2566,6 +2946,36 @@ export default function CableDesigner() {
                               className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                             />
                             <span className="text-sm font-mono font-bold text-indigo-600 w-10 text-right">{params.braidCoverage || 90}%</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {params.mode === 'advance' && params.armorType !== 'Unarmored' && (
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Armour Thickness (mm)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={params.manualArmorThickness || ''}
+                            placeholder={result.spec.armorThickness.toFixed(1)}
+                            onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? Number(e.target.value) : undefined)}
+                            className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                          />
+                          <div className="mt-2 p-2 bg-white/50 rounded-lg border border-indigo-100">
+                            <p className="text-[10px] font-bold text-indigo-600 mb-1">Calculation Formula:</p>
+                            <p className="text-[11px] font-mono text-slate-600">
+                              {params.armorType === 'SWA' || params.armorType === 'AWA' ? (
+                                'D_over = D_under + 2 * t_armor'
+                              ) : params.armorType === 'STA' ? (
+                                'D_over = D_under + 4 * t_armor (2 layers)'
+                              ) : params.armorType === 'SFA' ? (
+                                'D_over = D_under + 2 * (t_flat + t_tape)'
+                              ) : params.armorType === 'RGB' ? (
+                                'D_over = D_under + 2 * (t_wire + t_tape)'
+                              ) : params.armorType === 'GSWB' ? (
+                                'D_over = D_under + 2 * t_braid'
+                              ) : 'D_over = D_under + 2 * t_armor'}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -2629,161 +3039,182 @@ export default function CableDesigner() {
                             })()}
                           </select>
                         </div>
+
+                        {params.mode === 'advance' && (
+                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Outer Sheath Thickness (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualSheathThickness || ''}
+                              placeholder={result.spec.sheathThickness.toFixed(1)}
+                              onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
 
-                    {/* MV Screen Selection */}
-                    {params.standard === 'IEC 60502-2' && (
-                      <div className="space-y-4 pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Metallic Screen Type</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {(['CTS', 'CWS'] as MvScreenType[]).map((type) => (
-                              <button
-                                key={type}
-                                onClick={() => handleParamChange('mvScreenType', type)}
-                                className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                                  params.mvScreenType === type
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {type === 'CTS' ? 'Copper Tape (CTS)' : 'Copper Wire (CWS)'}
-                              </button>
-                            ))}
+                    {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
+                    {params.mode === 'advance' && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">7. Advanced Intermediate Diameters</label>
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Dia Under Armor (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={params.manualDiameterUnderArmor || ''}
+                                placeholder={result.spec.diameterUnderArmor.toFixed(1)}
+                                onChange={(e) => handleParamChange('manualDiameterUnderArmor', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Dia Over Armor (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={params.manualDiameterOverArmor || ''}
+                                placeholder={result.spec.diameterOverArmor.toFixed(1)}
+                                onChange={(e) => handleParamChange('manualDiameterOverArmor', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Overall Diameter (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={params.manualOverallDiameter || ''}
+                              placeholder={result.spec.overallDiameter.toFixed(1)}
+                              onChange={(e) => handleParamChange('manualOverallDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                            />
                           </div>
                         </div>
-
-                        {params.mvScreenType === 'CWS' && (
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Screen Size (mm²)</label>
-                            <select
-                              value={params.mvScreenSize}
-                              onChange={(e) => handleParamChange('mvScreenSize', Number(e.target.value))}
-                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                            >
-                              {[16, 25, 35, 50, 70, 95].map((s) => (
-                                <option key={s} value={s}>{s} mm²</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
                       </div>
                     )}
 
                     {/* Manual Overrides Section */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 space-y-4 shadow-sm mt-6">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Manual Specifications</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1">Conductor (mm)</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder={result.spec.conductorDiameter.toFixed(1)}
-                            value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(1) : ''}
-                            onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? parseFloat(e.target.value) : undefined)}
-                            className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                        </div>
-
-                        {(params.hasMgt || params.fireguard) && (
+                    {params.mode === 'standard' && (
+                      <div className="bg-white p-4 rounded-2xl border border-slate-100 space-y-4 shadow-sm mt-6">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Manual Specifications</label>
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">MGT (mm)</label>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Conductor (mm)</label>
                             <input
                               type="number"
                               step="0.1"
-                              placeholder={(result.spec.mgtThickness || 0.2).toFixed(1)}
-                              value={params.manualMgtThickness !== undefined ? params.manualMgtThickness.toFixed(1) : ''}
-                              onChange={(e) => handleParamChange('manualMgtThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              placeholder={result.spec.conductorDiameter.toFixed(1)}
+                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? parseFloat(e.target.value) : undefined)}
                               className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
                           </div>
-                        )}
 
-                        {params.standard === 'IEC 60502-2' && (
-                          <>
+                          {(params.hasMgt || params.fireguard) && (
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Cond. Screen (mm)</label>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">MGT (mm)</label>
                               <input
                                 type="number"
                                 step="0.1"
-                                placeholder={(result.spec.conductorScreenThickness || 0.5).toFixed(1)}
-                                value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness.toFixed(1) : ''}
-                                onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                placeholder={(result.spec.mgtThickness || 0.2).toFixed(1)}
+                                value={params.manualMgtThickness !== undefined ? params.manualMgtThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualMgtThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
                             </div>
+                          )}
+
+                          {params.standard === 'IEC 60502-2' && (
+                            <>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1">Cond. Screen (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  placeholder={(result.spec.conductorScreenThickness || 0.5).toFixed(1)}
+                                  value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness.toFixed(1) : ''}
+                                  onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                  className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1">Ins. Screen (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  placeholder={(result.spec.insulationScreenThickness || 0.5).toFixed(1)}
+                                  value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness.toFixed(1) : ''}
+                                  onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                  className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Insulation (mm)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder={result.spec.insulationThickness.toFixed(1)}
+                              value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness.toFixed(1) : ''}
+                              onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+
+                          {(params.cores > 1 || params.armorType !== 'Unarmored' || params.hasInnerSheath) && (
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Ins. Screen (mm)</label>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Inner Sheath (mm)</label>
                               <input
                                 type="number"
                                 step="0.1"
-                                placeholder={(result.spec.insulationScreenThickness || 0.5).toFixed(1)}
-                                value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness.toFixed(1) : ''}
-                                onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                placeholder={result.spec.innerCoveringThickness.toFixed(1)}
+                                value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
                             </div>
-                          </>
-                        )}
+                          )}
 
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1">Insulation (mm)</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder={result.spec.insulationThickness.toFixed(1)}
-                            value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness.toFixed(1) : ''}
-                            onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
-                            className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          />
+                          {params.armorType !== 'Unarmored' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Armor (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                placeholder={result.spec.armorThickness.toFixed(1)}
+                                value={params.manualArmorThickness !== undefined ? params.manualArmorThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                          )}
+
+                          {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Outer Sheath (mm)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                placeholder={result.spec.sheathThickness.toFixed(1)}
+                                value={params.manualSheathThickness !== undefined ? params.manualSheathThickness.toFixed(1) : ''}
+                                onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                          )}
                         </div>
-
-                        {(params.cores > 1 || params.armorType !== 'Unarmored' || params.hasInnerSheath) && (
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Inner Sheath (mm)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              placeholder={result.spec.innerCoveringThickness.toFixed(1)}
-                              value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness.toFixed(1) : ''}
-                              onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                          </div>
-                        )}
-
-                        {params.armorType !== 'Unarmored' && (
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Armor (mm)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              placeholder={result.spec.armorThickness.toFixed(1)}
-                              value={params.manualArmorThickness !== undefined ? params.manualArmorThickness.toFixed(1) : ''}
-                              onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                          </div>
-                        )}
-
-                        {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Outer Sheath (mm)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              placeholder={result.spec.sheathThickness.toFixed(1)}
-                              value={params.manualSheathThickness !== undefined ? params.manualSheathThickness.toFixed(1) : ''}
-                              onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    )}
 
                     {/* Add to Project Button moved to bottom of config */}
                     <div className="pt-4">
@@ -3438,6 +3869,39 @@ export default function CableDesigner() {
                 </div>
               </div>
 
+              {/* Material Weight Calculation (Advance Mode Only) */}
+              {params.mode === 'advance' && result.weights && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-indigo-500" />
+                      Material Weight Breakdown
+                    </h2>
+                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-widest">Formula View</span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <WeightFormulaRow label="Conductor" detail={result.weights.conductor} />
+                    <WeightFormulaRow label="Mica Glass Tape (MGT)" detail={result.weights.mgt} />
+                    <WeightFormulaRow label="Conductor Screen" detail={result.weights.conductorScreen} />
+                    <WeightFormulaRow label="Insulation" detail={result.weights.insulation} />
+                    <WeightFormulaRow label="Insulation Screen" detail={result.weights.insulationScreen} />
+                    <WeightFormulaRow label="Metallic Screen" detail={result.weights.metallicScreen} />
+                    <WeightFormulaRow label="Inner Sheath" detail={result.weights.innerSheath} />
+                    <WeightFormulaRow label="Armor" detail={result.weights.armor} />
+                    <WeightFormulaRow label="Separator" detail={result.weights.separator} />
+                    <WeightFormulaRow label="Outer Sheath" detail={result.weights.outerSheath} />
+                    <WeightFormulaRow label="Earthing" detail={result.weights.earthing} />
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[9px] text-slate-400 leading-relaxed italic">
+                      * All weights are calculated in kg/km. Formulas follow standard cable construction geometry.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Electrical Properties */}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
@@ -3650,6 +4114,21 @@ export default function CableDesigner() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function WeightFormulaRow({ label, detail }: { label: string; detail?: { weight: number; formula: string } }) {
+  if (!detail || detail.weight === 0) return null;
+  return (
+    <div className="py-2 border-b border-slate-50 last:border-0">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-xs font-medium text-slate-600">{label}</span>
+        <span className="text-xs font-bold text-slate-900 font-mono">{detail.weight.toFixed(2)} kg/km</span>
+      </div>
+      <div className="text-[9px] text-indigo-500 font-mono bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100/50 overflow-x-auto whitespace-nowrap">
+        {detail.formula}
       </div>
     </div>
   );
