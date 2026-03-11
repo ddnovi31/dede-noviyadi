@@ -11,9 +11,9 @@
   }
   .print-scale {
     /* Scale down slightly to ensure it fits on one page */
-    transform: scale(0.95);
+    transform: scale(0.97);
     transform-origin: top center;
-    width: 105%; /* Compensate for scale to fill width */
+    width: 100% !important;
   }
   .break-after-page {
     page-break-after: always;

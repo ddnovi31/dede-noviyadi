@@ -1119,7 +1119,7 @@ export default function CableDesigner() {
           </div>
           </div>
 
-          <div className={reviewTab === 'specifications' ? 'space-y-12 print:block' : 'hidden print:block space-y-12'}>
+          <div className={reviewTab === 'specifications' ? 'space-y-12 print:block print:space-y-0' : 'hidden print:block print:space-y-0 space-y-12'}>
             {Object.keys(groupedItems).map((key, groupIdx) => {
             const items = groupedItems[key];
             const firstItem = items[0];
@@ -1143,7 +1143,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-0 print:m-0 print:break-after-page print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-4 print:m-0 print:break-after-page print:overflow-visible print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
                 <div className="flex justify-between items-center mb-6 print:hidden">
                   <div>
                     {printedSheets.has(groupIdx) && (
