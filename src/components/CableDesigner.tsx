@@ -1143,7 +1143,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
                 <div className="flex justify-between items-center mb-6 print:hidden">
                   <div>
                     {printedSheets.has(groupIdx) && (
@@ -1172,11 +1172,9 @@ export default function CableDesigner() {
                       <th className="border border-slate-400 p-2 w-10 text-center">No</th>
                       <th className="border border-slate-400 p-2 text-left w-48">Description</th>
                       <th className="border border-slate-400 p-2 w-16 text-center">Unit</th>
-                      {items.map((item, idx) => (
-                        <th key={idx} className="border border-slate-400 p-2 text-center min-w-[120px]">
-                          Specification
-                        </th>
-                      ))}
+                      <th colSpan={items.length} className="border border-slate-400 p-2 text-center min-w-[120px]">
+                        Specification
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1185,35 +1183,34 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">1</td>
                       <td className="border border-slate-400 p-2 font-medium">Product Brand</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((_, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">MULTI KABEL</td>
-                      ))}
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center">2</td>
                       <td className="border border-slate-400 p-2 font-medium">Standard Reference</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((item, idx) => {
-                        let std = item.result.general.standardReference;
-                        if (p.fireguard) std += ', IEC 60331';
-                        if (p.sheathMaterial.includes('PVC-FR')) {
-                          if (p.sheathMaterial.includes('CAT.A')) std += ', IEC 60332-3-22';
-                          else if (p.sheathMaterial.includes('CAT.B')) std += ', IEC 60332-3-23';
-                          else if (p.sheathMaterial.includes('CAT.C')) std += ', IEC 60332-3-24';
-                          else std += ', IEC 60332-1';
-                        }
-                        const editKey = `${key}-standard-${idx}`;
-                        return (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                        {(() => {
+                          const firstItem = items[0];
+                          let std = firstItem.result.general.standardReference;
+                          if (p.fireguard) std += ', IEC 60331';
+                          if (p.sheathMaterial.includes('PVC-FR')) {
+                            if (p.sheathMaterial.includes('CAT.A')) std += ', IEC 60332-3-22';
+                            else if (p.sheathMaterial.includes('CAT.B')) std += ', IEC 60332-3-23';
+                            else if (p.sheathMaterial.includes('CAT.C')) std += ', IEC 60332-3-24';
+                            else std += ', IEC 60332-1';
+                          }
+                          const editKey = `${key}-standard-group`;
+                          return (
                             <input
                               type="text"
                               value={specEdits[editKey] ?? std}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                               className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
                             />
-                          </td>
-                        );
-                      })}
+                          );
+                        })()}
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center">3</td>
@@ -1239,9 +1236,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">4</td>
                       <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
                       <td className="border border-slate-400 p-2 text-center">kV</td>
-                      {items.map((_, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.voltage}</td>
-                      ))}
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center">{p.voltage}</td>
                     </tr>
 
                     {/* 5. Constructional Data */}

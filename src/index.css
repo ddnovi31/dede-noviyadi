@@ -15,6 +15,13 @@
     transform-origin: top center;
     width: 100% !important;
   }
+  .print-landscape-page {
+    page: landscape-page;
+  }
+  @page landscape-page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
   .break-after-page {
     /* Removed to avoid forcing new pages if not needed */
   }
