@@ -847,10 +847,10 @@ export default function CableDesigner() {
 
     const groupedItemsList: {key: string, items: {params: CableDesignParams, result: CalculationResult}[]}[] = [];
     (Object.entries(groupedItemsRaw) as [string, {params: CableDesignParams, result: CalculationResult}[]][]).forEach(([key, items]) => {
-      for (let i = 0; i < items.length; i += 8) {
+      for (let i = 0; i < items.length; i += 7) {
         groupedItemsList.push({
-          key: items.length > 8 ? `${key}-part-${Math.floor(i/8) + 1}` : key,
-          items: items.slice(i, i + 8)
+          key: items.length > 7 ? `${key}-part-${Math.floor(i/7) + 1}` : key,
+          items: items.slice(i, i + 7)
         });
       }
     });
@@ -1131,7 +1131,7 @@ export default function CableDesigner() {
 
           <div className={reviewTab === 'specifications' ? 'space-y-12 print:block print:space-y-0' : 'hidden print:block print:space-y-0 space-y-12'}>
             {groupedItemsList.map((group, groupIdx) => {
-            const { key, items } = group;
+            const { key: groupKey, items } = group;
             const firstItem = items[0];
             const p = firstItem.params;
             
@@ -1153,7 +1153,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale break-after-page ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+              <div key={groupKey} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale break-after-page ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
                 <div className="flex justify-between items-center mb-6 print:hidden">
                   <div>
                     {printedSheets.has(groupIdx) && (
@@ -1210,7 +1210,7 @@ export default function CableDesigner() {
                             else if (p.sheathMaterial.includes('CAT.C')) std += ', IEC 60332-3-24';
                             else std += ', IEC 60332-1';
                           }
-                          const editKey = `${key}-standard-group`;
+                          const editKey = `${groupKey}-standard-group`;
                           return (
                             <input
                               type="text"
@@ -1340,7 +1340,7 @@ export default function CableDesigner() {
                         <td className="border border-slate-400 p-2 text-center">-</td>
                         {items.map((_, idx) => {
                           const defaultColor = getDefaultInsulationColor(p.cores, p.hasEarthing, isMV, isABC);
-                          const editKey = `${key}-insulation-color-${idx}`;
+                          const editKey = `${groupKey}-insulation-color-${idx}`;
                           return (
                             <td key={idx} className="border border-slate-400 p-2 text-center">
                               <input
@@ -1492,7 +1492,7 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 pl-4">- Colour of Inner Sheath</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => {
-                            const editKey = `${key}-inner-sheath-color-${idx}`;
+                            const editKey = `${groupKey}-inner-sheath-color-${idx}`;
                             return (
                               <td key={idx} className="border border-slate-400 p-2 text-center">
                                 <input
@@ -1590,7 +1590,7 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => {
                             const defaultColor = p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black';
-                            const editKey = `${key}-outer-sheath-color-${idx}`;
+                            const editKey = `${groupKey}-outer-sheath-color-${idx}`;
                             return (
                               <td key={idx} className="border border-slate-400 p-2 text-center">
                                 <input
@@ -1620,7 +1620,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       <td colSpan={items.length} className="border border-slate-400 p-1 text-center font-bold text-[10px]">
                         {(() => {
-                          const editKey = `${key}-marking`;
+                          const editKey = `${groupKey}-marking`;
                           let stds = p.standard;
                           if (p.fireguard) stds += ' IEC 60331';
                           if (p.sheathMaterial.includes('PVC-FR')) {
@@ -1690,7 +1690,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 pl-4">- Drum Type</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       {items.map((item, idx) => {
-                        const editKey = `${key}-drum-type-${idx}`;
+                        const editKey = `${groupKey}-drum-type-${idx}`;
                         return (
                           <td key={idx} className="border border-slate-400 p-2 text-center">
                             <input
