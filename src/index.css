@@ -14,6 +14,7 @@
     transform: scale(0.92);
     transform-origin: top center;
     width: 100% !important;
+    page-break-inside: avoid;
   }
   .print-landscape-page {
     page: landscape-page;
@@ -22,7 +23,10 @@
     size: A4 landscape;
     margin: 5mm;
   }
+  .print-landscape-page.print-scale {
+    transform: scale(0.88); /* Slightly smaller for landscape to fit more columns */
+  }
   .break-after-page {
-    /* Removed to avoid forcing new pages if not needed */
+    page-break-after: always;
   }
 }

@@ -838,12 +838,22 @@ export default function CableDesigner() {
       return acc + calculateSellingPrice(hpp, item.params.margin);
     }, 0);
 
-    const groupedItems = projectItems.reduce((acc, item) => {
+    const groupedItemsRaw = projectItems.reduce((acc, item) => {
       const key = getConstructionKey(item.params);
       if (!acc[key]) acc[key] = [];
       acc[key].push(item);
       return acc;
     }, {} as Record<string, {params: CableDesignParams, result: CalculationResult}[]>);
+
+    const groupedItemsList: {key: string, items: {params: CableDesignParams, result: CalculationResult}[]}[] = [];
+    (Object.entries(groupedItemsRaw) as [string, {params: CableDesignParams, result: CalculationResult}[]][]).forEach(([key, items]) => {
+      for (let i = 0; i < items.length; i += 8) {
+        groupedItemsList.push({
+          key: items.length > 8 ? `${key}-part-${Math.floor(i/8) + 1}` : key,
+          items: items.slice(i, i + 8)
+        });
+      }
+    });
 
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900 print:bg-white print:p-0">
@@ -1120,8 +1130,8 @@ export default function CableDesigner() {
           </div>
 
           <div className={reviewTab === 'specifications' ? 'space-y-12 print:block print:space-y-0' : 'hidden print:block print:space-y-0 space-y-12'}>
-            {Object.keys(groupedItems).map((key, groupIdx) => {
-            const items = groupedItems[key];
+            {groupedItemsList.map((group, groupIdx) => {
+            const { key, items } = group;
             const firstItem = items[0];
             const p = firstItem.params;
             
@@ -1143,7 +1153,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale break-after-page ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
                 <div className="flex justify-between items-center mb-6 print:hidden">
                   <div>
                     {printedSheets.has(groupIdx) && (
@@ -1236,7 +1246,9 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center">4</td>
                       <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
                       <td className="border border-slate-400 p-2 text-center">kV</td>
-                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center">{p.voltage}</td>
+                      {items.map((item, idx) => (
+                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.params.voltage}</td>
+                      ))}
                     </tr>
 
                     {/* 5. Constructional Data */}
