@@ -1143,7 +1143,7 @@ export default function CableDesigner() {
             }
 
             return (
-              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-4 print:m-0 print:break-after-page print:overflow-visible print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
+              <div key={groupIdx} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
                 <div className="flex justify-between items-center mb-6 print:hidden">
                   <div>
                     {printedSheets.has(groupIdx) && (
@@ -1159,14 +1159,14 @@ export default function CableDesigner() {
                     <Printer className="w-3 h-3" /> Print This Sheet
                   </button>
                 </div>
-                <div className="text-center mb-6 space-y-1">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Technical Specifications</h2>
-                  <p className="text-xs text-slate-600 font-medium">
+                <div className="text-center mb-4 print:mb-2 space-y-1">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">Technical Specifications</h2>
+                  <p className="text-xs text-slate-600 font-medium print:text-[10px]">
                     {isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'} ({p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)
                   </p>
                 </div>
 
-                <table className="w-full border-collapse border border-slate-400 text-[10px] [&_td]:!py-1 [&_th]:!py-1">
+                <table className="w-full border-collapse border border-slate-400 text-[10px] print:text-[9px] [&_td]:!py-1 [&_th]:!py-1 print:[&_td]:!py-0.5 print:[&_th]:!py-0.5">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="border border-slate-400 p-2 w-10 text-center">No</th>

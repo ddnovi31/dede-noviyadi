@@ -3,19 +3,19 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 5mm;
   }
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   .print-scale {
-    /* Scale down slightly to ensure it fits on one page */
-    transform: scale(0.97);
+    /* Scale down to ensure it fits on one page */
+    transform: scale(0.92);
     transform-origin: top center;
     width: 100% !important;
   }
   .break-after-page {
-    page-break-after: always;
+    /* Removed to avoid forcing new pages if not needed */
   }
 }
