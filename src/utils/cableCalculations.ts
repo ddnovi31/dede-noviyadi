@@ -1,3 +1,5 @@
+import { evaluate } from 'mathjs';
+
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
 export type InsulationMaterial = string;
@@ -74,6 +76,9 @@ export interface CableDesignParams {
   manualDiameterUnderArmor?: number;
   manualDiameterOverArmor?: number;
   manualOverallDiameter?: number;
+
+  // Custom Formulas for Material Weights
+  customFormulas?: Record<string, string>;
 }
 
 interface SizeData {
@@ -1210,79 +1215,119 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight);
 
+  const scope = {
+    PI: Math.PI,
+    cores: effectiveParams.cores,
+    size: effectiveParams.size,
+    conductorDiameter,
+    wireCount,
+    wireDiameter,
+    coreDiameter,
+    laidUpDiameter,
+    diameterUnderArmor,
+    diameterOverArmor,
+    overallDiameter,
+    insulationThickness,
+    innerSheathThickness: innerCoveringThickness,
+    armorThickness,
+    sheathThickness: finalSheathThickness,
+    separatorThickness,
+    screenThickness,
+    mvScreenThickness,
+    conductorScreenThickness,
+    insulationScreenThickness,
+    mgtThickness,
+    densityCu: densities.Cu,
+    densityAl: densities.Al,
+    densityXLPE: densities.XLPE,
+    densityPVC: densities.PVC,
+    densityPE: densities.PE,
+    densityLSZH: densities.LSZH,
+    densitySteel: densities.Steel,
+    densitySteelWire: densities.SteelWire,
+    densitySemiCond: densities.SemiCond,
+    densityMGT: densities.MGT,
+    densityTCu: densities.TCu,
+    densityCTS: densities.CTS || densities.Cu,
+    densityCWS: densities.CWS || densities.Cu,
+    densitySTA: densities.STA || densities.Steel,
+    densitySWA: densities.SWA || densities.SteelWire,
+    densityAWA: densities.AWA || densities.Al,
+    densityGSWB: densities.GSWB || densities.Steel,
+    densitySFA: densities.SFA || densities.Steel,
+    densityRGB: densities.RGB || densities.Steel,
+  };
+
+  const evalFormula = (defaultWeight: number, defaultFormula: string, key: string) => {
+    if (effectiveParams.customFormulas && effectiveParams.customFormulas[key]) {
+      try {
+        const customWeight = evaluate(effectiveParams.customFormulas[key], scope);
+        return { weight: Number(customWeight), formula: effectiveParams.customFormulas[key], isCustom: true };
+      } catch (e) {
+        return { weight: defaultWeight, formula: defaultFormula, isCustom: false, error: true };
+      }
+    }
+    return { weight: defaultWeight, formula: defaultFormula, isCustom: false };
+  };
+
   // Weight Details with Formulas
   const weightDetails = {
-    conductor: {
-      weight: totalConductorWeight,
-      formula: `${effectiveParams.cores} cores * ${wireCount} wires * π * (${wireDiameter.toFixed(2)}/2)² * ${densities[effectiveParams.conductorMaterial]} * 1.02 (lay factor)`
-    },
-    insulation: {
-      weight: totalInsulationWeight,
-      formula: `${effectiveParams.cores} cores * π * ((${coreDiameter.toFixed(2)}/2)² - (${(conductorDiameter + 2 * conductorScreenThickness).toFixed(2)}/2)²) * ${densities[effectiveParams.insulationMaterial]}`
-    },
-    outerSheath: {
-      weight: sheathWeight,
-      formula: `π * ((${overallDiameter.toFixed(2)}/2)² - (${diameterOverArmor.toFixed(2)}/2)²) * ${densities[effectiveParams.sheathMaterial]}`
-    }
+    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${wireCount} wires * π * (${wireDiameter.toFixed(2)}/2)² * ${densities[effectiveParams.conductorMaterial]} * 1.02 (lay factor)`, 'conductor'),
+    insulation: evalFormula(totalInsulationWeight, `${effectiveParams.cores} cores * π * ((${coreDiameter.toFixed(2)}/2)² - (${(conductorDiameter + 2 * conductorScreenThickness).toFixed(2)}/2)²) * ${densities[effectiveParams.insulationMaterial]}`, 'insulation'),
+    outerSheath: evalFormula(sheathWeight, `π * ((${overallDiameter.toFixed(2)}/2)² - (${diameterOverArmor.toFixed(2)}/2)²) * ${densities[effectiveParams.sheathMaterial]}`, 'outerSheath')
   } as any;
 
   if (totalMgtWeight > 0) {
-    weightDetails.mgt = {
-      weight: totalMgtWeight,
-      formula: `${effectiveParams.cores} cores * π * ((${diameterOverMgt.toFixed(2)}/2)² - (${conductorDiameter.toFixed(2)}/2)²) * ${densities.MGT}`
-    };
+    weightDetails.mgt = evalFormula(totalMgtWeight, `${effectiveParams.cores} cores * π * ((${diameterOverMgt.toFixed(2)}/2)² - (${conductorDiameter.toFixed(2)}/2)²) * ${densities.MGT}`, 'mgt');
   }
 
   if (totalSemiCondWeight > 0) {
-    weightDetails.conductorScreen = {
-      weight: totalSemiCondWeight / 2, // Approximate
-      formula: `${effectiveParams.cores} cores * π * ((${ (conductorDiameter/2 + conductorScreenThickness).toFixed(2) })² - (${(conductorDiameter/2).toFixed(2)})²) * ${densities.SemiCond}`
-    };
-    weightDetails.insulationScreen = {
-      weight: totalSemiCondWeight / 2, // Approximate
-      formula: `${effectiveParams.cores} cores * π * ((${ (coreDiameter/2).toFixed(2) })² - (${(coreDiameter/2 - insulationScreenThickness).toFixed(2)})²) * ${densities.SemiCond}`
-    };
+    weightDetails.conductorScreen = evalFormula(totalSemiCondWeight / 2, `${effectiveParams.cores} cores * π * ((${ (conductorDiameter/2 + conductorScreenThickness).toFixed(2) })² - (${(conductorDiameter/2).toFixed(2)})²) * ${densities.SemiCond}`, 'conductorScreen');
+    weightDetails.insulationScreen = evalFormula(totalSemiCondWeight / 2, `${effectiveParams.cores} cores * π * ((${ (coreDiameter/2).toFixed(2) })² - (${(coreDiameter/2 - insulationScreenThickness).toFixed(2)})²) * ${densities.SemiCond}`, 'insulationScreen');
   }
 
   if (totalMvScreenWeight > 0 || screenWeight > 0) {
     const w = totalMvScreenWeight || screenWeight;
     const type = effectiveParams.mvScreenType !== 'None' ? effectiveParams.mvScreenType : effectiveParams.screenType;
-    weightDetails.metallicScreen = {
-      weight: w,
-      formula: type === 'CTS' 
-        ? `π * Mean Diameter * Thickness * 1.25 (overlap) * ${densities.Cu}`
-        : `Area (${(totalMvScreenWeight || screenWeight) / (densities.Cu * 1.05)}) * ${densities.Cu} * 1.05 (lay factor)`
-    };
+    const defaultFormula = type === 'CTS' 
+      ? `π * Mean Diameter * Thickness * 1.25 (overlap) * ${densities.Cu}`
+      : `Area (${(totalMvScreenWeight || screenWeight) / (densities.Cu * 1.05)}) * ${densities.Cu} * 1.05 (lay factor)`;
+    weightDetails.metallicScreen = evalFormula(w, defaultFormula, 'metallicScreen');
   }
 
   if (innerCoveringWeight > 0) {
-    weightDetails.innerSheath = {
-      weight: innerCoveringWeight,
-      formula: `π * ((${ (laidUpDiameter/2 + innerCoveringThickness).toFixed(2) })² - (${(laidUpDiameter/2).toFixed(2)})²) * ${densities[effectiveParams.innerSheathMaterial || 'PVC']}`
-    };
+    weightDetails.innerSheath = evalFormula(innerCoveringWeight, `π * ((${ (laidUpDiameter/2 + innerCoveringThickness).toFixed(2) })² - (${(laidUpDiameter/2).toFixed(2)})²) * ${densities[effectiveParams.innerSheathMaterial || 'PVC']}`, 'innerSheath');
   }
 
   if (armorWeight > 0) {
-    weightDetails.armor = {
-      weight: armorWeight,
-      formula: effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA'
-        ? `${Math.floor((Math.PI * (diameterUnderArmor + armorThickness)) / (armorThickness * 1.05))} wires * π * (${armorThickness}/2)² * ${effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel} * 1.05`
-        : `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`
-    };
+    const defaultFormula = effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA'
+      ? `${Math.floor((Math.PI * (diameterUnderArmor + armorThickness)) / (armorThickness * 1.05))} wires * π * (${armorThickness}/2)² * ${effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel} * 1.05`
+      : `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`;
+    weightDetails.armor = evalFormula(armorWeight, defaultFormula, 'armor');
   }
 
   if (separatorWeight > 0) {
-    weightDetails.separator = {
-      weight: separatorWeight,
-      formula: `π * ((${ (diameterOverOverallScreen/2 + separatorThickness).toFixed(2) })² - (${(diameterOverOverallScreen/2).toFixed(2)})²) * ${densities[effectiveParams.separatorMaterial || 'PVC']}`
-    };
+    weightDetails.separator = evalFormula(separatorWeight, `π * ((${ (diameterOverOverallScreen/2 + separatorThickness).toFixed(2) })² - (${(diameterOverOverallScreen/2).toFixed(2)})²) * ${densities[effectiveParams.separatorMaterial || 'PVC']}`, 'separator');
   }
 
   if (earthingCores > 0) {
-    weightDetails.earthing = {
-      weight: earthingConductorWeightPerCore * earthingCores + totalEarthingInsulationWeight,
-      formula: `Conductor: ${earthingCores} * Area * ${densities[effectiveParams.conductorMaterial]} + Insulation: ${earthingCores} * Area * ${densities[effectiveParams.insulationMaterial]}`
-    };
+    weightDetails.earthing = evalFormula(earthingConductorWeightPerCore * earthingCores + totalEarthingInsulationWeight, `Conductor: ${earthingCores} * Area * ${densities[effectiveParams.conductorMaterial]} + Insulation: ${earthingCores} * Area * ${densities[effectiveParams.insulationMaterial]}`, 'earthing');
+  }
+
+  // Recalculate total weight if custom formulas are used
+  let finalTotalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : 0);
+  if (!abcTData && !abcData) {
+    finalTotalWeight = (weightDetails.conductor?.weight || 0) +
+                       (weightDetails.insulation?.weight || 0) +
+                       (weightDetails.outerSheath?.weight || 0) +
+                       (weightDetails.mgt?.weight || 0) +
+                       (weightDetails.conductorScreen?.weight || 0) +
+                       (weightDetails.insulationScreen?.weight || 0) +
+                       (weightDetails.metallicScreen?.weight || 0) +
+                       (weightDetails.innerSheath?.weight || 0) +
+                       (weightDetails.armor?.weight || 0) +
+                       (weightDetails.separator?.weight || 0) +
+                       (weightDetails.earthing?.weight || 0);
   }
 
   // NYMHY Standard Limits (Batas bawah / Batas atas)
@@ -1398,21 +1443,21 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       braidCoverage: effectiveParams.armorType === 'GSWB' ? (effectiveParams.braidCoverage || 90) : undefined,
     },
     bom: {
-      conductorWeight: Number(applyScrap(totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
-      insulationWeight: Number(applyScrap(totalInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
-      innerCoveringWeight: Number(applyScrap(innerCoveringWeight, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
+      conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
+      insulationWeight: Number(applyScrap(weightDetails.insulation?.weight || totalInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
+      innerCoveringWeight: Number(applyScrap(weightDetails.innerSheath?.weight || innerCoveringWeight, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
       screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
-      separatorWeight: Number(applyScrap(separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
-      armorWeight: Number(applyScrap(armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : 'Steel')))))).toFixed(1)),
-      sheathWeight: Number(applyScrap(sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
-      semiCondWeight: Number(applyScrap(totalSemiCondWeight, 'SemiCond').toFixed(1)),
-      mvScreenWeight: Number(applyScrap(totalMvScreenWeight, 'Cu').toFixed(1)),
-      mgtWeight: Number(applyScrap(totalMgtWeight, 'MGT').toFixed(1)),
+      separatorWeight: Number(applyScrap(weightDetails.separator?.weight || separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
+      armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : 'Steel')))))).toFixed(1)),
+      sheathWeight: Number(applyScrap(weightDetails.outerSheath?.weight || sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
+      semiCondWeight: Number(applyScrap((weightDetails.conductorScreen?.weight || 0) + (weightDetails.insulationScreen?.weight || 0), 'SemiCond').toFixed(1)),
+      mvScreenWeight: Number(applyScrap(weightDetails.metallicScreen?.weight || totalMvScreenWeight, 'Cu').toFixed(1)),
+      mgtWeight: Number(applyScrap(weightDetails.mgt?.weight || totalMgtWeight, 'MGT').toFixed(1)),
       earthingConductorWeight: Number(applyScrap(earthingConductorWeightPerCore * earthingCores, effectiveParams.conductorMaterial).toFixed(1)),
       earthingAlWeight: earthingAlWeight > 0 ? Number(applyScrap(earthingAlWeight, 'Al').toFixed(1)) : undefined,
       earthingSteelWeight: earthingSteelWeight > 0 ? Number(applyScrap(earthingSteelWeight, 'SteelWire').toFixed(1)) : undefined,
       earthingInsulationWeight: Number(applyScrap(totalEarthingInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
-      totalWeight: Number(applyScrap(totalWeight, 'Total').toFixed(1)),
+      totalWeight: Number(applyScrap(finalTotalWeight, 'Total').toFixed(1)),
     },
     weights: weightDetails,
     electrical: {

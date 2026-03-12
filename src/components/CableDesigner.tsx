@@ -477,18 +477,7 @@ export default function CableDesigner() {
 
       // Advance Mode Defaults
       if (key === 'mode' && value === 'advance') {
-        const sizeData = CABLE_DATA.find(d => d.size === newParams.size);
-        if (sizeData) {
-          // Default wire diameter based on 7 strands for small sizes, 19 for medium, 37 for large
-          let strands = 7;
-          if (newParams.size > 50) strands = 19;
-          if (newParams.size > 150) strands = 37;
-          
-          newParams.manualWireDiameter = Number((sizeData.diameter / Math.sqrt(strands)).toFixed(2));
-          newParams.manualInsulationThickness = newParams.insulationMaterial === 'XLPE' ? sizeData.xlpeThick : sizeData.pvcThick;
-          // Conductor diameter is auto, so we don't set manualConductorDiameter
-          newParams.manualConductorDiameter = undefined;
-        }
+        newParams.manualConductorDiameter = undefined;
       }
       
       // Feature Logic
@@ -534,6 +523,30 @@ export default function CableDesigner() {
       // Aluminum size constraint: min 10mm2
       if (newParams.conductorMaterial === 'Al' && newParams.size < 10) {
         newParams.size = 10;
+      }
+
+      if (['size', 'cores', 'standard', 'voltage'].includes(key)) {
+        newParams.manualInsulationThickness = undefined;
+        newParams.manualInnerSheathThickness = undefined;
+        newParams.manualSheathThickness = undefined;
+        newParams.manualConductorDiameter = undefined;
+        newParams.manualArmorThickness = undefined;
+        newParams.manualConductorScreenThickness = undefined;
+        newParams.manualInsulationScreenThickness = undefined;
+        newParams.manualMgtThickness = undefined;
+        newParams.manualWireDiameter = undefined;
+        newParams.manualEarthingWireDiameter = undefined;
+        newParams.manualEarthingConductorDiameter = undefined;
+        newParams.manualEarthingInsulationThickness = undefined;
+        newParams.manualLaidUpDiameter = undefined;
+        newParams.manualDiameterUnderArmor = undefined;
+        newParams.manualDiameterOverArmor = undefined;
+        newParams.manualOverallDiameter = undefined;
+        newParams.manualMvScreenThickness = undefined;
+        newParams.manualScreenThickness = undefined;
+        newParams.manualSeparatorThickness = undefined;
+        newParams.manualScreenWireDiameter = undefined;
+        newParams.manualMvScreenWireDiameter = undefined;
       }
 
       if (key === 'size') {
@@ -2491,7 +2504,7 @@ export default function CableDesigner() {
                                 type="number"
                                 step="0.01"
                                 value={params.manualWireDiameter || ''}
-                                placeholder="Auto"
+                                placeholder={result.spec.phaseCore.wireDiameter.toFixed(2)}
                                 onChange={(e) => handleParamChange('manualWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -2505,7 +2518,7 @@ export default function CableDesigner() {
                               type="number"
                               step="0.1"
                               value={params.manualConductorDiameter || ''}
-                              placeholder="Auto"
+                              placeholder={result.spec.conductorDiameter.toFixed(2)}
                               onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -2570,7 +2583,7 @@ export default function CableDesigner() {
                               type="number"
                               step="0.1"
                               value={params.manualInsulationThickness || ''}
-                              placeholder="Auto"
+                              placeholder={result.spec.insulationThickness.toFixed(1)}
                               onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -3881,17 +3894,17 @@ export default function CableDesigner() {
                   </div>
                   
                   <div className="space-y-1">
-                    <WeightFormulaRow label="Conductor" detail={result.weights.conductor} />
-                    <WeightFormulaRow label="Mica Glass Tape (MGT)" detail={result.weights.mgt} />
-                    <WeightFormulaRow label="Conductor Screen" detail={result.weights.conductorScreen} />
-                    <WeightFormulaRow label="Insulation" detail={result.weights.insulation} />
-                    <WeightFormulaRow label="Insulation Screen" detail={result.weights.insulationScreen} />
-                    <WeightFormulaRow label="Metallic Screen" detail={result.weights.metallicScreen} />
-                    <WeightFormulaRow label="Inner Sheath" detail={result.weights.innerSheath} />
-                    <WeightFormulaRow label="Armor" detail={result.weights.armor} />
-                    <WeightFormulaRow label="Separator" detail={result.weights.separator} />
-                    <WeightFormulaRow label="Outer Sheath" detail={result.weights.outerSheath} />
-                    <WeightFormulaRow label="Earthing" detail={result.weights.earthing} />
+                    <WeightFormulaRow label="Conductor" detail={result.weights.conductor} formulaKey="conductor" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Mica Glass Tape (MGT)" detail={result.weights.mgt} formulaKey="mgt" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Conductor Screen" detail={result.weights.conductorScreen} formulaKey="conductorScreen" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Insulation" detail={result.weights.insulation} formulaKey="insulation" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Insulation Screen" detail={result.weights.insulationScreen} formulaKey="insulationScreen" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Metallic Screen" detail={result.weights.metallicScreen} formulaKey="metallicScreen" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Inner Sheath" detail={result.weights.innerSheath} formulaKey="innerSheath" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Armor" detail={result.weights.armor} formulaKey="armor" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Separator" detail={result.weights.separator} formulaKey="separator" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Outer Sheath" detail={result.weights.outerSheath} formulaKey="outerSheath" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label="Earthing" detail={result.weights.earthing} formulaKey="earthing" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                   </div>
                   
                   <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -4119,17 +4132,79 @@ export default function CableDesigner() {
   );
 }
 
-function WeightFormulaRow({ label, detail }: { label: string; detail?: { weight: number; formula: string } }) {
-  if (!detail || detail.weight === 0) return null;
+function WeightFormulaRow({ 
+  label, 
+  detail,
+  formulaKey,
+  customFormulas,
+  onFormulaChange
+}: { 
+  label: string; 
+  detail?: { weight: number; formula: string; isCustom?: boolean; error?: boolean };
+  formulaKey: string;
+  customFormulas?: Record<string, string>;
+  onFormulaChange: (key: string, formula: string | undefined) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  if (!detail || (detail.weight === 0 && !customFormulas?.[formulaKey])) return null;
+
+  const handleEdit = () => {
+    setEditValue(customFormulas?.[formulaKey] || detail.formula);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (editValue.trim() === '' || (editValue === detail.formula && !customFormulas?.[formulaKey])) {
+      onFormulaChange(formulaKey, undefined);
+    } else {
+      onFormulaChange(formulaKey, editValue);
+    }
+    setIsEditing(false);
+  };
+
   return (
     <div className="py-2 border-b border-slate-50 last:border-0">
       <div className="flex justify-between items-center mb-1">
-        <span className="text-xs font-medium text-slate-600">{label}</span>
-        <span className="text-xs font-bold text-slate-900 font-mono">{detail.weight.toFixed(2)} kg/km</span>
+        <span className="text-xs font-medium text-slate-600 flex items-center gap-1">
+          {label}
+          {detail.isCustom && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Custom</span>}
+          {detail.error && <span className="text-[8px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">Error</span>}
+        </span>
+        <span className={`text-xs font-bold font-mono ${detail.error ? 'text-red-500' : 'text-slate-900'}`}>
+          {detail.error ? 'Err' : detail.weight.toFixed(2)} kg/km
+        </span>
       </div>
-      <div className="text-[9px] text-indigo-500 font-mono bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100/50 overflow-x-auto whitespace-nowrap">
-        {detail.formula}
-      </div>
+      
+      {isEditing ? (
+        <div className="flex gap-2 mt-1">
+          <input
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="flex-1 text-[10px] font-mono bg-white border border-indigo-200 rounded px-2 py-1 focus:outline-none focus:border-indigo-500"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          />
+          <button onClick={handleSave} className="text-[10px] bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600">Save</button>
+          <button onClick={() => setIsEditing(false)} className="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300">Cancel</button>
+        </div>
+      ) : (
+        <div 
+          onClick={handleEdit}
+          className={`text-[9px] font-mono p-1.5 rounded-lg border overflow-x-auto whitespace-nowrap cursor-pointer transition-colors ${
+            detail.error 
+              ? 'bg-red-50/50 text-red-500 border-red-100/50 hover:bg-red-50' 
+              : detail.isCustom 
+                ? 'bg-amber-50/50 text-amber-600 border-amber-100/50 hover:bg-amber-50'
+                : 'bg-indigo-50/50 text-indigo-500 border-indigo-100/50 hover:bg-indigo-50'
+          }`}
+          title="Click to edit formula"
+        >
+          {detail.formula}
+        </div>
+      )}
     </div>
   );
 }
