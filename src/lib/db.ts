@@ -1,3 +1,7 @@
+export const DB_NAME = 'CableDesignerDB';
+export const DB_VERSION = 1;
+export const STORE_NAME = 'projects';
+
 export interface SavedProject {
   id: string;
   name: string;
@@ -5,41 +9,59 @@ export interface SavedProject {
   updatedAt: number;
 }
 
-export async function initDB(): Promise<void> {
-  const response = await fetch('/api/projects/reset', {
-    method: 'POST',
+export function initDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
   });
-  if (!response.ok) {
-    throw new Error('Failed to reset database');
-  }
 }
 
 export async function saveProjectToDB(project: SavedProject): Promise<void> {
-  const response = await fetch('/api/projects', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(project),
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put(project);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
-  if (!response.ok) {
-    throw new Error('Failed to save project');
-  }
 }
 
 export async function getProjectsFromDB(): Promise<SavedProject[]> {
-  const response = await fetch('/api/projects');
-  if (!response.ok) {
-    throw new Error('Failed to fetch projects');
-  }
-  return response.json();
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 export async function deleteProjectFromDB(id: string): Promise<void> {
-  const response = await fetch(`/api/projects/${id}`, {
-    method: 'DELETE',
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
-  if (!response.ok) {
-    throw new Error('Failed to delete project');
-  }
 }

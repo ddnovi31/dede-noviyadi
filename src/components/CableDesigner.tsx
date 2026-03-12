@@ -164,10 +164,6 @@ export default function CableDesigner() {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
 
-  const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
-  const [projectName, setProjectName] = useState('New Project');
-  const [result, setResult] = useState<CalculationResult | null>(null);
-
   const handlePrintSheet = (groupIdx: number) => {
     setPrintingGroupId(groupIdx);
     setPrintedSheets(prev => new Set(prev).add(groupIdx));
@@ -178,57 +174,14 @@ export default function CableDesigner() {
   };
 
   const handleInitDB = async () => {
-    if (!confirm("Are you sure you want to clear all projects from the database? This action cannot be undone.")) {
-      return;
-    }
     try {
       await initDB();
-      setProjectId(null);
-      setProjectItems([]);
-      setProjectName('New Project');
-      alert('Database reset successfully!');
+      alert('Database initialized successfully!');
     } catch (err) {
       console.error(err);
-      alert('Failed to reset database.');
+      alert('Failed to initialize database.');
     }
   };
-
-  const handleNewProject = async () => {
-    if (projectItems.length > 0 && !confirm("Create a new project? Unsaved changes will be lost if you haven't saved.")) {
-      return;
-    }
-    const newId = crypto.randomUUID();
-    setProjectName('New Project');
-    setProjectItems([]);
-    setProjectId(newId);
-    
-    try {
-      const project: SavedProject = {
-        id: newId,
-        name: 'New Project',
-        items: [],
-        updatedAt: Date.now(),
-      };
-      await saveProjectToDB(project);
-    } catch (err) {
-      console.error('Failed to create new project:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (projectId) {
-      const timer = setTimeout(() => {
-        const project: SavedProject = {
-          id: projectId,
-          name: projectName,
-          items: projectItems,
-          updatedAt: Date.now(),
-        };
-        saveProjectToDB(project).catch(console.error);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [projectItems, projectName, projectId]);
 
   const handleSaveProject = async () => {
     if (projectItems.length === 0) {
@@ -466,6 +419,10 @@ export default function CableDesigner() {
       type: 'danger'
     });
   };
+
+  const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
+  const [projectName, setProjectName] = useState('New Project');
+  const [result, setResult] = useState<CalculationResult | null>(null);
 
   useEffect(() => {
     const res = calculateCable(params, materialDensities, materialScrap);
@@ -1480,7 +1437,7 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 pl-4">- Diameter of Conductor (Approx.)</td>
                           <td className="border border-slate-400 p-2 text-center">mm</td>
                           {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.conductorDiameter?.toFixed(2) || '-'}</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.conductorDiameter.toFixed(2) || '-'}</td>
                           ))}
                         </tr>
 
@@ -1508,7 +1465,7 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 pl-4">- Thickness of Insulation (Nom.)</td>
                           <td className="border border-slate-400 p-2 text-center">mm</td>
                           {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.insulationThickness?.toFixed(1) || '-'}</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.insulationThickness.toFixed(1) || '-'}</td>
                           ))}
                         </tr>
                       </>
@@ -2068,13 +2025,6 @@ export default function CableDesigner() {
                 Open Project
               </button>
               <button
-                onClick={handleNewProject}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
-              >
-                <Plus className="w-4 h-4" />
-                New Project
-              </button>
-              <button
                 onClick={handleSaveProject}
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
               >
@@ -2412,7 +2362,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.01"
-                                  value={params.manualEarthingWireDiameter !== undefined ? params.manualEarthingWireDiameter : (result.spec.earthingCore?.wireDiameter || 0).toFixed(2)}
+                                  value={params.manualEarthingWireDiameter || ''}
+                                  placeholder="Auto"
                                   onChange={(e) => handleParamChange('manualEarthingWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
                                   className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                                 />
@@ -2425,7 +2376,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.1"
-                                  value={params.manualEarthingConductorDiameter !== undefined ? params.manualEarthingConductorDiameter : (result.spec.earthingCore?.conductorDiameter || 0).toFixed(2)}
+                                  value={params.manualEarthingConductorDiameter || ''}
+                                  placeholder="Auto"
                                   onChange={(e) => handleParamChange('manualEarthingConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
                                   className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                                 />
@@ -2435,7 +2387,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.1"
-                                  value={params.manualEarthingInsulationThickness !== undefined ? params.manualEarthingInsulationThickness : (result.spec.earthingCore?.insulationThickness || 0).toFixed(1)}
+                                  value={params.manualEarthingInsulationThickness || ''}
+                                  placeholder="Auto"
                                   onChange={(e) => handleParamChange('manualEarthingInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
                                   className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                                 />
@@ -2550,7 +2503,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.01"
-                                value={params.manualWireDiameter !== undefined ? params.manualWireDiameter : result.spec.phaseCore.wireDiameter.toFixed(2)}
+                                value={params.manualWireDiameter || ''}
+                                placeholder={result.spec.phaseCore.wireDiameter.toFixed(2)}
                                 onChange={(e) => handleParamChange('manualWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -2563,7 +2517,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter : result.spec.conductorDiameter.toFixed(2)}
+                              value={params.manualConductorDiameter || ''}
+                              placeholder={result.spec.conductorDiameter.toFixed(2)}
                               onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -2576,7 +2531,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness : (result.spec.conductorScreenThickness || 0).toFixed(1)}
+                                value={params.manualConductorScreenThickness || ''}
+                                placeholder={(result.spec.conductorScreenThickness || 0).toFixed(1)}
                                 onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -2626,7 +2582,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness : result.spec.insulationThickness.toFixed(1)}
+                              value={params.manualInsulationThickness || ''}
+                              placeholder={result.spec.insulationThickness.toFixed(1)}
                               onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -2639,7 +2596,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness : (result.spec.insulationScreenThickness || 0).toFixed(1)}
+                                value={params.manualInsulationScreenThickness || ''}
+                                placeholder={(result.spec.insulationScreenThickness || 0).toFixed(1)}
                                 onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -2695,7 +2653,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.1"
-                                  value={params.manualMvScreenThickness !== undefined ? params.manualMvScreenThickness : (result.spec.mvScreenThickness || 0).toFixed(1)}
+                                  value={params.manualMvScreenThickness || ''}
+                                  placeholder={(result.spec.mvScreenThickness || 0).toFixed(1)}
                                   onChange={(e) => handleParamChange('manualMvScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
                                   className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                                 />
@@ -2740,7 +2699,8 @@ export default function CableDesigner() {
                           <input
                             type="number"
                             step="0.1"
-                            value={params.manualLaidUpDiameter !== undefined ? params.manualLaidUpDiameter : result.spec.laidUpDiameter.toFixed(1)}
+                            value={params.manualLaidUpDiameter || ''}
+                            placeholder={result.spec.laidUpDiameter.toFixed(1)}
                             onChange={(e) => handleParamChange('manualLaidUpDiameter', e.target.value ? Number(e.target.value) : undefined)}
                             className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                           />
@@ -2799,7 +2759,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness : result.spec.innerCoveringThickness.toFixed(1)}
+                              value={params.manualInnerSheathThickness || ''}
+                              placeholder={result.spec.innerCoveringThickness.toFixed(1)}
                               onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -2859,7 +2820,8 @@ export default function CableDesigner() {
                                   <input
                                     type="number"
                                     step="0.1"
-                                    value={params.manualScreenThickness !== undefined ? params.manualScreenThickness : (result.spec.screenThickness || 0).toFixed(1)}
+                                    value={params.manualScreenThickness || ''}
+                                    placeholder={(result.spec.screenThickness || 0).toFixed(1)}
                                     onChange={(e) => handleParamChange('manualScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
                                     className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                                   />
@@ -2944,7 +2906,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualSeparatorThickness !== undefined ? params.manualSeparatorThickness : (result.spec.separatorThickness || 0).toFixed(1)}
+                              value={params.manualSeparatorThickness || ''}
+                              placeholder={(result.spec.separatorThickness || 0).toFixed(1)}
                               onChange={(e) => handleParamChange('manualSeparatorThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -3006,7 +2969,8 @@ export default function CableDesigner() {
                           <input
                             type="number"
                             step="0.1"
-                            value={params.manualArmorThickness !== undefined ? params.manualArmorThickness : result.spec.armorThickness.toFixed(1)}
+                            value={params.manualArmorThickness || ''}
+                            placeholder={result.spec.armorThickness.toFixed(1)}
                             onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? Number(e.target.value) : undefined)}
                             className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                           />
@@ -3095,7 +3059,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualSheathThickness !== undefined ? params.manualSheathThickness : result.spec.sheathThickness.toFixed(1)}
+                              value={params.manualSheathThickness || ''}
+                              placeholder={result.spec.sheathThickness.toFixed(1)}
                               onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -3116,7 +3081,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualDiameterUnderArmor !== undefined ? params.manualDiameterUnderArmor : result.spec.diameterUnderArmor.toFixed(1)}
+                                value={params.manualDiameterUnderArmor || ''}
+                                placeholder={result.spec.diameterUnderArmor.toFixed(1)}
                                 onChange={(e) => handleParamChange('manualDiameterUnderArmor', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -3126,7 +3092,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualDiameterOverArmor !== undefined ? params.manualDiameterOverArmor : result.spec.diameterOverArmor.toFixed(1)}
+                                value={params.manualDiameterOverArmor || ''}
+                                placeholder={result.spec.diameterOverArmor.toFixed(1)}
                                 onChange={(e) => handleParamChange('manualDiameterOverArmor', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -3137,7 +3104,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualOverallDiameter !== undefined ? params.manualOverallDiameter : result.spec.overallDiameter.toFixed(1)}
+                              value={params.manualOverallDiameter || ''}
+                              placeholder={result.spec.overallDiameter.toFixed(1)}
                               onChange={(e) => handleParamChange('manualOverallDiameter', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -3156,7 +3124,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter : result.spec.conductorDiameter.toFixed(1)}
+                              placeholder={result.spec.conductorDiameter.toFixed(1)}
+                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(1) : ''}
                               onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? parseFloat(e.target.value) : undefined)}
                               className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
@@ -3168,7 +3137,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualMgtThickness !== undefined ? params.manualMgtThickness : (result.spec.mgtThickness || 0.2).toFixed(1)}
+                                placeholder={(result.spec.mgtThickness || 0.2).toFixed(1)}
+                                value={params.manualMgtThickness !== undefined ? params.manualMgtThickness.toFixed(1) : ''}
                                 onChange={(e) => handleParamChange('manualMgtThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
@@ -3182,7 +3152,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.1"
-                                  value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness : (result.spec.conductorScreenThickness || 0.5).toFixed(1)}
+                                  placeholder={(result.spec.conductorScreenThickness || 0.5).toFixed(1)}
+                                  value={params.manualConductorScreenThickness !== undefined ? params.manualConductorScreenThickness.toFixed(1) : ''}
                                   onChange={(e) => handleParamChange('manualConductorScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                   className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
@@ -3192,7 +3163,8 @@ export default function CableDesigner() {
                                 <input
                                   type="number"
                                   step="0.1"
-                                  value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness : (result.spec.insulationScreenThickness || 0.5).toFixed(1)}
+                                  placeholder={(result.spec.insulationScreenThickness || 0.5).toFixed(1)}
+                                  value={params.manualInsulationScreenThickness !== undefined ? params.manualInsulationScreenThickness.toFixed(1) : ''}
                                   onChange={(e) => handleParamChange('manualInsulationScreenThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                   className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
@@ -3205,7 +3177,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness : result.spec.insulationThickness.toFixed(1)}
+                              placeholder={result.spec.insulationThickness.toFixed(1)}
+                              value={params.manualInsulationThickness !== undefined ? params.manualInsulationThickness.toFixed(1) : ''}
                               onChange={(e) => handleParamChange('manualInsulationThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                               className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
@@ -3217,7 +3190,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness : result.spec.innerCoveringThickness.toFixed(1)}
+                                placeholder={result.spec.innerCoveringThickness.toFixed(1)}
+                                value={params.manualInnerSheathThickness !== undefined ? params.manualInnerSheathThickness.toFixed(1) : ''}
                                 onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
@@ -3230,7 +3204,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualArmorThickness !== undefined ? params.manualArmorThickness : result.spec.armorThickness.toFixed(1)}
+                                placeholder={result.spec.armorThickness.toFixed(1)}
+                                value={params.manualArmorThickness !== undefined ? params.manualArmorThickness.toFixed(1) : ''}
                                 onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
@@ -3243,7 +3218,8 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 step="0.1"
-                                value={params.manualSheathThickness !== undefined ? params.manualSheathThickness : result.spec.sheathThickness.toFixed(1)}
+                                placeholder={result.spec.sheathThickness.toFixed(1)}
+                                value={params.manualSheathThickness !== undefined ? params.manualSheathThickness.toFixed(1) : ''}
                                 onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
@@ -3562,15 +3538,6 @@ export default function CableDesigner() {
                       <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
                         <h3 className="text-sm font-bold text-slate-900 mb-2">Project Management</h3>
                         <p className="text-xs text-slate-500 mb-4">Save your current project or load a previously saved project.</p>
-                        <div className="flex gap-2 mb-2">
-                          <button
-                            onClick={handleNewProject}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            New Project
-                          </button>
-                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={handleSaveProject}
@@ -3733,7 +3700,7 @@ export default function CableDesigner() {
                           <SpecRow label="Steel Wire" value={`${result.spec.earthingCore.steelWireCount} x ${result.spec.earthingCore.steelWireDiameter?.toFixed(2)}`} unit="mm" />
                         </>
                       ) : (
-                        <SpecRow label="Conductor Construction" value={`${result.spec.earthingCore.wireCount} x ${(result.spec.earthingCore.wireDiameter || 0).toFixed(2)}`} unit="mm" />
+                        <SpecRow label="Conductor Construction" value={`${result.spec.earthingCore.wireCount} x ${result.spec.earthingCore.wireDiameter.toFixed(2)}`} unit="mm" />
                       )}
                       <SpecRow label="Conductor Diameter" value={result.spec.earthingCore.conductorDiameter} unit="mm" />
                       <SpecRow label="Insulation Thickness" value={result.spec.earthingCore.insulationThickness} unit="mm" />
