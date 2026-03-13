@@ -19,6 +19,7 @@ import {
 import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject } from '../lib/db';
+import * as XLSX from 'xlsx';
 
 const DEFAULT_MATERIAL_PRICES = {
   Cu: 155000,
@@ -172,7 +173,7 @@ export default function CableDesigner() {
     return null;
   });
   const [showSqlModal, setShowSqlModal] = useState(false);
-  const [sqlForm, setSqlForm] = useState({ host: '', database: '', username: '', password: '' });
+  const [sqlForm, setSqlForm] = useState({ host: '', port: '', database: '', username: '', password: '' });
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnectSql = async () => {
@@ -257,6 +258,44 @@ export default function CableDesigner() {
       console.error(err);
       alert('Failed to load projects from SQL database.');
     }
+  };
+
+  const handleExportExcel = () => {
+    if (projectItems.length === 0) {
+      alert('No items to export.');
+      return;
+    }
+
+    const data = projectItems.map((item, index) => {
+      const hpp = calculateHPP(item.result, item.params);
+      const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
+      const breakdown = calculateCostBreakdown(item.result.bom, item.params);
+      
+      return {
+        'No': index + 1,
+        'Cable Designation': getCableDesignation(item.params, item.result),
+        'Cores': item.params.cores,
+        'Size (mm²)': item.params.size,
+        'Voltage': item.params.voltage,
+        'Standard': item.params.standard,
+        'Overall Diameter (mm)': item.result.spec.overallDiameter.toFixed(2),
+        'Total Weight (kg/km)': item.result.bom.totalWeight.toFixed(2),
+        'HPP (Rp/m)': hpp,
+        'Margin (%)': item.params.margin,
+        'Selling Price (Rp/m)': sellingPrice,
+        'Conductor Cost': breakdown.conductor + (breakdown.earthingConductor || 0) + (breakdown.earthingAl || 0) + (breakdown.earthingSteel || 0),
+        'Insulation Cost': breakdown.insulation + (breakdown.earthingInsulation || 0),
+        'Inner Sheath Cost': breakdown.innerCovering,
+        'Armor Cost': breakdown.armor,
+        'Outer Sheath Cost': breakdown.sheath,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Project Items");
+
+    XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
   };
 
   const handleOpenProject = (project: SavedProject) => {
@@ -1974,9 +2013,15 @@ export default function CableDesigner() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Server Address</label>
-                <input type="text" value={sqlForm.host} onChange={e => setSqlForm({...sqlForm, host: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. localhost:3306" />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Server Address</label>
+                  <input type="text" value={sqlForm.host} onChange={e => setSqlForm({...sqlForm, host: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. localhost" />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Port</label>
+                  <input type="text" value={sqlForm.port} onChange={e => setSqlForm({...sqlForm, port: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="3306" />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">Database Name</label>
@@ -2199,6 +2244,13 @@ export default function CableDesigner() {
               >
                 <Save className="w-4 h-4" />
                 Save Project
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
+              >
+                <Download className="w-4 h-4" />
+                Download Excel
               </button>
             </div>
         </header>
@@ -3721,6 +3773,13 @@ export default function CableDesigner() {
                           >
                             <FolderOpen className="w-4 h-4" />
                             Open Project
+                          </button>
+                          <button
+                            onClick={handleExportExcel}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Export Excel
                           </button>
                         </div>
                       </div>
