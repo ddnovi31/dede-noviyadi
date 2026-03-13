@@ -1108,7 +1108,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness;
-    armorWeight = tapeArea * (densities.STA || densities.Steel);
+    armorWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
     // Flat wire approx 0.8mm, Tape approx 0.2mm
@@ -1124,7 +1124,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2; // Overlap
     
-    armorWeight = (flatArea + tapeArea) * (densities.SFA || densities.Steel);
+    armorWeight = (flatArea * 1.02 + tapeArea * 1.02) * (densities.SFA || densities.Steel); // 2% lay factor
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
     // Wire approx 1.25mm, Tape approx 0.2mm
@@ -1141,7 +1141,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2;
     
-    armorWeight = (wireArea + tapeArea) * (densities.RGB || densities.Steel);
+    armorWeight = (wireArea * 1.05 + tapeArea * 1.02) * (densities.RGB || densities.Steel); // 5% lay factor for wire, 2% for tape
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
     
@@ -1160,14 +1160,20 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     else if (diameterUnderArmor <= 50) carriers = 48;
     else carriers = 64;
 
-    // Braid angle (alpha) - typically 45-60 degrees for good coverage
+    // Braid angle (alpha) - typically 45 degrees for good coverage
     const braidAngleDeg = 45; 
-    const layFactor = 1 / Math.cos(braidAngleDeg * Math.PI / 180);
+    const cosAlpha = Math.cos(braidAngleDeg * Math.PI / 180);
+    const layFactor = 1 / cosAlpha;
     
     const meanBraidDiameter = diameterUnderArmor + wireDia;
-    const coverage = (effectiveParams.braidCoverage || 90) / 100;
+    const coverageTarget = (effectiveParams.braidCoverage || 90) / 100;
     
-    const n = Math.ceil((coverage * 2 * Math.PI * meanBraidDiameter * Math.cos(braidAngleDeg * Math.PI / 180)) / (carriers * wireDia));
+    // Standard formula: Coverage K = 2F - F^2 => Filling factor F = 1 - sqrt(1 - K)
+    const F = 1 - Math.sqrt(1 - coverageTarget);
+    
+    // N = (F * 2 * PI * Dm * cos(alpha)) / (C * d)
+    const exactN = (F * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
+    const n = Math.ceil(exactN); // Number of wires per carrier must be integer
     
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
     const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (densities.GSWB || densities.Steel);

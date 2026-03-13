@@ -19,7 +19,7 @@ import {
 import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject } from '../lib/db';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 const DEFAULT_MATERIAL_PRICES = {
   Cu: 155000,
@@ -266,34 +266,304 @@ export default function CableDesigner() {
       return;
     }
 
-    const data = projectItems.map((item, index) => {
-      const hpp = calculateHPP(item.result, item.params);
-      const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
-      const breakdown = calculateCostBreakdown(item.result.bom, item.params);
-      
-      return {
-        'No': index + 1,
-        'Cable Designation': getCableDesignation(item.params, item.result),
-        'Cores': item.params.cores,
-        'Size (mm²)': item.params.size,
-        'Voltage': item.params.voltage,
-        'Standard': item.params.standard,
-        'Overall Diameter (mm)': item.result.spec.overallDiameter.toFixed(2),
-        'Total Weight (kg/km)': item.result.bom.totalWeight.toFixed(2),
-        'HPP (Rp/m)': hpp,
-        'Margin (%)': item.params.margin,
-        'Selling Price (Rp/m)': sellingPrice,
-        'Conductor Cost': breakdown.conductor + (breakdown.earthingConductor || 0) + (breakdown.earthingAl || 0) + (breakdown.earthingSteel || 0),
-        'Insulation Cost': breakdown.insulation + (breakdown.earthingInsulation || 0),
-        'Inner Sheath Cost': breakdown.innerCovering,
-        'Armor Cost': breakdown.armor,
-        'Outer Sheath Cost': breakdown.sheath,
-      };
+    const fmtNum = '#,##0.00';
+    const fmtRp = '"Rp" #,##0.00';
+
+    const createHeader = (text: string, bgColor: string) => ({
+      v: text,
+      t: 's',
+      s: {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: bgColor } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        },
+        alignment: { horizontal: "center", vertical: "center" }
+      }
     });
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    const hGen = "808080";
+    const hCond = "F79646";
+    const hCScr = "FCD5B4";
+    const hIns = "4F81BD";
+    const hIScr = "B8CCE4";
+    const hMScr = "FFC000";
+    const hEarth = "9BBB59";
+    const hSep = "8064A2";
+    const hInSh = "CCC0DA";
+    const hArm = "595959";
+    const hOutSh = "000000";
+    const hTot = "C0504D";
+
+    const summaryHeaders = [
+      createHeader('No', hGen), createHeader('Project', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), createHeader('Jumlah Kabel', hGen), 
+      createHeader('BOM (kg/km)', hTot), createHeader('HPP (Rp/m)', hTot), createHeader('Margin (%)', hTot), createHeader('Price (Rp/m)', hTot)
+    ];
+    const summaryDataAOA: any[][] = [summaryHeaders];
+
+    // Group items by construction (standard + voltage)
+    const groupedItems: Record<string, { item: typeof projectItems[0], index: number }[]> = {};
+    projectItems.forEach((item, index) => {
+      const groupKey = `${item.params.standard} - ${item.params.voltage}`;
+      if (!groupedItems[groupKey]) {
+        groupedItems[groupKey] = [];
+      }
+      groupedItems[groupKey].push({ item, index });
+    });
+
+    const detailsHeaders = [
+      createHeader('No', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), createHeader('Core', hGen), createHeader('Size', hGen), 
+      createHeader('Cond Wires', hCond), createHeader('Wire Dia (mm)', hCond), createHeader('Cond Dia (mm)', hCond), createHeader('Cond Dens', hCond), createHeader('Cond Wt (kg/km)', hCond), createHeader('Cond Prc (Rp/kg)', hCond), createHeader('Cond Cst (Rp/m)', hCond),
+      createHeader('C.Scr Thk (mm)', hCScr), createHeader('C.Scr Dia (mm)', hCScr), createHeader('C.Scr Dens', hCScr), createHeader('C.Scr Wt (kg/km)', hCScr), createHeader('C.Scr Prc (Rp/kg)', hCScr), createHeader('C.Scr Cst (Rp/m)', hCScr),
+      createHeader('Ins Thk (mm)', hIns), createHeader('Ins Dia (mm)', hIns), createHeader('Ins Dens', hIns), createHeader('Ins Wt (kg/km)', hIns), createHeader('Ins Prc (Rp/kg)', hIns), createHeader('Ins Cst (Rp/m)', hIns),
+      createHeader('I.Scr Thk (mm)', hIScr), createHeader('I.Scr Dia (mm)', hIScr), createHeader('I.Scr Dens', hIScr), createHeader('I.Scr Wt (kg/km)', hIScr), createHeader('I.Scr Prc (Rp/kg)', hIScr), createHeader('I.Scr Cst (Rp/m)', hIScr),
+      createHeader('M.Scr Thk (mm)', hMScr), createHeader('M.Scr Dia (mm)', hMScr), createHeader('M.Scr Dens', hMScr), createHeader('M.Scr Wt (kg/km)', hMScr), createHeader('M.Scr Prc (Rp/kg)', hMScr), createHeader('M.Scr Cst (Rp/m)', hMScr),
+      createHeader('E.Core Size', hEarth), createHeader('E.Cond Dia (mm)', hEarth), createHeader('E.Cond Wt (kg/km)', hEarth), createHeader('E.Cond Cst (Rp/m)', hEarth), createHeader('E.Ins Thk (mm)', hEarth), createHeader('E.Ins Dia (mm)', hEarth), createHeader('E.Ins Wt (kg/km)', hEarth), createHeader('E.Ins Cst (Rp/m)', hEarth),
+      createHeader('Laid-up Dia (mm)', hGen), 
+      createHeader('Sep Thk (mm)', hSep), createHeader('Sep Dia (mm)', hSep), createHeader('Sep Dens', hSep), createHeader('Sep Wt (kg/km)', hSep), createHeader('Sep Prc (Rp/kg)', hSep), createHeader('Sep Cst (Rp/m)', hSep),
+      createHeader('In.Sh Thk (mm)', hInSh), createHeader('In.Sh Dia (mm)', hInSh), createHeader('In.Sh Dens', hInSh), createHeader('In.Sh Wt (kg/km)', hInSh), createHeader('In.Sh Prc (Rp/kg)', hInSh), createHeader('In.Sh Cst (Rp/m)', hInSh),
+      createHeader('Arm Thk (mm)', hArm), createHeader('Arm Dia (mm)', hArm), createHeader('Arm Dens', hArm), createHeader('Arm Wt (kg/km)', hArm), createHeader('Arm Prc (Rp/kg)', hArm), createHeader('Arm Cst (Rp/m)', hArm),
+      createHeader('Out.Sh Thk (mm)', hOutSh), createHeader('Overall Dia (mm)', hOutSh), createHeader('Out.Sh Dens', hOutSh), createHeader('Out.Sh Wt (kg/km)', hOutSh), createHeader('Out.Sh Prc (Rp/kg)', hOutSh), createHeader('Out.Sh Cst (Rp/m)', hOutSh),
+      createHeader('Pack Cst (Rp/m)', hTot), createHeader('Total HPP (Rp/m)', hTot), createHeader('Overhead (%)', hTot), createHeader('Margin (%)', hTot), createHeader('Total Price (Rp/m)', hTot)
+    ];
+
+    const sheetsData: Record<string, any[][]> = {};
+
+    Object.entries(groupedItems).forEach(([groupKey, items]) => {
+      // Clean sheet name (max 31 chars, no invalid chars)
+      const sheetName = groupKey.replace(/[\\/?*\[\]:]/g, '_').substring(0, 31);
+      sheetsData[sheetName] = [detailsHeaders];
+
+      items.forEach(({ item, index }) => {
+        const r = sheetsData[sheetName].length + 1; // Excel row number for this sheet
+        
+        const condPrice = (item.params.conductorMaterial === 'Cu' ? materialPrices.Cu : (item.params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
+        const condDensity = materialDensities[item.params.conductorMaterial as keyof typeof materialDensities] || 8.89;
+        const condScrap = 1 + (materialScrap[item.params.conductorMaterial] || 0) / 100;
+
+        const insPrice = materialPrices[item.params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE;
+        const insDensity = materialDensities[item.params.insulationMaterial as keyof typeof materialDensities] || 0.92;
+        const insScrap = 1 + (materialScrap[item.params.insulationMaterial] || 0) / 100;
+
+        const innerPrice = materialPrices[item.params.innerSheathMaterial || 'PVC'] || materialPrices.PVC;
+        const innerDensity = materialDensities[(item.params.innerSheathMaterial || 'PVC') as keyof typeof materialDensities] || 1.45;
+        const innerScrap = 1 + (materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0) / 100;
+
+        const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : 'Steel')))));
+        const armorPrice = (
+          item.params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
+          item.params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
+          item.params.armorType === 'STA' ? (materialPrices.STA || materialPrices.Steel) : 
+          materialPrices.Steel
+        );
+        const armorDensity = item.params.armorType === 'AWA' ? 2.7 : 7.85;
+        const armorScrap = 1 + (materialScrap[armorMat] || 0) / 100;
+
+        const sheathPrice = materialPrices[item.params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC;
+        const sheathDensity = materialDensities[item.params.sheathMaterial as keyof typeof materialDensities] || 1.45;
+        const sheathScrap = 1 + (materialScrap[item.params.sheathMaterial] || 0) / 100;
+
+        const semiPrice = materialPrices.SemiCond || 65000;
+        const semiDensity = materialDensities.SemiCond || 1.15;
+        const semiScrap = 1 + (materialScrap.SemiCond || 0) / 100;
+
+        const metScreenMat = item.params.screenType === 'CTS' ? 'CTS' : (item.params.screenType === 'CWS' ? 'CWS' : 'Steel');
+        const metScreenPrice = item.params.screenType === 'CTS' ? (materialPrices.CTS || materialPrices.Cu) : materialPrices.Cu;
+        const metScreenDensity = materialDensities.Cu || 8.89;
+        const metScreenScrap = 1 + (materialScrap[metScreenMat] || 0) / 100;
+
+        const separatorPrice = materialPrices[item.params.separatorMaterial || 'PVC'] || materialPrices.PVC;
+        const separatorDensity = materialDensities[(item.params.separatorMaterial || 'PVC') as keyof typeof materialDensities] || 1.45;
+        const separatorScrap = 1 + (materialScrap[item.params.separatorMaterial || 'PVC'] || 0) / 100;
+
+        const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+        const packingCost = packing.packingCostPerMeter;
+
+        const row = [
+          { v: index + 1, t: 'n' }, // A: No
+          { v: getCableDesignation(item.params, item.result), t: 's' }, // B: Tipe Kabel
+          { v: item.params.standard, t: 's' }, // C: Standard
+          { v: item.params.cores, t: 'n' }, // D: Core
+          { v: item.params.size, t: 'n' }, // E: Size
+          { v: item.result.spec.phaseCore.wireCount || 0, t: 'n' }, // F: Cond Wires
+          { v: item.result.spec.phaseCore.wireDiameter || 0, t: 'n', z: fmtNum }, // G: Wire Dia
+          { v: item.result.spec.phaseCore.conductorDiameter || 0, t: 'n', z: fmtNum }, // H: Cond Dia
+          { v: condDensity, t: 'n', z: fmtNum }, // I: Cond Dens
+          { t: 'n', f: `IF(AND(F${r}>0, G${r}>0), D${r}*F${r}*PI()*(G${r}/2)^2*I${r}*1.02, D${r}*PI()*(H${r}/2)^2*I${r}*1.02) * ${condScrap}`, z: fmtNum }, // J: Cond Wt
+          { v: condPrice, t: 'n', z: fmtRp }, // K: Cond Prc
+          { t: 'n', f: `J${r}*K${r}/1000`, z: fmtRp }, // L: Cond Cst
+
+          { v: item.result.spec.conductorScreenThickness || 0, t: 'n', z: fmtNum }, // M: C.Scr Thk
+          { t: 'n', f: `H${r}+2*M${r}`, z: fmtNum }, // N: C.Scr Dia
+          { v: semiDensity, t: 'n', z: fmtNum }, // O: C.Scr Dens
+          { t: 'n', f: `D${r}*PI()*((N${r}/2)^2-(H${r}/2)^2)*O${r}*1.02 * ${semiScrap}`, z: fmtNum }, // P: C.Scr Wt
+          { v: semiPrice, t: 'n', z: fmtRp }, // Q: C.Scr Prc
+          { t: 'n', f: `P${r}*Q${r}/1000`, z: fmtRp }, // R: C.Scr Cst
+
+          { v: item.result.spec.phaseCore.insulationThickness || 0, t: 'n', z: fmtNum }, // S: Ins Thk
+          { t: 'n', f: `N${r}+2*S${r}`, z: fmtNum }, // T: Ins Dia
+          { v: insDensity, t: 'n', z: fmtNum }, // U: Ins Dens
+          { t: 'n', f: `D${r}*PI()*((T${r}/2)^2-(N${r}/2)^2)*U${r}*1.02 * ${insScrap}`, z: fmtNum }, // V: Ins Wt
+          { v: insPrice, t: 'n', z: fmtRp }, // W: Ins Prc
+          { t: 'n', f: `V${r}*W${r}/1000`, z: fmtRp }, // X: Ins Cst
+
+          { v: item.result.spec.insulationScreenThickness || 0, t: 'n', z: fmtNum }, // Y: I.Scr Thk
+          { t: 'n', f: `T${r}+2*Y${r}`, z: fmtNum }, // Z: I.Scr Dia
+          { v: semiDensity, t: 'n', z: fmtNum }, // AA: I.Scr Dens
+          { t: 'n', f: `D${r}*PI()*((Z${r}/2)^2-(T${r}/2)^2)*AA${r}*1.02 * ${semiScrap}`, z: fmtNum }, // AB: I.Scr Wt
+          { v: semiPrice, t: 'n', z: fmtRp }, // AC: I.Scr Prc
+          { t: 'n', f: `AB${r}*AC${r}/1000`, z: fmtRp }, // AD: I.Scr Cst
+
+          { v: item.result.spec.mvScreenThickness || item.result.spec.screenThickness || 0, t: 'n', z: fmtNum }, // AE: M.Scr Thk
+          { t: 'n', f: `Z${r}+2*AE${r}`, z: fmtNum }, // AF: M.Scr Dia
+          { v: metScreenDensity, t: 'n', z: fmtNum }, // AG: M.Scr Dens
+          { t: 'n', f: `D${r}*PI()*((AF${r}/2)^2-(Z${r}/2)^2)*AG${r}*1.02 * ${metScreenScrap}`, z: fmtNum }, // AH: M.Scr Wt
+          { v: metScreenPrice, t: 'n', z: fmtRp }, // AI: M.Scr Prc
+          { t: 'n', f: `AH${r}*AI${r}/1000`, z: fmtRp }, // AJ: M.Scr Cst
+
+          { v: item.params.earthingSize || 0, t: 'n', z: fmtNum }, // AK: E.Core Size
+          { v: item.result.spec.earthingCore?.conductorDiameter || 0, t: 'n', z: fmtNum }, // AL: E.Cond Dia
+          { t: 'n', f: `IF(AK${r}>0, PI()*(AL${r}/2)^2*I${r}*1.02 * ${condScrap}, 0)`, z: fmtNum }, // AM: E.Cond Wt
+          { t: 'n', f: `AM${r}*K${r}/1000`, z: fmtRp }, // AN: E.Cond Cst
+          { v: item.result.spec.earthingCore?.insulationThickness || 0, t: 'n', z: fmtNum }, // AO: E.Ins Thk
+          { t: 'n', f: `AL${r}+2*AO${r}`, z: fmtNum }, // AP: E.Ins Dia
+          { t: 'n', f: `IF(AK${r}>0, PI()*((AP${r}/2)^2-(AL${r}/2)^2)*U${r}*1.02 * ${insScrap}, 0)`, z: fmtNum }, // AQ: E.Ins Wt
+          { t: 'n', f: `AQ${r}*W${r}/1000`, z: fmtRp }, // AR: E.Ins Cst
+
+          { v: item.result.spec.laidUpDiameter || 0, t: 'n', z: fmtNum }, // AS: Laid-up Dia
+
+          { v: item.result.spec.separatorThickness || 0, t: 'n', z: fmtNum }, // AT: Sep Thk
+          { t: 'n', f: `AS${r}+2*AT${r}`, z: fmtNum }, // AU: Sep Dia
+          { v: separatorDensity, t: 'n', z: fmtNum }, // AV: Sep Dens
+          { t: 'n', f: `PI()*((AU${r}/2)^2-(AS${r}/2)^2)*AV${r} * ${separatorScrap}`, z: fmtNum }, // AW: Sep Wt
+          { v: separatorPrice, t: 'n', z: fmtRp }, // AX: Sep Prc
+          { t: 'n', f: `AW${r}*AX${r}/1000`, z: fmtRp }, // AY: Sep Cst
+
+          { v: item.result.spec.innerCoveringThickness || 0, t: 'n', z: fmtNum }, // AZ: In.Sh Thk
+          { t: 'n', f: `AU${r}+2*AZ${r}`, z: fmtNum }, // BA: In.Sh Dia
+          { v: innerDensity, t: 'n', z: fmtNum }, // BB: In.Sh Dens
+          { t: 'n', f: `PI()*((BA${r}/2)^2-(AU${r}/2)^2)*BB${r} * ${innerScrap}`, z: fmtNum }, // BC: In.Sh Wt
+          { v: innerPrice, t: 'n', z: fmtRp }, // BD: In.Sh Prc
+          { t: 'n', f: `BC${r}*BD${r}/1000`, z: fmtRp }, // BE: In.Sh Cst
+
+          { v: item.result.spec.armorThickness || 0, t: 'n', z: fmtNum }, // BF: Arm Thk
+          { t: 'n', f: `BA${r}+2*BF${r}`, z: fmtNum }, // BG: Arm Dia
+          { v: armorDensity, t: 'n', z: fmtNum }, // BH: Arm Dens
+          // Armor weight formula depends on armor type
+          ...(item.params.armorType === 'SWA' || item.params.armorType === 'AWA' ? [
+            { t: 'n', f: `INT(PI()*(BA${r}+BF${r})/(BF${r}*1.05)) * PI()*(BF${r}/2)^2 * BH${r} * 1.05 * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Wire)
+          ] : item.params.armorType === 'STA' ? [
+            { t: 'n', f: `PI()*(BA${r}+2*BF${r}) * 2*BF${r} * BH${r} * 1.02 * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Tape)
+          ] : item.params.armorType === 'SFA' ? [
+            { t: 'n', f: `(PI()*(BA${r}+BF${r}*0.8)*BF${r}*0.8*0.9*1.02 + PI()*(BA${r}+2*BF${r}*0.8+BF${r}*0.2)*BF${r}*0.2*1.2*1.02) * BH${r} * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Flat + Tape)
+          ] : item.params.armorType === 'RGB' ? [
+            { t: 'n', f: `(INT(PI()*(BA${r}+BF${r}*0.85)/(BF${r}*0.85*1.1))*PI()*(BF${r}*0.85/2)^2*1.05 + PI()*(BA${r}+2*BF${r}*0.85+BF${r}*0.15)*BF${r}*0.15*1.2*1.02) * BH${r} * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Wire + Tape)
+          ] : item.params.armorType === 'GSWB' || item.params.armorType === 'TCWB' ? [
+            { t: 'n', f: `CEILING(((1-SQRT(1-${item.params.braidCoverage || 90}/100))*2*PI()*(BA${r}+BF${r}/2)*COS(45*PI()/180))/(IF(BA${r}<=10,16,IF(BA${r}<=20,24,IF(BA${r}<=35,32,IF(BA${r}<=50,48,64))))*BF${r}/2), 1) * IF(BA${r}<=10,16,IF(BA${r}<=20,24,IF(BA${r}<=35,32,IF(BA${r}<=50,48,64)))) * PI()*(BF${r}/4)^2 * BH${r} * (1/COS(45*PI()/180)) * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Braid)
+          ] : [
+            { t: 'n', f: `0`, z: fmtNum } // BI: Arm Wt (None)
+          ]),
+          { v: armorPrice, t: 'n', z: fmtRp }, // BJ: Arm Prc
+          { t: 'n', f: `BI${r}*BJ${r}/1000`, z: fmtRp }, // BK: Arm Cst
+
+          { v: item.result.spec.sheathThickness || 0, t: 'n', z: fmtNum }, // BL: Out.Sh Thk
+          { t: 'n', f: `BG${r}+2*BL${r}`, z: fmtNum }, // BM: Overall Dia
+          { v: sheathDensity, t: 'n', z: fmtNum }, // BN: Out.Sh Dens
+          { t: 'n', f: `PI()*((BM${r}/2)^2-(BG${r}/2)^2)*BN${r} * ${sheathScrap}`, z: fmtNum }, // BO: Out.Sh Wt
+          { v: sheathPrice, t: 'n', z: fmtRp }, // BP: Out.Sh Prc
+          { t: 'n', f: `BO${r}*BP${r}/1000`, z: fmtRp }, // BQ: Out.Sh Cst
+
+          { v: packingCost, t: 'n', z: fmtRp }, // BR: Pack Cst
+          { t: 'n', f: `L${r}+R${r}+X${r}+AD${r}+AJ${r}+AN${r}+AR${r}+AY${r}+BE${r}+BK${r}+BQ${r}+BR${r}`, z: fmtRp }, // BS: Total HPP
+          { v: item.params.overhead || 0, t: 'n', z: fmtNum }, // BT: Overhead
+          { v: item.params.margin || 0, t: 'n', z: fmtNum }, // BU: Margin
+          { t: 'n', f: `BS${r}*(1+BT${r}/100)*(1+BU${r}/100)`, z: fmtRp } // BV: Total Price
+        ];
+        
+        sheetsData[sheetName].push(row);
+
+        summaryDataAOA.push([
+          { v: index + 1, t: 'n' }, // A
+          { v: projectName || 'Cable Project', t: 's' }, // B
+          { t: 's', f: `'${sheetName}'!B${r}` }, // C
+          { t: 's', f: `'${sheetName}'!C${r}` }, // D
+          { v: `${item.params.cores} x ${item.params.size}`, t: 's' }, // E
+          { t: 'n', f: `'${sheetName}'!J${r}+'${sheetName}'!P${r}+'${sheetName}'!V${r}+'${sheetName}'!AB${r}+'${sheetName}'!AH${r}+'${sheetName}'!AM${r}+'${sheetName}'!AQ${r}+'${sheetName}'!AW${r}+'${sheetName}'!BC${r}+'${sheetName}'!BI${r}+'${sheetName}'!BO${r}`, z: fmtNum }, // F
+          { t: 'n', f: `'${sheetName}'!BS${r}`, z: fmtRp }, // G
+          { t: 'n', f: `'${sheetName}'!BU${r}`, z: fmtNum }, // H
+          { t: 'n', f: `'${sheetName}'!BV${r}`, z: fmtRp }, // I
+        ]);
+      });
+    });
+
+    // Create Material & Scrap Settings Sheet
+    const matHeaders = [
+      createHeader('Material Name', hGen),
+      createHeader('Price (Rp/kg)', hCond),
+      createHeader('Density (g/cm³)', hIns),
+      createHeader('Scrap Factor (%)', hTot)
+    ];
+    const matDataAOA: any[][] = [matHeaders];
+    
+    // Get all unique materials from prices, densities, and scrap
+    const allMaterials = new Set([
+      ...Object.keys(materialPrices),
+      ...Object.keys(materialDensities),
+      ...Object.keys(materialScrap)
+    ]);
+
+    Array.from(allMaterials).sort().forEach(mat => {
+      matDataAOA.push([
+        { v: mat, t: 's' },
+        { v: materialPrices[mat as keyof typeof materialPrices] || 0, t: 'n', z: fmtRp },
+        { v: materialDensities[mat as keyof typeof materialDensities] || 0, t: 'n', z: fmtNum },
+        { v: materialScrap[mat] || 0, t: 'n', z: fmtNum }
+      ]);
+    });
+
+    const autoFitColumns = (aoa: any[][]) => {
+      const colWidths: { wch: number }[] = [];
+      aoa.forEach(row => {
+        row.forEach((cell, colIdx) => {
+          let val = '';
+          if (cell === null || cell === undefined) {
+            val = '';
+          } else if (typeof cell === 'object') {
+            if (cell.v !== undefined) val = String(cell.v);
+            else if (cell.f) val = '123,456,789.00'; // Estimate length for formulas
+          } else {
+            val = String(cell);
+          }
+          const len = val.length + 2; // Add padding
+          if (!colWidths[colIdx]) colWidths[colIdx] = { wch: 10 };
+          if (len > colWidths[colIdx].wch) {
+            colWidths[colIdx].wch = Math.min(len, 35); // Cap at 35 characters
+          }
+        });
+      });
+      return colWidths;
+    };
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Project Items");
+    
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryDataAOA);
+    wsSummary['!cols'] = autoFitColumns(summaryDataAOA);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+    
+    // Add a sheet for each construction group
+    Object.entries(sheetsData).forEach(([sheetName, dataAOA]) => {
+      const wsDetails = XLSX.utils.aoa_to_sheet(dataAOA);
+      wsDetails['!cols'] = autoFitColumns(dataAOA);
+      XLSX.utils.book_append_sheet(wb, wsDetails, sheetName);
+    });
+
+    // Add Material Settings sheet
+    const wsMat = XLSX.utils.aoa_to_sheet(matDataAOA);
+    wsMat['!cols'] = autoFitColumns(matDataAOA);
+    XLSX.utils.book_append_sheet(wb, wsMat, "Material Settings");
 
     XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
   };
