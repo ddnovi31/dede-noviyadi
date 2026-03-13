@@ -962,7 +962,7 @@ export default function CableDesigner() {
             </button>
           </div>
 
-          <div className={reviewTab === 'summary' ? 'block print:hidden' : 'hidden print:hidden'}>
+          <div className={reviewTab === 'summary' ? 'block print:block space-y-6' : 'hidden print:hidden'}>
             {/* Project Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -979,11 +979,57 @@ export default function CableDesigner() {
 
           {/* Detailed Items Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
+            <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <List className="w-5 h-5 text-indigo-600" />
                 Cable Specifications & Costs
               </h2>
+              <div className="flex items-center gap-4 print:hidden">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-slate-500">Set All OH:</label>
+                  <input 
+                    type="number" 
+                    className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                    placeholder="%"
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setProjectItems(prev => prev.map(item => ({
+                          ...item,
+                          params: { ...item.params, overhead: val }
+                        })));
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-slate-500">Set All MG:</label>
+                  <input 
+                    type="number" 
+                    className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                    placeholder="%"
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setProjectItems(prev => prev.map(item => ({
+                          ...item,
+                          params: { ...item.params, margin: val }
+                        })));
+                      }
+                    }}
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    setReviewTab('summary');
+                    setTimeout(() => window.print(), 100);
+                  }}
+                  className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Summary
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -1030,10 +1076,34 @@ export default function CableDesigner() {
                           })()}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="text-xs text-slate-600 font-mono">{item.params.overhead || 0}%</div>
+                          <input 
+                            type="number" 
+                            className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                            value={item.params.overhead || 0}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) {
+                                setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, overhead: val } } : pItem
+                                ));
+                              }
+                            }}
+                          />
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="text-xs text-slate-600 font-mono">{item.params.margin || 0}%</div>
+                          <input 
+                            type="number" 
+                            className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                            value={item.params.margin || 0}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) {
+                                setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, margin: val } } : pItem
+                                ));
+                              }
+                            }}
+                          />
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="text-xs font-bold text-slate-400 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
@@ -1173,7 +1243,7 @@ export default function CableDesigner() {
           </div>
           </div>
 
-          <div className={reviewTab === 'specifications' ? 'space-y-12 print:block print:space-y-0' : 'hidden print:block print:space-y-0 space-y-12'}>
+          <div className={reviewTab === 'specifications' ? 'space-y-12 print:block print:space-y-0' : 'hidden print:hidden'}>
             {groupedItemsList.map((group, groupIdx) => {
             const { key: groupKey, items } = group;
             const firstItem = items[0];
