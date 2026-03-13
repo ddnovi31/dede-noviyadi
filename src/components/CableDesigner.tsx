@@ -187,10 +187,10 @@ export default function CableDesigner() {
       // Automatically create database (simulate by calling initDB)
       try {
         await initDB();
-        alert('Successfully connected to SQL server and created new database!');
+        alert('Successfully connected to SQL server and created "projects" table for storing projects!');
       } catch (err) {
         console.error(err);
-        alert('Connected, but failed to initialize database structure.');
+        alert('Connected, but failed to create "projects" table.');
       }
     }, 1500);
   };
@@ -219,6 +219,10 @@ export default function CableDesigner() {
   };
 
   const handleSaveProject = async () => {
+    if (!sqlConfig) {
+      setShowSqlModal(true);
+      return;
+    }
     if (projectItems.length === 0) {
       alert('No items to save.');
       return;
@@ -233,21 +237,25 @@ export default function CableDesigner() {
       };
       await saveProjectToDB(project);
       setProjectId(id);
-      alert('Project saved successfully!');
+      alert('Project saved successfully to SQL database!');
     } catch (err) {
       console.error(err);
-      alert('Failed to save project.');
+      alert('Failed to save project to SQL database.');
     }
   };
 
   const handleLoadProjects = async () => {
+    if (!sqlConfig) {
+      setShowSqlModal(true);
+      return;
+    }
     try {
       const projects = await getProjectsFromDB();
       setSavedProjects(projects.sort((a, b) => b.updatedAt - a.updatedAt));
       setShowProjectsModal(true);
     } catch (err) {
       console.error(err);
-      alert('Failed to load projects.');
+      alert('Failed to load projects from SQL database.');
     }
   };
 
@@ -2018,7 +2026,7 @@ export default function CableDesigner() {
               {savedProjects.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <Database className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                  <p>No saved projects found in local database.</p>
+                  <p>No saved projects found in SQL database.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -3679,14 +3687,14 @@ export default function CableDesigner() {
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4">
                       <p className="text-xs text-indigo-700 leading-relaxed">
-                        Manage local database and projects.
+                        Manage SQL database connection and projects.
                       </p>
                     </div>
                     
                     <div className="space-y-4">
                       <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
                         <h3 className="text-sm font-bold text-slate-900 mb-2">Database Management</h3>
-                        <p className="text-xs text-slate-500 mb-4">Initialize or clear the local database used for storing projects.</p>
+                        <p className="text-xs text-slate-500 mb-4">Initialize or clear the SQL database used for storing projects.</p>
                         <button
                           onClick={handleInitDB}
                           className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
