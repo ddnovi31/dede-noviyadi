@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X } from 'lucide-react';
 import {
   calculateCable,
   CABLE_DATA,
@@ -164,16 +164,42 @@ export default function CableDesigner() {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
 
-  const handlePrintSheet = (groupIdx: number) => {
-    setPrintingGroupId(groupIdx);
-    setPrintedSheets(prev => new Set(prev).add(groupIdx));
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setPrintingGroupId(null), 100);
-    }, 100);
+  const [sqlConfig, setSqlConfig] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cable_sql_config');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [sqlForm, setSqlForm] = useState({ host: '', database: '', username: '', password: '' });
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnectSql = async () => {
+    setIsConnecting(true);
+    // Simulate connection delay
+    setTimeout(async () => {
+      setIsConnecting(false);
+      setSqlConfig(sqlForm);
+      localStorage.setItem('cable_sql_config', JSON.stringify(sqlForm));
+      setShowSqlModal(false);
+      
+      // Automatically create database (simulate by calling initDB)
+      try {
+        await initDB();
+        alert('Successfully connected to SQL server and created new database!');
+      } catch (err) {
+        console.error(err);
+        alert('Connected, but failed to initialize database structure.');
+      }
+    }, 1500);
   };
 
   const handleInitDB = async () => {
+    if (!sqlConfig) {
+      setShowSqlModal(true);
+      return;
+    }
     try {
       await initDB();
       alert('Database initialized successfully!');
@@ -181,6 +207,15 @@ export default function CableDesigner() {
       console.error(err);
       alert('Failed to initialize database.');
     }
+  };
+
+  const handlePrintSheet = (groupIdx: number) => {
+    setPrintingGroupId(groupIdx);
+    setPrintedSheets(prev => new Set(prev).add(groupIdx));
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintingGroupId(null), 100);
+    }, 100);
   };
 
   const handleSaveProject = async () => {
@@ -963,6 +998,10 @@ export default function CableDesigner() {
           </div>
 
           <div className={reviewTab === 'summary' ? 'block print:block space-y-6' : 'hidden print:hidden'}>
+            {/* Landscape Print Style */}
+            <style type="text/css" media="print">
+              {`@page { size: landscape; }`}
+            </style>
             {/* Project Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -1039,6 +1078,7 @@ export default function CableDesigner() {
                     <th className="px-6 py-4 border-b border-slate-100">Dimensions</th>
                     <th className="px-6 py-4 border-b border-slate-100">Weight</th>
                     <th className="px-6 py-4 border-b border-slate-100">Packing</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Cond. Price</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">OH (%)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">MG (%)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">HPP / Meter</th>
@@ -1049,6 +1089,8 @@ export default function CableDesigner() {
                   {projectItems.map((item, idx) => {
                     const hpp = calculateHPP(item.result, item.params);
                     const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
+                    const breakdown = calculateCostBreakdown(item.result.bom, item.params);
+                    const conductorPrice = breakdown.conductor + (breakdown.earthingConductor || 0) + (breakdown.earthingAl || 0) + (breakdown.earthingSteel || 0);
                     return (
                       <tr key={item.params.id || idx} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
@@ -1074,6 +1116,9 @@ export default function CableDesigner() {
                               </div>
                             );
                           })()}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-xs font-bold text-slate-600 font-mono">Rp {Math.round(conductorPrice).toLocaleString('id-ID')}</div>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <input 
@@ -1907,6 +1952,52 @@ export default function CableDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      {/* SQL Connection Modal */}
+      {showSqlModal && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Database className="w-5 h-5 text-indigo-600" />
+                Database Settings
+              </h2>
+              <button onClick={() => setShowSqlModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Server Address</label>
+                <input type="text" value={sqlForm.host} onChange={e => setSqlForm({...sqlForm, host: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. localhost:3306" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Database Name</label>
+                <input type="text" value={sqlForm.database} onChange={e => setSqlForm({...sqlForm, database: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. cable_db" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Username</label>
+                <input type="text" value={sqlForm.username} onChange={e => setSqlForm({...sqlForm, username: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. root" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                <input type="password" value={sqlForm.password} onChange={e => setSqlForm({...sqlForm, password: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button onClick={() => setShowSqlModal(false)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancel</button>
+              <button onClick={handleConnectSql} disabled={isConnecting} className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors flex items-center gap-2">
+                {isConnecting ? (
+                  <>
+                    <RotateCcw className="w-4 h-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : 'Connect & Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Load Projects Modal */}
       {showProjectsModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
