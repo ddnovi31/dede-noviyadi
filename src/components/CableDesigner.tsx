@@ -403,14 +403,18 @@ export default function CableDesigner() {
         const innerDensity = materialDensities[(item.params.innerSheathMaterial || 'PVC') as keyof typeof materialDensities] || 1.45;
         const innerScrap = 1 + (materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0) / 100;
 
-        const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : 'Steel')))));
+        const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : (item.params.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))));
         const armorPrice = (
           item.params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
           item.params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
           item.params.armorType === 'STA' ? (materialPrices.STA || materialPrices.Steel) : 
+          item.params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.Steel) : 
+          item.params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.Steel) : 
+          item.params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.Steel) : 
+          item.params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
           materialPrices.Steel
         );
-        const armorDensity = item.params.armorType === 'AWA' ? 2.7 : 7.85;
+        const armorDensity = item.params.armorType === 'AWA' ? 2.7 : (item.params.armorType === 'TCWB' ? 8.89 : 7.85);
         const armorScrap = 1 + (materialScrap[armorMat] || 0) / 100;
 
         const sheathPrice = materialPrices[item.params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC;
@@ -1074,8 +1078,24 @@ export default function CableDesigner() {
         newParams.manualConductorDiameter = undefined;
       }
       
+      if (key === 'cores' || key === 'formationType') {
+        const newCores = key === 'cores' ? value : prev.cores;
+        const newFormation = key === 'formationType' ? value : prev.formationType;
+        const isIsAllowed = newFormation !== 'Core' && newCores > 1;
+        if (!isIsAllowed) {
+          newParams.hasIndividualScreen = false;
+        }
+      }
+      
       if (key === 'hasIndividualScreen' && value === true) {
-        newParams.hasOverallScreen = true;
+        const isIsAllowed = prev.formationType !== 'Core' && 
+                            !(prev.formationType === 'Pair' && prev.cores <= 2) && 
+                            !(prev.formationType === 'Triad' && prev.cores <= 3);
+        if (!isIsAllowed) {
+          newParams.hasIndividualScreen = false;
+        } else {
+          newParams.hasOverallScreen = true;
+        }
       }
       if (key === 'hasOverallScreen' && value === false) {
         newParams.hasIndividualScreen = false;
@@ -1108,11 +1128,13 @@ export default function CableDesigner() {
       }
       
       // Validation rules
-      if (newParams.cores === 1 && newParams.armorType === 'SWA') {
-        newParams.armorType = 'AWA'; // Single core AC systems use AWA
-      }
-      if (newParams.cores > 1 && newParams.armorType === 'AWA') {
-        newParams.armorType = 'SWA'; // Multi core uses SWA
+      if (newParams.standard !== 'BS EN 50288-7') {
+        if (newParams.cores === 1 && newParams.armorType === 'SWA') {
+          newParams.armorType = 'AWA'; // Single core AC systems use AWA
+        }
+        if (newParams.cores > 1 && newParams.armorType === 'AWA') {
+          newParams.armorType = 'SWA'; // Multi core uses SWA
+        }
       }
       if (newParams.cores > 5 && newParams.size > 10) {
         newParams.size = 10; // Max 10mm2 for > 5 cores
@@ -1229,7 +1251,7 @@ export default function CableDesigner() {
           newParams.voltage = '0.6/1 kV';
           newParams.insulationMaterial = 'XLPE';
           newParams.sheathMaterial = 'SHF1';
-          if (newParams.armorType !== 'Unarmored' && newParams.armorType !== 'GSWB') {
+          if (newParams.armorType !== 'Unarmored' && newParams.armorType !== 'GSWB' && newParams.armorType !== 'TCWB') {
             newParams.armorType = 'GSWB';
           }
         } else if (newParams.standard.includes('NFA2X')) {
@@ -1393,6 +1415,7 @@ export default function CableDesigner() {
       params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.Steel) : 
       params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.Steel) : 
       params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.Steel) : 
+      params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
       materialPrices.Steel
     );
     const sheathPrice = (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC);
@@ -2038,9 +2061,16 @@ export default function CableDesigner() {
                             itemSizeDesignation += ` + ${item.params.earthingCores} x ${item.params.earthingSize}`;
                           }
                         }
+                        const defaultVal = `${constructionName} ${itemSizeDesignation} mm²`;
+                        const editKey = `${groupKey}-type-size-${idx}`;
                         return (
                           <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
-                            {constructionName} {itemSizeDesignation} mm²
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? defaultVal}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
+                            />
                           </td>
                         );
                       })}
@@ -2473,31 +2503,50 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center"></td>
                       <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      <td colSpan={items.length} className="border border-slate-400 p-1 text-center font-bold text-[10px]">
-                        {(() => {
-                          const editKey = `${groupKey}-marking`;
-                          let stds = p.standard;
-                          if (p.fireguard) stds += ' IEC 60331';
-                          if (p.sheathMaterial.includes('PVC-FR')) {
-                            if (p.sheathMaterial.includes('CAT.A')) stds += ' IEC 60332-3-22';
-                            else if (p.sheathMaterial.includes('CAT.B')) stds += ' IEC 60332-3-23';
-                            else if (p.sheathMaterial.includes('CAT.C')) stds += ' IEC 60332-3-24';
-                            else stds += ' IEC 60332-1';
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-marking-${idx}`;
+                        let stds = p.standard;
+                        if (p.fireguard) stds += ' IEC 60331';
+                        if (p.sheathMaterial.includes('PVC-FR')) {
+                          if (p.sheathMaterial.includes('CAT.A')) stds += ' IEC 60332-3-22';
+                          else if (p.sheathMaterial.includes('CAT.B')) stds += ' IEC 60332-3-23';
+                          else if (p.sheathMaterial.includes('CAT.C')) stds += ' IEC 60332-3-24';
+                          else stds += ' IEC 60332-1';
+                        }
+                        const construction = constructionName;
+                        
+                        let itemSizeDesignation = '';
+                        if (item.params.formationType === 'Pair') {
+                            const pairs = item.params.cores / 2;
+                            itemSizeDesignation = `${pairs} x 2 x ${item.params.size}`;
+                        } else if (item.params.formationType === 'Triad') {
+                            const triads = item.params.cores / 3;
+                            itemSizeDesignation = `${triads} x 3 x ${item.params.size}`;
+                        } else {
+                            itemSizeDesignation = `${item.params.cores} x ${item.params.size}`;
+                        }
+
+                        if (item.params.hasEarthing && item.params.earthingCores && item.params.earthingCores > 0 && item.params.earthingSize && item.params.earthingSize > 0) {
+                          if (item.params.earthingCores === 1) {
+                            itemSizeDesignation += ` + ${item.params.earthingSize}`;
+                          } else {
+                            itemSizeDesignation += ` + ${item.params.earthingCores} x ${item.params.earthingSize}`;
                           }
-                          const construction = constructionName;
-                          const sizeStr = `${sizeDesignation} mm²`;
-                          const defaultMarking = `[${p.standard}] [MULTI KABEL] [${construction}] [${sizeDesignation} mm²] [${p.voltage}] [MADE IN INDONESIA]`;
-                          
-                          return (
+                        }
+                        
+                        const defaultMarking = `[${p.standard}] [MULTI KABEL] [${construction}] [${itemSizeDesignation} mm²] [${p.voltage}] [MADE IN INDONESIA]`;
+                        
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
                             <input
                               type="text"
                               value={specEdits[editKey] ?? defaultMarking}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
-                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-bold outline-none"
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
                             />
-                          );
-                        })()}
-                      </td>
+                          </td>
+                        );
+                      })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
@@ -3015,15 +3064,21 @@ export default function CableDesigner() {
                             </select>
                           </div>
                           <div className="flex items-center gap-6">
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                              <input
-                                type="checkbox"
-                                checked={params.hasIndividualScreen || false}
-                                onChange={(e) => handleParamChange('hasIndividualScreen', e.target.checked)}
-                                className="rounded text-indigo-600 focus:ring-indigo-500"
-                              />
-                              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Individual Screen (IS)</span>
-                            </label>
+                            {(() => {
+                              const isIsAllowed = params.formationType !== 'Core' && params.cores > 1;
+                              return (
+                                <label className={`flex items-center gap-2 cursor-pointer group ${!isIsAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={params.hasIndividualScreen || false}
+                                    disabled={!isIsAllowed}
+                                    onChange={(e) => handleParamChange('hasIndividualScreen', e.target.checked)}
+                                    className="rounded text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                                  />
+                                  <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Individual Screen (IS)</span>
+                                </label>
+                              );
+                            })()}
                             <label className="flex items-center gap-2 cursor-pointer group">
                               <input
                                 type="checkbox"
@@ -3846,8 +3901,21 @@ export default function CableDesigner() {
                           className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
                         >
                           <option value="Unarmored">Unarmored</option>
-                          {params.standard === 'IEC 60092-353' ? (
-                            <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                          {params.standard === 'BS EN 50288-7' ? (
+                            <>
+                              <option value="SWA">SWA (Steel Wire)</option>
+                              <option value="STA">STA (Steel Tape)</option>
+                              <option value="SFA">SFA (Steel Flat & Tape)</option>
+                              <option value="RGB">RGB (Steel Wire & Tape)</option>
+                              <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                              <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
+                              <option value="AWA">AWA (Aluminum Wire)</option>
+                            </>
+                          ) : params.standard === 'IEC 60092-353' ? (
+                            <>
+                              <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                              <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
+                            </>
                           ) : params.cores === 1 ? (
                             <option value="AWA">AWA (Aluminum Wire)</option>
                           ) : (
@@ -3857,13 +3925,14 @@ export default function CableDesigner() {
                               <option value="SFA">SFA (Steel Flat & Tape)</option>
                               <option value="RGB">RGB (Steel Wire & Tape)</option>
                               <option value="GSWB">GSWB (Steel Wire Braided)</option>
+                              <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
                             </>
                           )}
                         </select>
                       </div>
 
-                      {/* Braid Coverage Input (GSWB only) */}
-                      {params.armorType === 'GSWB' && (
+                      {/* Braid Coverage Input (GSWB/TCWB only) */}
+                      {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                           <label className="block text-sm font-medium text-slate-700 mb-1">Braid Coverage (%)</label>
                           <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
@@ -3903,7 +3972,7 @@ export default function CableDesigner() {
                                 'D_over = D_under + 2 * (t_flat + t_tape)'
                               ) : params.armorType === 'RGB' ? (
                                 'D_over = D_under + 2 * (t_wire + t_tape)'
-                              ) : params.armorType === 'GSWB' ? (
+                              ) : params.armorType === 'GSWB' || params.armorType === 'TCWB' ? (
                                 'D_over = D_under + 2 * t_braid'
                               ) : 'D_over = D_under + 2 * t_armor'}
                             </p>

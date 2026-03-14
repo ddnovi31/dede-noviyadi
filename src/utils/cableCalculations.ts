@@ -96,6 +96,7 @@ interface SizeData {
 }
 
 export const CABLE_DATA: SizeData[] = [
+  { size: 0.5, diameter: 0.9, xlpeThick: 0.5, pvcThick: 0.6 },
   { size: 0.75, diameter: 1.1, xlpeThick: 0.5, pvcThick: 0.6 },
   { size: 1, diameter: 1.3, xlpeThick: 0.5, pvcThick: 0.6 },
   { size: 1.5, diameter: 1.6, xlpeThick: 0.7, pvcThick: 0.8 },
@@ -398,18 +399,31 @@ export interface CalculationResult {
 }
 
 const RESISTANCE_CU: Record<number, number> = {
-  1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 
+  0.5: 36.0, 0.75: 24.5, 1: 18.1, 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 
   70: 0.268, 95: 0.193, 120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601, 
   400: 0.0470, 500: 0.0366, 630: 0.0283
 };
 
+const RESISTANCE_TCU: Record<number, number> = {
+  0.5: 36.7, 0.75: 24.8, 1: 18.2, 1.5: 12.2, 2.5: 7.56, 4: 4.70, 6: 3.11, 10: 1.84, 16: 1.16, 25: 0.734, 35: 0.529, 50: 0.391, 
+  70: 0.270, 95: 0.195, 120: 0.154, 150: 0.126, 185: 0.100, 240: 0.0762, 300: 0.0607, 
+  400: 0.0475, 500: 0.0369, 630: 0.0286
+};
+
 const RESISTANCE_CU_CLASS5: Record<number, number> = {
-  0.75: 26.0, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.30, 10: 1.91, 16: 1.21, 
+  0.5: 39.0, 0.75: 26.0, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.30, 10: 1.91, 16: 1.21, 
   25: 0.780, 35: 0.554, 50: 0.386, 70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 
   185: 0.106, 240: 0.0801, 300: 0.0641, 400: 0.0486, 500: 0.0384, 630: 0.0287
 };
 
+const RESISTANCE_TCU_CLASS5: Record<number, number> = {
+  0.5: 40.1, 0.75: 26.7, 1: 20.0, 1.5: 13.7, 2.5: 8.21, 4: 5.09, 6: 3.39, 10: 1.95, 16: 1.24, 
+  25: 0.795, 35: 0.565, 50: 0.393, 70: 0.277, 95: 0.210, 120: 0.164, 150: 0.132, 
+  185: 0.108, 240: 0.0817, 300: 0.0654, 400: 0.0495, 500: 0.0391, 630: 0.0292
+};
+
 const CLASS5_CONSTRUCTION: Record<number, { wireCount: number, wireDiameter: number }> = {
+  0.5: { wireCount: 16, wireDiameter: 0.20 },
   0.75: { wireCount: 24, wireDiameter: 0.20 },
   1: { wireCount: 32, wireDiameter: 0.20 },
   1.5: { wireCount: 30, wireDiameter: 0.25 },
@@ -609,6 +623,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       maxDcResistance = RESISTANCE_CU_CLASS5[effectiveParams.size] || (RESISTANCE_CU[effectiveParams.size] || 0);
     } else {
       maxDcResistance = RESISTANCE_CU[effectiveParams.size] || 0;
+    }
+  } else if (effectiveParams.conductorMaterial === 'TCu') {
+    if (effectiveParams.conductorType === 'f') {
+      maxDcResistance = RESISTANCE_TCU_CLASS5[effectiveParams.size] || (RESISTANCE_TCU[effectiveParams.size] || 0);
+    } else {
+      maxDcResistance = RESISTANCE_TCU[effectiveParams.size] || 0;
     }
   } else {
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
@@ -1544,7 +1564,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Extract braid wire diameter for spec display
   let braidWireDiameter: number | undefined;
-  if (effectiveParams.armorType === 'GSWB') {
+  if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
     braidWireDiameter = diameterUnderArmor <= 15 ? 0.2 : 0.3;
   }
 
@@ -1588,7 +1608,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       overallDiameterMin,
       overallDiameterMax,
       braidWireDiameter,
-      braidCoverage: effectiveParams.armorType === 'GSWB' ? (effectiveParams.braidCoverage || 90) : undefined,
+      braidCoverage: (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') ? (effectiveParams.braidCoverage || 90) : undefined,
     },
     bom: {
       conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
@@ -1596,7 +1616,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       innerCoveringWeight: Number(applyScrap(weightDetails.innerSheath?.weight || innerCoveringWeight, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
       screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
       separatorWeight: Number(applyScrap(weightDetails.separator?.weight || separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
-      armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : 'Steel')))))).toFixed(1)),
+      armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : (effectiveParams.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))))).toFixed(1)),
       sheathWeight: Number(applyScrap(weightDetails.outerSheath?.weight || sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
       semiCondWeight: Number(applyScrap((weightDetails.conductorScreen?.weight || 0) + (weightDetails.insulationScreen?.weight || 0), 'SemiCond').toFixed(1)),
       mvScreenWeight: Number(applyScrap(weightDetails.metallicScreen?.weight || totalMvScreenWeight, 'Cu').toFixed(1)),
