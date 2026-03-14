@@ -50,6 +50,8 @@ const DEFAULT_MATERIAL_PRICES = {
   GSWB: 25000,
   SFA: 24000,
   RGB: 26000,
+  'Aluminium Foil': 15000,
+  'Polyester Tape': 10000,
 };
 
 const DEFAULT_MATERIAL_DENSITIES = {
@@ -81,6 +83,8 @@ const DEFAULT_MATERIAL_DENSITIES = {
   GSWB: 7.85,
   SFA: 7.85,
   RGB: 7.85,
+  'Aluminium Foil': 2.7,
+  'Polyester Tape': 1.4,
 };
 
 const DEFAULT_MATERIAL_SCRAP = {
@@ -299,8 +303,9 @@ export default function CableDesigner() {
     const hTot = "C0504D";
 
     const summaryHeaders = [
-      createHeader('No', hGen), createHeader('Project', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), createHeader('Jumlah Kabel', hGen), 
-      createHeader('BOM (kg/km)', hTot), createHeader('HPP (Rp/m)', hTot), createHeader('Margin (%)', hTot), createHeader('Price (Rp/m)', hTot)
+      createHeader('No', hGen), createHeader('Project', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), 
+      createHeader('Order Length (m)', hGen), createHeader('BOM (kg/km)', hTot), createHeader('HPP (Rp/m)', hTot), 
+      createHeader('Margin (%)', hTot), createHeader('Price (Rp/m)', hTot), createHeader('Total (Rp)', hTot)
     ];
     const summaryDataAOA: any[][] = [summaryHeaders];
 
@@ -314,28 +319,74 @@ export default function CableDesigner() {
       groupedItems[groupKey].push({ item, index });
     });
 
-    const detailsHeaders = [
-      createHeader('No', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), createHeader('Core', hGen), createHeader('Size', hGen), 
-      createHeader('Cond Wires', hCond), createHeader('Wire Dia (mm)', hCond), createHeader('Cond Dia (mm)', hCond), createHeader('Cond Dens', hCond), createHeader('Cond Wt (kg/km)', hCond), createHeader('Cond Prc (Rp/kg)', hCond), createHeader('Cond Cst (Rp/m)', hCond),
-      createHeader('C.Scr Thk (mm)', hCScr), createHeader('C.Scr Dia (mm)', hCScr), createHeader('C.Scr Dens', hCScr), createHeader('C.Scr Wt (kg/km)', hCScr), createHeader('C.Scr Prc (Rp/kg)', hCScr), createHeader('C.Scr Cst (Rp/m)', hCScr),
-      createHeader('Ins Thk (mm)', hIns), createHeader('Ins Dia (mm)', hIns), createHeader('Ins Dens', hIns), createHeader('Ins Wt (kg/km)', hIns), createHeader('Ins Prc (Rp/kg)', hIns), createHeader('Ins Cst (Rp/m)', hIns),
-      createHeader('I.Scr Thk (mm)', hIScr), createHeader('I.Scr Dia (mm)', hIScr), createHeader('I.Scr Dens', hIScr), createHeader('I.Scr Wt (kg/km)', hIScr), createHeader('I.Scr Prc (Rp/kg)', hIScr), createHeader('I.Scr Cst (Rp/m)', hIScr),
-      createHeader('M.Scr Thk (mm)', hMScr), createHeader('M.Scr Dia (mm)', hMScr), createHeader('M.Scr Dens', hMScr), createHeader('M.Scr Wt (kg/km)', hMScr), createHeader('M.Scr Prc (Rp/kg)', hMScr), createHeader('M.Scr Cst (Rp/m)', hMScr),
-      createHeader('E.Core Size', hEarth), createHeader('E.Cond Dia (mm)', hEarth), createHeader('E.Cond Wt (kg/km)', hEarth), createHeader('E.Cond Cst (Rp/m)', hEarth), createHeader('E.Ins Thk (mm)', hEarth), createHeader('E.Ins Dia (mm)', hEarth), createHeader('E.Ins Wt (kg/km)', hEarth), createHeader('E.Ins Cst (Rp/m)', hEarth),
-      createHeader('Laid-up Dia (mm)', hGen), 
-      createHeader('Sep Thk (mm)', hSep), createHeader('Sep Dia (mm)', hSep), createHeader('Sep Dens', hSep), createHeader('Sep Wt (kg/km)', hSep), createHeader('Sep Prc (Rp/kg)', hSep), createHeader('Sep Cst (Rp/m)', hSep),
-      createHeader('In.Sh Thk (mm)', hInSh), createHeader('In.Sh Dia (mm)', hInSh), createHeader('In.Sh Dens', hInSh), createHeader('In.Sh Wt (kg/km)', hInSh), createHeader('In.Sh Prc (Rp/kg)', hInSh), createHeader('In.Sh Cst (Rp/m)', hInSh),
-      createHeader('Arm Thk (mm)', hArm), createHeader('Arm Dia (mm)', hArm), createHeader('Arm Dens', hArm), createHeader('Arm Wt (kg/km)', hArm), createHeader('Arm Prc (Rp/kg)', hArm), createHeader('Arm Cst (Rp/m)', hArm),
-      createHeader('Out.Sh Thk (mm)', hOutSh), createHeader('Overall Dia (mm)', hOutSh), createHeader('Out.Sh Dens', hOutSh), createHeader('Out.Sh Wt (kg/km)', hOutSh), createHeader('Out.Sh Prc (Rp/kg)', hOutSh), createHeader('Out.Sh Cst (Rp/m)', hOutSh),
-      createHeader('Pack Cst (Rp/m)', hTot), createHeader('Total HPP (Rp/m)', hTot), createHeader('Overhead (%)', hTot), createHeader('Margin (%)', hTot), createHeader('Total Price (Rp/m)', hTot)
-    ];
-
     const sheetsData: Record<string, any[][]> = {};
 
     Object.entries(groupedItems).forEach(([groupKey, items]) => {
       // Clean sheet name (max 31 chars, no invalid chars)
       const sheetName = groupKey.replace(/[\\/?*\[\]:]/g, '_').substring(0, 31);
-      sheetsData[sheetName] = [detailsHeaders];
+      
+      // Determine which columns are needed for this construction
+      const sampleItem = items[0].item;
+      const isMV = sampleItem.params.standard === 'IEC 60502-2';
+      const isIEC60502_1 = sampleItem.params.standard === 'IEC 60502-1';
+      const hasScreen = isMV ? (sampleItem.params.mvScreenType !== 'None') : (sampleItem.params.screenType !== 'None');
+      const hasArmor = sampleItem.params.armorType !== 'None';
+      const hasEarth = sampleItem.params.hasEarthing || (sampleItem.params.earthingSize && sampleItem.params.earthingSize > 0);
+      const hasInnerSheath = sampleItem.params.armorType !== 'Unarmored' || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None' && sampleItem.params.innerSheathMaterial !== 'Unarmored');
+      const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
+      const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X');
+      const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
+      const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7';
+
+      const dynamicHeaders = [
+        createHeader('No', hGen), createHeader('Tipe Kabel', hGen), createHeader('Standard', hGen), createHeader('Core', hGen), createHeader('Size', hGen), 
+        createHeader('Cond Wires', hCond), createHeader('Wire Dia (mm)', hCond), createHeader('Cond Dia (mm)', hCond), createHeader('Cond Dens', hCond), createHeader('Cond Wt (kg/km)', hCond), createHeader('Cond Prc (Rp/kg)', hCond), createHeader('Cond Cst (Rp/m)', hCond),
+        ...(isMV ? [
+          createHeader('C.Scr Thk (mm)', hCScr), createHeader('C.Scr Dia (mm)', hCScr), createHeader('C.Scr Dens', hCScr), createHeader('C.Scr Wt (kg/km)', hCScr), createHeader('C.Scr Prc (Rp/kg)', hCScr), createHeader('C.Scr Cst (Rp/m)', hCScr)
+        ] : []),
+        createHeader('Ins Thk (mm)', hIns), createHeader('Ins Dia (mm)', hIns), createHeader('Ins Dens', hIns), createHeader('Ins Wt (kg/km)', hIns), createHeader('Ins Prc (Rp/kg)', hIns), createHeader('Ins Cst (Rp/m)', hIns),
+        ...(isMV ? [
+          createHeader('I.Scr Thk (mm)', hIScr), createHeader('I.Scr Dia (mm)', hIScr), createHeader('I.Scr Dens', hIScr), createHeader('I.Scr Wt (kg/km)', hIScr), createHeader('I.Scr Prc (Rp/kg)', hIScr), createHeader('I.Scr Cst (Rp/m)', hIScr)
+        ] : []),
+        ...(isMV && hasScreen ? [
+          createHeader('M.Scr Thk (mm)', hMScr), createHeader('M.Scr Dia (mm)', hMScr), createHeader('M.Scr Dens', hMScr), createHeader('M.Scr Wt (kg/km)', hMScr), createHeader('M.Scr Prc (Rp/kg)', hMScr), createHeader('M.Scr Cst (Rp/m)', hMScr)
+        ] : []),
+        ...(hasEarth ? [
+          createHeader('E.Core Size', hEarth), 
+          createHeader('E.Wire Count', hEarth),
+          createHeader('E.Wire Dia (mm)', hEarth),
+          ...(isNFA2XT ? [
+            createHeader('Steel Wire Count', hEarth),
+            createHeader('Steel Wire Dia (mm)', hEarth),
+          ] : []),
+          createHeader('E.Cond Dia (mm)', hEarth), createHeader('E.Cond Wt (kg/km)', hEarth), createHeader('E.Cond Cst (Rp/m)', hEarth), createHeader('E.Ins Thk (mm)', hEarth), createHeader('E.Ins Dia (mm)', hEarth), createHeader('E.Ins Wt (kg/km)', hEarth), createHeader('E.Ins Cst (Rp/m)', hEarth)
+        ] : []),
+        createHeader('Laid-up Dia (mm)', hGen), 
+        ...(isInstrumentation && sampleItem.params.hasIndividualScreen ? [
+          createHeader('IS Wt (kg/km)', hMScr), createHeader('IS Cst (Rp/m)', hMScr)
+        ] : []),
+        ...(isInstrumentation && sampleItem.params.hasOverallScreen ? [
+          createHeader('OS Wt (kg/km)', hMScr), createHeader('OS Cst (Rp/m)', hMScr)
+        ] : []),
+        ...(hasInnerSheath ? [
+          createHeader('In.Sh Thk (mm)', hInSh), createHeader('In.Sh Dia (mm)', hInSh), createHeader('In.Sh Dens', hInSh), createHeader('In.Sh Wt (kg/km)', hInSh), createHeader('In.Sh Prc (Rp/kg)', hInSh), createHeader('In.Sh Cst (Rp/m)', hInSh)
+        ] : []),
+        ...(!isMV && hasScreen ? [
+          createHeader('M.Scr Thk (mm)', hMScr), createHeader('M.Scr Dia (mm)', hMScr), createHeader('M.Scr Dens', hMScr), createHeader('M.Scr Wt (kg/km)', hMScr), createHeader('M.Scr Prc (Rp/kg)', hMScr), createHeader('M.Scr Cst (Rp/m)', hMScr)
+        ] : []),
+        ...(hasSeparator ? [
+          createHeader('Sep Thk (mm)', hSep), createHeader('Sep Dia (mm)', hSep), createHeader('Sep Dens', hSep), createHeader('Sep Wt (kg/km)', hSep), createHeader('Sep Prc (Rp/kg)', hSep), createHeader('Sep Cst (Rp/m)', hSep)
+        ] : []),
+        ...(hasArmor ? [
+          createHeader('Arm Thk (mm)', hArm), createHeader('Arm Dia (mm)', hArm), createHeader('Arm Dens', hArm), createHeader('Arm Wt (kg/km)', hArm), createHeader('Arm Prc (Rp/kg)', hArm), createHeader('Arm Cst (Rp/m)', hArm)
+        ] : []),
+        ...(hasOuterSheath ? [
+          createHeader('Out.Sh Thk (mm)', hOutSh), createHeader('Overall Dia (mm)', hOutSh), createHeader('Out.Sh Dens', hOutSh), createHeader('Out.Sh Wt (kg/km)', hOutSh), createHeader('Out.Sh Prc (Rp/kg)', hOutSh), createHeader('Out.Sh Cst (Rp/m)', hOutSh),
+        ] : []),
+        createHeader('Pack Cst (Rp/m)', hTot), createHeader('Total HPP (Rp/m)', hTot), createHeader('Overhead (%)', hTot), createHeader('Margin (%)', hTot), createHeader('Total Price (Rp/m)', hTot)
+      ];
+
+      sheetsData[sheetName] = [dynamicHeaders];
 
       items.forEach(({ item, index }) => {
         const r = sheetsData[sheetName].length + 1; // Excel row number for this sheet
@@ -382,6 +433,166 @@ export default function CableDesigner() {
         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
         const packingCost = packing.packingCostPerMeter;
 
+        // Calculate column indices dynamically based on what's included
+        let colIdx = 12; // Starts after Cond Cst (L is 11, so next is 12)
+        
+        const getColName = (index: number) => {
+          let colName = '';
+          let temp = index;
+          while (temp >= 0) {
+            colName = String.fromCharCode(65 + (temp % 26)) + colName;
+            temp = Math.floor(temp / 26) - 1;
+          }
+          return colName;
+        };
+
+        const cScrCols = isMV ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const insCols = {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        };
+
+        const iScrCols = isMV ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const mScrColsMV = (isMV && hasScreen) ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const earthCols = hasEarth ? {
+          size: getColName(colIdx++),
+          wCount: getColName(colIdx++),
+          wDia: getColName(colIdx++),
+          ...(isNFA2XT ? {
+            sWCount: getColName(colIdx++),
+            sWDia: getColName(colIdx++),
+          } : {}),
+          cDia: getColName(colIdx++),
+          cWt: getColName(colIdx++),
+          cCst: getColName(colIdx++),
+          iThk: getColName(colIdx++),
+          iDia: getColName(colIdx++),
+          iWt: getColName(colIdx++),
+          iCst: getColName(colIdx++)
+        } : null;
+
+        const laidUpDiaCol = getColName(colIdx++);
+
+        const isCols = (isInstrumentation && sampleItem.params.hasIndividualScreen) ? {
+          wt: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const osCols = (isInstrumentation && sampleItem.params.hasOverallScreen) ? {
+          wt: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const inShCols = hasInnerSheath ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const mScrColsLV = (!isMV && hasScreen) ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const mScrCols = mScrColsMV || mScrColsLV;
+
+        const sepCols = hasSeparator ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const armCols = hasArmor ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const outShCols = hasOuterSheath ? {
+          thk: getColName(colIdx++),
+          dia: getColName(colIdx++),
+          dens: getColName(colIdx++),
+          wt: getColName(colIdx++),
+          prc: getColName(colIdx++),
+          cst: getColName(colIdx++)
+        } : null;
+
+        const packCstCol = getColName(colIdx++);
+        const totalHppCol = getColName(colIdx++);
+        const overheadCol = getColName(colIdx++);
+        const marginCol = getColName(colIdx++);
+        const totalPriceCol = getColName(colIdx++);
+
+        // Build total HPP formula dynamically
+        let hppFormula = `L${r}`;
+        if (isMV) hppFormula += `+${cScrCols!.cst}${r}`;
+        hppFormula += `+${insCols.cst}${r}`;
+        if (isMV) hppFormula += `+${iScrCols!.cst}${r}`;
+        if (hasEarth) hppFormula += `+${earthCols!.cCst}${r}+${earthCols!.iCst}${r}`;
+        if (hasInnerSheath) hppFormula += `+${inShCols!.cst}${r}`;
+        if (isInstrumentation && item.params.hasIndividualScreen) hppFormula += `+${isCols!.cst}${r}`;
+        if (isInstrumentation && item.params.hasOverallScreen) hppFormula += `+${osCols!.cst}${r}`;
+        if (hasScreen) hppFormula += `+${mScrCols!.cst}${r}`;
+        if (hasSeparator) hppFormula += `+${sepCols!.cst}${r}`;
+        if (hasArmor) hppFormula += `+${armCols!.cst}${r}`;
+        if (hasOuterSheath) hppFormula += `+${outShCols!.cst}${r}`;
+        hppFormula += `+${packCstCol}${r}`;
+
+        // Build total BOM formula dynamically
+        let bomFormula = `'${sheetName}'!J${r}`;
+        if (isMV) bomFormula += `+'${sheetName}'!${cScrCols!.wt}${r}`;
+        bomFormula += `+'${sheetName}'!${insCols.wt}${r}`;
+        if (isMV) bomFormula += `+'${sheetName}'!${iScrCols!.wt}${r}`;
+        if (hasEarth) bomFormula += `+'${sheetName}'!${earthCols!.cWt}${r}+'${sheetName}'!${earthCols!.iWt}${r}`;
+        if (hasInnerSheath) bomFormula += `+'${sheetName}'!${inShCols!.wt}${r}`;
+        if (isInstrumentation && item.params.hasIndividualScreen) bomFormula += `+'${sheetName}'!${isCols!.wt}${r}`;
+        if (isInstrumentation && item.params.hasOverallScreen) bomFormula += `+'${sheetName}'!${osCols!.wt}${r}`;
+        if (hasScreen) bomFormula += `+'${sheetName}'!${mScrCols!.wt}${r}`;
+        if (hasSeparator) bomFormula += `+'${sheetName}'!${sepCols!.wt}${r}`;
+        if (hasArmor) bomFormula += `+'${sheetName}'!${armCols!.wt}${r}`;
+        if (hasOuterSheath) bomFormula += `+'${sheetName}'!${outShCols!.wt}${r}`;
+
         const row = [
           { v: index + 1, t: 'n' }, // A: No
           { v: getCableDesignation(item.params, item.result), t: 's' }, // B: Tipe Kabel
@@ -396,91 +607,131 @@ export default function CableDesigner() {
           { v: condPrice, t: 'n', z: fmtRp }, // K: Cond Prc
           { t: 'n', f: `J${r}*K${r}/1000`, z: fmtRp }, // L: Cond Cst
 
-          { v: item.result.spec.conductorScreenThickness || 0, t: 'n', z: fmtNum }, // M: C.Scr Thk
-          { t: 'n', f: `H${r}+2*M${r}`, z: fmtNum }, // N: C.Scr Dia
-          { v: semiDensity, t: 'n', z: fmtNum }, // O: C.Scr Dens
-          { t: 'n', f: `D${r}*PI()*((N${r}/2)^2-(H${r}/2)^2)*O${r}*1.02 * ${semiScrap}`, z: fmtNum }, // P: C.Scr Wt
-          { v: semiPrice, t: 'n', z: fmtRp }, // Q: C.Scr Prc
-          { t: 'n', f: `P${r}*Q${r}/1000`, z: fmtRp }, // R: C.Scr Cst
+          ...(isMV ? [
+            { v: item.result.spec.conductorScreenThickness || 0, t: 'n', z: fmtNum }, // C.Scr Thk
+            { t: 'n', f: `H${r}+2*${cScrCols!.thk}${r}`, z: fmtNum }, // C.Scr Dia
+            { v: semiDensity, t: 'n', z: fmtNum }, // C.Scr Dens
+            { t: 'n', f: `D${r}*PI()*((${cScrCols!.dia}${r}/2)^2-(H${r}/2)^2)*${cScrCols!.dens}${r}*1.02 * ${semiScrap}`, z: fmtNum }, // C.Scr Wt
+            { v: semiPrice, t: 'n', z: fmtRp }, // C.Scr Prc
+            { t: 'n', f: `${cScrCols!.wt}${r}*${cScrCols!.prc}${r}/1000`, z: fmtRp }, // C.Scr Cst
+          ] : []),
 
-          { v: item.result.spec.phaseCore.insulationThickness || 0, t: 'n', z: fmtNum }, // S: Ins Thk
-          { t: 'n', f: `N${r}+2*S${r}`, z: fmtNum }, // T: Ins Dia
-          { v: insDensity, t: 'n', z: fmtNum }, // U: Ins Dens
-          { t: 'n', f: `D${r}*PI()*((T${r}/2)^2-(N${r}/2)^2)*U${r}*1.02 * ${insScrap}`, z: fmtNum }, // V: Ins Wt
-          { v: insPrice, t: 'n', z: fmtRp }, // W: Ins Prc
-          { t: 'n', f: `V${r}*W${r}/1000`, z: fmtRp }, // X: Ins Cst
+          { v: item.result.spec.phaseCore.insulationThickness || 0, t: 'n', z: fmtNum }, // Ins Thk
+          { t: 'n', f: `${isMV ? cScrCols!.dia : 'H'}${r}+2*${insCols.thk}${r}`, z: fmtNum }, // Ins Dia
+          { v: insDensity, t: 'n', z: fmtNum }, // Ins Dens
+          { t: 'n', f: `D${r}*PI()*((${insCols.dia}${r}/2)^2-(${isMV ? cScrCols!.dia : 'H'}${r}/2)^2)*${insCols.dens}${r}*1.02 * ${insScrap}`, z: fmtNum }, // Ins Wt
+          { v: insPrice, t: 'n', z: fmtRp }, // Ins Prc
+          { t: 'n', f: `${insCols.wt}${r}*${insCols.prc}${r}/1000`, z: fmtRp }, // Ins Cst
 
-          { v: item.result.spec.insulationScreenThickness || 0, t: 'n', z: fmtNum }, // Y: I.Scr Thk
-          { t: 'n', f: `T${r}+2*Y${r}`, z: fmtNum }, // Z: I.Scr Dia
-          { v: semiDensity, t: 'n', z: fmtNum }, // AA: I.Scr Dens
-          { t: 'n', f: `D${r}*PI()*((Z${r}/2)^2-(T${r}/2)^2)*AA${r}*1.02 * ${semiScrap}`, z: fmtNum }, // AB: I.Scr Wt
-          { v: semiPrice, t: 'n', z: fmtRp }, // AC: I.Scr Prc
-          { t: 'n', f: `AB${r}*AC${r}/1000`, z: fmtRp }, // AD: I.Scr Cst
+          ...(isMV ? [
+            { v: item.result.spec.insulationScreenThickness || 0, t: 'n', z: fmtNum }, // I.Scr Thk
+            { t: 'n', f: `${insCols.dia}${r}+2*${iScrCols!.thk}${r}`, z: fmtNum }, // I.Scr Dia
+            { v: semiDensity, t: 'n', z: fmtNum }, // I.Scr Dens
+            { t: 'n', f: `D${r}*PI()*((${iScrCols!.dia}${r}/2)^2-(${insCols.dia}${r}/2)^2)*${iScrCols!.dens}${r}*1.02 * ${semiScrap}`, z: fmtNum }, // I.Scr Wt
+            { v: semiPrice, t: 'n', z: fmtRp }, // I.Scr Prc
+            { t: 'n', f: `${iScrCols!.wt}${r}*${iScrCols!.prc}${r}/1000`, z: fmtRp }, // I.Scr Cst
+          ] : []),
 
-          { v: item.result.spec.mvScreenThickness || item.result.spec.screenThickness || 0, t: 'n', z: fmtNum }, // AE: M.Scr Thk
-          { t: 'n', f: `Z${r}+2*AE${r}`, z: fmtNum }, // AF: M.Scr Dia
-          { v: metScreenDensity, t: 'n', z: fmtNum }, // AG: M.Scr Dens
-          { t: 'n', f: `D${r}*PI()*((AF${r}/2)^2-(Z${r}/2)^2)*AG${r}*1.02 * ${metScreenScrap}`, z: fmtNum }, // AH: M.Scr Wt
-          { v: metScreenPrice, t: 'n', z: fmtRp }, // AI: M.Scr Prc
-          { t: 'n', f: `AH${r}*AI${r}/1000`, z: fmtRp }, // AJ: M.Scr Cst
+          ...(isMV && hasScreen ? [
+            { v: item.result.spec.mvScreenThickness || 0, t: 'n', z: fmtNum }, // M.Scr Thk
+            { t: 'n', f: `${iScrCols!.dia}${r}+2*${mScrCols!.thk}${r}`, z: fmtNum }, // M.Scr Dia
+            { v: metScreenDensity, t: 'n', z: fmtNum }, // M.Scr Dens
+            { t: 'n', f: `D${r}*PI()*((${mScrCols!.dia}${r}/2)^2-(${iScrCols!.dia}${r}/2)^2)*${mScrCols!.dens}${r}*1.02 * ${metScreenScrap}`, z: fmtNum }, // M.Scr Wt
+            { v: metScreenPrice, t: 'n', z: fmtRp }, // M.Scr Prc
+            { t: 'n', f: `${mScrCols!.wt}${r}*${mScrCols!.prc}${r}/1000`, z: fmtRp }, // M.Scr Cst
+          ] : []),
 
-          { v: item.params.earthingSize || 0, t: 'n', z: fmtNum }, // AK: E.Core Size
-          { v: item.result.spec.earthingCore?.conductorDiameter || 0, t: 'n', z: fmtNum }, // AL: E.Cond Dia
-          { t: 'n', f: `IF(AK${r}>0, PI()*(AL${r}/2)^2*I${r}*1.02 * ${condScrap}, 0)`, z: fmtNum }, // AM: E.Cond Wt
-          { t: 'n', f: `AM${r}*K${r}/1000`, z: fmtRp }, // AN: E.Cond Cst
-          { v: item.result.spec.earthingCore?.insulationThickness || 0, t: 'n', z: fmtNum }, // AO: E.Ins Thk
-          { t: 'n', f: `AL${r}+2*AO${r}`, z: fmtNum }, // AP: E.Ins Dia
-          { t: 'n', f: `IF(AK${r}>0, PI()*((AP${r}/2)^2-(AL${r}/2)^2)*U${r}*1.02 * ${insScrap}, 0)`, z: fmtNum }, // AQ: E.Ins Wt
-          { t: 'n', f: `AQ${r}*W${r}/1000`, z: fmtRp }, // AR: E.Ins Cst
+          ...(hasEarth ? [
+            { v: item.params.earthingSize || 0, t: 'n', z: fmtNum }, // E.Core Size
+            { v: item.result.spec.earthingCore?.wireCount || 0, t: 'n' }, // E.Wire Count
+            { v: item.result.spec.earthingCore?.wireDiameter || 0, t: 'n', z: fmtNum }, // E.Wire Dia
+            ...(isNFA2XT ? [
+              { v: item.result.spec.earthingCore?.steelWireCount || 0, t: 'n' }, // Steel Wire Count
+              { v: item.result.spec.earthingCore?.steelWireDiameter || 0, t: 'n', z: fmtNum }, // Steel Wire Dia
+            ] : []),
+            { v: item.result.spec.earthingCore?.conductorDiameter || 0, t: 'n', z: fmtNum }, // E.Cond Dia
+            { t: 'n', f: `IF(${earthCols!.size}${r}>0, ${item.params.standard.includes('NFA2X-T') ? item.result.bom.earthingConductorWeight : `PI()*(${earthCols!.cDia}${r}/2)^2*I${r}*1.02 * ${condScrap}`}, 0)`, z: fmtNum }, // E.Cond Wt
+            { t: 'n', f: `${earthCols!.cWt}${r}*K${r}/1000`, z: fmtRp }, // E.Cond Cst
+            { v: item.result.spec.earthingCore?.insulationThickness || 0, t: 'n', z: fmtNum }, // E.Ins Thk
+            { t: 'n', f: `${earthCols!.cDia}${r}+2*${earthCols!.iThk}${r}`, z: fmtNum }, // E.Ins Dia
+            { t: 'n', f: `IF(${earthCols!.size}${r}>0, PI()*((${earthCols!.iDia}${r}/2)^2-(${earthCols!.cDia}${r}/2)^2)*U${r}*1.02 * ${insScrap}, 0)`, z: fmtNum }, // E.Ins Wt
+            { t: 'n', f: `${earthCols!.iWt}${r}*W${r}/1000`, z: fmtRp }, // E.Ins Cst
+          ] : []),
 
-          { v: item.result.spec.laidUpDiameter || 0, t: 'n', z: fmtNum }, // AS: Laid-up Dia
+          { v: item.result.spec.laidUpDiameter || 0, t: 'n', z: fmtNum }, // Laid-up Dia
 
-          { v: item.result.spec.separatorThickness || 0, t: 'n', z: fmtNum }, // AT: Sep Thk
-          { t: 'n', f: `AS${r}+2*AT${r}`, z: fmtNum }, // AU: Sep Dia
-          { v: separatorDensity, t: 'n', z: fmtNum }, // AV: Sep Dens
-          { t: 'n', f: `PI()*((AU${r}/2)^2-(AS${r}/2)^2)*AV${r} * ${separatorScrap}`, z: fmtNum }, // AW: Sep Wt
-          { v: separatorPrice, t: 'n', z: fmtRp }, // AX: Sep Prc
-          { t: 'n', f: `AW${r}*AX${r}/1000`, z: fmtRp }, // AY: Sep Cst
+          ...(isInstrumentation && item.params.hasIndividualScreen ? [
+            { v: item.result.bom.isWeight || 0, t: 'n', z: fmtNum }, // IS Wt
+            { t: 'n', f: `${isCols!.wt}${r}*${materialPrices.Cu}/1000`, z: fmtRp }, // IS Cst (Approx Cu price)
+          ] : []),
 
-          { v: item.result.spec.innerCoveringThickness || 0, t: 'n', z: fmtNum }, // AZ: In.Sh Thk
-          { t: 'n', f: `AU${r}+2*AZ${r}`, z: fmtNum }, // BA: In.Sh Dia
-          { v: innerDensity, t: 'n', z: fmtNum }, // BB: In.Sh Dens
-          { t: 'n', f: `PI()*((BA${r}/2)^2-(AU${r}/2)^2)*BB${r} * ${innerScrap}`, z: fmtNum }, // BC: In.Sh Wt
-          { v: innerPrice, t: 'n', z: fmtRp }, // BD: In.Sh Prc
-          { t: 'n', f: `BC${r}*BD${r}/1000`, z: fmtRp }, // BE: In.Sh Cst
+          ...(isInstrumentation && item.params.hasOverallScreen ? [
+            { v: item.result.bom.osWeight || 0, t: 'n', z: fmtNum }, // OS Wt
+            { t: 'n', f: `${osCols!.wt}${r}*${materialPrices.Cu}/1000`, z: fmtRp }, // OS Cst (Approx Cu price)
+          ] : []),
 
-          { v: item.result.spec.armorThickness || 0, t: 'n', z: fmtNum }, // BF: Arm Thk
-          { t: 'n', f: `BA${r}+2*BF${r}`, z: fmtNum }, // BG: Arm Dia
-          { v: armorDensity, t: 'n', z: fmtNum }, // BH: Arm Dens
-          // Armor weight formula depends on armor type
-          ...(item.params.armorType === 'SWA' || item.params.armorType === 'AWA' ? [
-            { t: 'n', f: `INT(PI()*(BA${r}+BF${r})/(BF${r}*1.05)) * PI()*(BF${r}/2)^2 * BH${r} * 1.05 * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Wire)
-          ] : item.params.armorType === 'STA' ? [
-            { t: 'n', f: `PI()*(BA${r}+2*BF${r}) * 2*BF${r} * BH${r} * 1.02 * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Tape)
-          ] : item.params.armorType === 'SFA' ? [
-            { t: 'n', f: `(PI()*(BA${r}+BF${r}*0.8)*BF${r}*0.8*0.9*1.02 + PI()*(BA${r}+2*BF${r}*0.8+BF${r}*0.2)*BF${r}*0.2*1.2*1.02) * BH${r} * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Flat + Tape)
-          ] : item.params.armorType === 'RGB' ? [
-            { t: 'n', f: `(INT(PI()*(BA${r}+BF${r}*0.85)/(BF${r}*0.85*1.1))*PI()*(BF${r}*0.85/2)^2*1.05 + PI()*(BA${r}+2*BF${r}*0.85+BF${r}*0.15)*BF${r}*0.15*1.2*1.02) * BH${r} * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Wire + Tape)
-          ] : item.params.armorType === 'GSWB' || item.params.armorType === 'TCWB' ? [
-            { t: 'n', f: `CEILING(((1-SQRT(1-${item.params.braidCoverage || 90}/100))*2*PI()*(BA${r}+BF${r}/2)*COS(45*PI()/180))/(IF(BA${r}<=10,16,IF(BA${r}<=20,24,IF(BA${r}<=35,32,IF(BA${r}<=50,48,64))))*BF${r}/2), 1) * IF(BA${r}<=10,16,IF(BA${r}<=20,24,IF(BA${r}<=35,32,IF(BA${r}<=50,48,64)))) * PI()*(BF${r}/4)^2 * BH${r} * (1/COS(45*PI()/180)) * ${armorScrap}`, z: fmtNum } // BI: Arm Wt (Braid)
-          ] : [
-            { t: 'n', f: `0`, z: fmtNum } // BI: Arm Wt (None)
-          ]),
-          { v: armorPrice, t: 'n', z: fmtRp }, // BJ: Arm Prc
-          { t: 'n', f: `BI${r}*BJ${r}/1000`, z: fmtRp }, // BK: Arm Cst
+          ...(hasInnerSheath ? [
+            { v: item.result.spec.innerCoveringThickness || 0, t: 'n', z: fmtNum }, // In.Sh Thk
+            { t: 'n', f: `${laidUpDiaCol}${r}+2*${inShCols!.thk}${r}`, z: fmtNum }, // In.Sh Dia
+            { v: innerDensity, t: 'n', z: fmtNum }, // In.Sh Dens
+            { t: 'n', f: `PI()*((${inShCols!.dia}${r}/2)^2-(${laidUpDiaCol}${r}/2)^2)*${inShCols!.dens}${r} * ${innerScrap}`, z: fmtNum }, // In.Sh Wt
+            { v: innerPrice, t: 'n', z: fmtRp }, // In.Sh Prc
+            { t: 'n', f: `${inShCols!.wt}${r}*${inShCols!.prc}${r}/1000`, z: fmtRp }, // In.Sh Cst
+          ] : []),
 
-          { v: item.result.spec.sheathThickness || 0, t: 'n', z: fmtNum }, // BL: Out.Sh Thk
-          { t: 'n', f: `BG${r}+2*BL${r}`, z: fmtNum }, // BM: Overall Dia
-          { v: sheathDensity, t: 'n', z: fmtNum }, // BN: Out.Sh Dens
-          { t: 'n', f: `PI()*((BM${r}/2)^2-(BG${r}/2)^2)*BN${r} * ${sheathScrap}`, z: fmtNum }, // BO: Out.Sh Wt
-          { v: sheathPrice, t: 'n', z: fmtRp }, // BP: Out.Sh Prc
-          { t: 'n', f: `BO${r}*BP${r}/1000`, z: fmtRp }, // BQ: Out.Sh Cst
+          ...(!isMV && hasScreen ? [
+            { v: item.result.spec.screenThickness || 0, t: 'n', z: fmtNum }, // M.Scr Thk
+            { t: 'n', f: `${hasInnerSheath ? inShCols!.dia : laidUpDiaCol}${r}+2*${mScrCols!.thk}${r}`, z: fmtNum }, // M.Scr Dia
+            { v: metScreenDensity, t: 'n', z: fmtNum }, // M.Scr Dens
+            { t: 'n', f: `D${r}*PI()*((${mScrCols!.dia}${r}/2)^2-(${hasInnerSheath ? inShCols!.dia : laidUpDiaCol}${r}/2)^2)*${mScrCols!.dens}${r}*1.02 * ${metScreenScrap}`, z: fmtNum }, // M.Scr Wt
+            { v: metScreenPrice, t: 'n', z: fmtRp }, // M.Scr Prc
+            { t: 'n', f: `${mScrCols!.wt}${r}*${mScrCols!.prc}${r}/1000`, z: fmtRp }, // M.Scr Cst
+          ] : []),
 
-          { v: packingCost, t: 'n', z: fmtRp }, // BR: Pack Cst
-          { t: 'n', f: `L${r}+R${r}+X${r}+AD${r}+AJ${r}+AN${r}+AR${r}+AY${r}+BE${r}+BK${r}+BQ${r}+BR${r}`, z: fmtRp }, // BS: Total HPP
-          { v: item.params.overhead || 0, t: 'n', z: fmtNum }, // BT: Overhead
-          { v: item.params.margin || 0, t: 'n', z: fmtNum }, // BU: Margin
-          { t: 'n', f: `BS${r}*(1+BT${r}/100)*(1+BU${r}/100)`, z: fmtRp } // BV: Total Price
+          ...(hasSeparator ? [
+            { v: item.result.spec.separatorThickness || 0, t: 'n', z: fmtNum }, // Sep Thk
+            { t: 'n', f: `${hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol)}${r}+2*${sepCols!.thk}${r}`, z: fmtNum }, // Sep Dia
+            { v: separatorDensity, t: 'n', z: fmtNum }, // Sep Dens
+            { t: 'n', f: `PI()*((${sepCols!.dia}${r}/2)^2-(${hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol)}${r}/2)^2)*${sepCols!.dens}${r} * ${separatorScrap}`, z: fmtNum }, // Sep Wt
+            { v: separatorPrice, t: 'n', z: fmtRp }, // Sep Prc
+            { t: 'n', f: `${sepCols!.wt}${r}*${sepCols!.prc}${r}/1000`, z: fmtRp }, // Sep Cst
+          ] : []),
+
+          ...(hasArmor ? [
+            { v: item.result.spec.armorThickness || 0, t: 'n', z: fmtNum }, // Arm Thk
+            { t: 'n', f: `${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+2*${armCols!.thk}${r}`, z: fmtNum }, // Arm Dia
+            { v: armorDensity, t: 'n', z: fmtNum }, // Arm Dens
+            // Armor weight formula depends on armor type
+            ...(item.params.armorType === 'SWA' || item.params.armorType === 'AWA' ? [
+              { t: 'n', f: `INT(PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+${armCols!.thk}${r})/(${armCols!.thk}${r}*1.05)) * PI()*(${armCols!.thk}${r}/2)^2 * ${armCols!.dens}${r} * 1.05 * ${armorScrap}`, z: fmtNum } // Arm Wt (Wire)
+            ] : item.params.armorType === 'STA' ? [
+              { t: 'n', f: `PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+2*${armCols!.thk}${r}) * 2*${armCols!.thk}${r} * ${armCols!.dens}${r} * 1.02 * ${armorScrap}`, z: fmtNum } // Arm Wt (Tape)
+            ] : item.params.armorType === 'SFA' ? [
+              { t: 'n', f: `(PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+${armCols!.thk}${r}*0.8)*${armCols!.thk}${r}*0.8*0.9*1.02 + PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+2*${armCols!.thk}${r}*0.8+${armCols!.thk}${r}*0.2)*${armCols!.thk}${r}*0.2*1.2*1.02) * ${armCols!.dens}${r} * ${armorScrap}`, z: fmtNum } // Arm Wt (Flat + Tape)
+            ] : item.params.armorType === 'RGB' ? [
+              { t: 'n', f: `(INT(PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+${armCols!.thk}${r}*0.85)/(${armCols!.thk}${r}*0.85*1.1))*PI()*(${armCols!.thk}${r}*0.85/2)^2*1.05 + PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+2*${armCols!.thk}${r}*0.85+${armCols!.thk}${r}*0.15)*${armCols!.thk}${r}*0.15*1.2*1.02) * ${armCols!.dens}${r} * ${armorScrap}`, z: fmtNum } // Arm Wt (Wire + Tape)
+            ] : item.params.armorType === 'GSWB' || item.params.armorType === 'TCWB' ? [
+              { t: 'n', f: `CEILING(((1-SQRT(1-${item.params.braidCoverage || 90}/100))*2*PI()*(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}+${armCols!.thk}${r}/2)*COS(45*PI()/180))/(IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=10,16,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=20,24,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=35,32,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=50,48,64))))*${armCols!.thk}${r}/2), 1) * IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=10,16,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=20,24,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=35,32,IF(${hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol))}${r}<=50,48,64)))) * PI()*(${armCols!.thk}${r}/4)^2 * ${armCols!.dens}${r} * (1/COS(45*PI()/180)) * ${armorScrap}`, z: fmtNum } // Arm Wt (Braid)
+            ] : [
+              { t: 'n', f: `0`, z: fmtNum } // Arm Wt (None)
+            ]),
+            { v: armorPrice, t: 'n', z: fmtRp }, // Arm Prc
+            { t: 'n', f: `${armCols!.wt}${r}*${armCols!.prc}${r}/1000`, z: fmtRp }, // Arm Cst
+          ] : []),
+
+          ...(hasOuterSheath ? [
+            { v: item.result.spec.sheathThickness || 0, t: 'n', z: fmtNum }, // Out.Sh Thk
+            { t: 'n', f: `${hasArmor ? armCols!.dia : (hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol)))}${r}+2*${outShCols!.thk}${r}`, z: fmtNum }, // Overall Dia
+            { v: sheathDensity, t: 'n', z: fmtNum }, // Out.Sh Dens
+            { t: 'n', f: `PI()*((${outShCols!.dia}${r}/2)^2-(${hasArmor ? armCols!.dia : (hasSeparator ? sepCols!.dia : (hasScreen ? mScrCols!.dia : (hasInnerSheath ? inShCols!.dia : laidUpDiaCol)))}${r}/2)^2)*${outShCols!.dens}${r} * ${sheathScrap}`, z: fmtNum }, // Out.Sh Wt
+            { v: sheathPrice, t: 'n', z: fmtRp }, // Out.Sh Prc
+            { t: 'n', f: `${outShCols!.wt}${r}*${outShCols!.prc}${r}/1000`, z: fmtRp }, // Out.Sh Cst
+          ] : []),
+          { v: packingCost, t: 'n', z: fmtRp }, // Pack Cst
+          { t: 'n', f: hppFormula, z: fmtRp }, // Total HPP
+          { v: item.params.overhead || 0, t: 'n', z: fmtNum }, // Overhead
+          { v: item.params.margin || 0, t: 'n', z: fmtNum }, // Margin
+          { t: 'n', f: `${totalHppCol}${r}*(1+${overheadCol}${r}/100)*(1+${marginCol}${r}/100)`, z: fmtRp } // Total Price
         ];
         
         sheetsData[sheetName].push(row);
@@ -490,39 +741,25 @@ export default function CableDesigner() {
           { v: projectName || 'Cable Project', t: 's' }, // B
           { t: 's', f: `'${sheetName}'!B${r}` }, // C
           { t: 's', f: `'${sheetName}'!C${r}` }, // D
-          { v: `${item.params.cores} x ${item.params.size}`, t: 's' }, // E
-          { t: 'n', f: `'${sheetName}'!J${r}+'${sheetName}'!P${r}+'${sheetName}'!V${r}+'${sheetName}'!AB${r}+'${sheetName}'!AH${r}+'${sheetName}'!AM${r}+'${sheetName}'!AQ${r}+'${sheetName}'!AW${r}+'${sheetName}'!BC${r}+'${sheetName}'!BI${r}+'${sheetName}'!BO${r}`, z: fmtNum }, // F
-          { t: 'n', f: `'${sheetName}'!BS${r}`, z: fmtRp }, // G
-          { t: 'n', f: `'${sheetName}'!BU${r}`, z: fmtNum }, // H
-          { t: 'n', f: `'${sheetName}'!BV${r}`, z: fmtRp }, // I
+          { v: item.params.orderLength || 1000, t: 'n' }, // E: Order Length
+          { t: 'n', f: bomFormula, z: fmtNum }, // F
+          { t: 'n', f: `'${sheetName}'!${totalHppCol}${r}`, z: fmtRp }, // G
+          { t: 'n', f: `'${sheetName}'!${marginCol}${r}`, z: fmtNum }, // H
+          { t: 'n', f: `'${sheetName}'!${totalPriceCol}${r}`, z: fmtRp }, // I
+          { t: 'n', f: `E${summaryDataAOA.length + 1}*I${summaryDataAOA.length + 1}`, z: fmtRp }, // J: Total
         ]);
       });
     });
 
-    // Create Material & Scrap Settings Sheet
-    const matHeaders = [
-      createHeader('Material Name', hGen),
-      createHeader('Price (Rp/kg)', hCond),
-      createHeader('Density (g/cm³)', hIns),
-      createHeader('Scrap Factor (%)', hTot)
-    ];
-    const matDataAOA: any[][] = [matHeaders];
-    
-    // Get all unique materials from prices, densities, and scrap
-    const allMaterials = new Set([
-      ...Object.keys(materialPrices),
-      ...Object.keys(materialDensities),
-      ...Object.keys(materialScrap)
-    ]);
-
-    Array.from(allMaterials).sort().forEach(mat => {
-      matDataAOA.push([
-        { v: mat, t: 's' },
-        { v: materialPrices[mat as keyof typeof materialPrices] || 0, t: 'n', z: fmtRp },
-        { v: materialDensities[mat as keyof typeof materialDensities] || 0, t: 'n', z: fmtNum },
-        { v: materialScrap[mat] || 0, t: 'n', z: fmtNum }
+    // Add Grand Total row to Summary
+    if (summaryDataAOA.length > 1) {
+      const lastRow = summaryDataAOA.length;
+      summaryDataAOA.push([
+        null, null, null, null, null, null, null, null,
+        { v: 'GRAND TOTAL', t: 's' },
+        { t: 'n', f: `SUM(J2:J${lastRow})`, z: fmtRp }
       ]);
-    });
+    }
 
     const autoFitColumns = (aoa: any[][]) => {
       const colWidths: { wch: number }[] = [];
@@ -532,7 +769,7 @@ export default function CableDesigner() {
           if (cell === null || cell === undefined) {
             val = '';
           } else if (typeof cell === 'object') {
-            if (cell.v !== undefined) val = String(cell.v);
+            if (cell.v !== undefined && cell.v !== null) val = String(cell.v);
             else if (cell.f) val = '123,456,789.00'; // Estimate length for formulas
           } else {
             val = String(cell);
@@ -559,11 +796,6 @@ export default function CableDesigner() {
       wsDetails['!cols'] = autoFitColumns(dataAOA);
       XLSX.utils.book_append_sheet(wb, wsDetails, sheetName);
     });
-
-    // Add Material Settings sheet
-    const wsMat = XLSX.utils.aoa_to_sheet(matDataAOA);
-    wsMat['!cols'] = autoFitColumns(matDataAOA);
-    XLSX.utils.book_append_sheet(wb, wsMat, "Material Settings");
 
     XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
   };
@@ -832,6 +1064,13 @@ export default function CableDesigner() {
         newParams.manualConductorDiameter = undefined;
       }
       
+      if (key === 'hasIndividualScreen' && value === true) {
+        newParams.hasOverallScreen = true;
+      }
+      if (key === 'hasOverallScreen' && value === false) {
+        newParams.hasIndividualScreen = false;
+      }
+      
       // Feature Logic
       if (key === 'fireguard') {
         newParams.hasMgt = value;
@@ -1006,6 +1245,19 @@ export default function CableDesigner() {
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 4) newParams.cores = 4;
           }
+        } else if (newParams.standard === 'BS EN 50288-7') {
+          if (newParams.voltage !== '300 V' && newParams.voltage !== '300/500 V') {
+            newParams.voltage = '300/500 V';
+          }
+          if (newParams.size < 0.5) newParams.size = 0.5;
+          if (newParams.size > 2.5) newParams.size = 2.5;
+          if (newParams.conductorMaterial !== 'Cu' && newParams.conductorMaterial !== 'TCu') {
+            newParams.conductorMaterial = 'Cu';
+          }
+          if (newParams.conductorType !== 're' && newParams.conductorType !== 'rm' && newParams.conductorType !== 'f') {
+            newParams.conductorType = 're';
+          }
+          if (!newParams.formationType) newParams.formationType = 'Pair';
         }
       }
 
@@ -1022,6 +1274,17 @@ export default function CableDesigner() {
   const getCableDesignation = (p: CableDesignParams, r: CalculationResult | null) => {
     if (!r) return '';
     
+    if (p.standard === 'BS EN 50288-7') {
+      const formation = p.formationType || 'Pair';
+      const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : '');
+      const armor = p.armorType !== 'Unarmored' ? `/${p.armorType}` : '';
+      const mgt = p.fireguard ? '/MGT' : '';
+      const construction = `${p.conductorMaterial}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}${mgt}/${p.sheathMaterial}`.toUpperCase();
+      const elements = formation === 'Pair' ? '2' : (formation === 'Triad' ? '3' : '1');
+      const sizeStr = formation === 'Core' ? `${p.cores} x ${p.size} mm²` : `${p.cores} x ${elements} x ${p.size} mm²`;
+      return `${p.standard} ${construction} ${sizeStr} ${p.voltage}`;
+    }
+
     if (p.standard.includes('NFA2X-T')) {
       return `NFA2X-T ${p.cores} x ${p.size} + ${p.earthingSize} mm² ${r.electrical.voltageRating}`;
     }
@@ -1142,6 +1405,12 @@ export default function CableDesigner() {
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
+      isAl: bom.isAlWeight ? (bom.isAlWeight * materialPrices.Al) / 1000 : 0,
+      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * materialPrices.Cu) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * materialPrices.PE) / 1000 : 0,
+      osAl: bom.osAlWeight ? (bom.osAlWeight * materialPrices.Al) / 1000 : 0,
+      osDrain: bom.osDrainWeight ? (bom.osDrainWeight * materialPrices.Cu) / 1000 : 0,
+      osPet: bom.osPetWeight ? (bom.osPetWeight * materialPrices.PE) / 1000 : 0,
     };
 
     if (params.standard.includes('NFA2X-T') && bom.earthingAlWeight !== undefined && bom.earthingSteelWeight !== undefined) {
@@ -1314,13 +1583,21 @@ export default function CableDesigner() {
             </button>
           </div>
 
-          <div className={reviewTab === 'summary' ? 'block print:block space-y-6' : 'hidden print:hidden'}>
-            {/* Landscape Print Style */}
-            <style type="text/css" media="print">
-              {`@page { size: landscape; }`}
-            </style>
+          <style type="text/css" media="print">
+            {`@page { 
+              size: ${
+                reviewTab === 'summary' 
+                  ? 'landscape' 
+                  : (printingGroupId !== null 
+                      ? (groupedItemsList[printingGroupId]?.items.length > 4 ? 'landscape' : 'portrait')
+                      : (projectItems.length > 4 ? 'landscape' : 'portrait'))
+              }; 
+            }`}
+          </style>
+
+          <div className={reviewTab === 'summary' ? 'block print:block space-y-6 print-landscape-page' : 'hidden print:hidden'}>
             {/* Project Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-scale">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
                   <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
@@ -1334,7 +1611,7 @@ export default function CableDesigner() {
               </div>
 
           {/* Detailed Items Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print-scale">
             <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <List className="w-5 h-5 text-indigo-600" />
@@ -1396,10 +1673,12 @@ export default function CableDesigner() {
                     <th className="px-6 py-4 border-b border-slate-100">Weight</th>
                     <th className="px-6 py-4 border-b border-slate-100">Packing</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">Cond. Price</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-center">Order Length (m)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">OH (%)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">MG (%)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">HPP / Meter</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">Selling Price</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Total Price</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1440,6 +1719,21 @@ export default function CableDesigner() {
                         <td className="px-6 py-4 text-center">
                           <input 
                             type="number" 
+                            className="w-20 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                            value={item.params.orderLength || 1000}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) {
+                                setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, orderLength: val } } : pItem
+                                ));
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <input 
+                            type="number" 
                             className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
                             value={item.params.overhead || 0}
                             onChange={(e) => {
@@ -1473,6 +1767,9 @@ export default function CableDesigner() {
                         <td className="px-6 py-4 text-right">
                           <div className="text-sm font-bold text-indigo-600 font-mono">Rp {sellingPrice.toLocaleString('id-ID')}</div>
                         </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-sm font-bold text-emerald-600 font-mono">Rp {(sellingPrice * (item.params.orderLength || 1000)).toLocaleString('id-ID')}</div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -1482,7 +1779,7 @@ export default function CableDesigner() {
           </div>
 
           {/* BOM Summary for Project */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print:shadow-none print:border-slate-300 print-scale">
             <h2 className="text-lg font-bold flex items-center gap-2 mb-6">
               <Package className="w-5 h-5 text-emerald-600" />
               Consolidated Bill of Materials (Project Total)
@@ -1732,6 +2029,17 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center font-bold">5</td>
                       <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Constructional Data :</td>
                     </tr>
+
+                    {p.standard === 'BS EN 50288-7' && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 font-bold">• Formation Type</td>
+                        <td className="border border-slate-400 p-2 text-center">-</td>
+                        {items.map((item, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">{item.params.formationType || 'Pair'}</td>
+                        ))}
+                      </tr>
+                    )}
                     
                     {/* Conductor (Phase) */}
                     <tr>
@@ -1900,6 +2208,35 @@ export default function CableDesigner() {
                             <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.earthingCore?.insulationThickness.toFixed(1) || '-'}</td>
                           ))}
                         </tr>
+                      </>
+                    )}
+
+                    {p.standard === 'BS EN 50288-7' && (p.hasIndividualScreen || p.hasOverallScreen) && (
+                      <>
+                        <tr className="bg-slate-50/50">
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-tight">• Screening Data :</td>
+                        </tr>
+                        {p.hasIndividualScreen && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">Individual Screen (IS)</td>
+                            <td className="border border-slate-400 p-2 text-center">-</td>
+                            {items.map((_, idx) => (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">Al/PET Tape + Drain Wire</td>
+                            ))}
+                          </tr>
+                        )}
+                        {p.hasOverallScreen && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">Overall Screen (OS)</td>
+                            <td className="border border-slate-400 p-2 text-center">-</td>
+                            {items.map((_, idx) => (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">Al/PET Tape + Drain Wire</td>
+                            ))}
+                          </tr>
+                        )}
                       </>
                     )}
 
@@ -2475,54 +2812,16 @@ export default function CableDesigner() {
 
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Header */}
-        <header className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+        <header className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
           <div className="flex flex-col items-center md:items-start">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                 CABLE DESIGNER
               </h1>
-              <input
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Project Name"
-                className="bg-slate-50 border-none text-lg font-semibold text-indigo-600 focus:ring-0 p-0 w-64 placeholder:text-slate-300"
-              />
             </div>
             <div className="text-[10px] text-slate-400 mt-1 font-medium ml-1 uppercase tracking-wider">PT. Multi Kencana Niagatama</div>
             <div className="text-[9px] text-slate-300 ml-1 font-medium">created by Dede Noviyadi</div>
           </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setProjectItems([])}
-                className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 uppercase tracking-wider"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear List
-              </button>
-              <button
-                onClick={handleLoadProjects}
-                className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 uppercase tracking-wider"
-              >
-                <FolderOpen className="w-4 h-4" />
-                Open Project
-              </button>
-              <button
-                onClick={handleSaveProject}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
-              >
-                <Save className="w-4 h-4" />
-                Save Project
-              </button>
-              <button
-                onClick={handleExportExcel}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm uppercase tracking-wider"
-              >
-                <Download className="w-4 h-4" />
-                Download Excel
-              </button>
-            </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -2539,6 +2838,23 @@ export default function CableDesigner() {
             </button>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              {/* Compact Project Control Bar */}
+              <div className="flex items-center justify-between p-3 border-b border-slate-100 bg-slate-50 gap-2">
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Project Name"
+                  className="bg-white border border-slate-200 text-sm font-semibold text-indigo-600 rounded-lg p-2 flex-grow placeholder:text-slate-300"
+                />
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setProjectItems([])} className="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Clear List"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={handleLoadProjects} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Open Project"><FolderOpen className="w-4 h-4" /></button>
+                  <button onClick={handleSaveProject} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Save Project"><Save className="w-4 h-4" /></button>
+                  <button onClick={handleExportExcel} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Download Excel"><Download className="w-4 h-4" /></button>
+                </div>
+              </div>
+
               <div className="flex border-b border-slate-100 items-center pr-2">
                 <button
                   onClick={() => setActiveTab('config')}
@@ -2628,8 +2944,49 @@ export default function CableDesigner() {
                         <option value="SNI 04-6629.5 (NYMHY)">SNI 04-6629.5 (NYMHY)</option>
                         <option value="SPLN D3. 010-1 : 2014 (NFA2X)">SPLN D3. 010-1 : 2014 (NFA2X)</option>
                         <option value="SPLN D3. 010-1 : 2015 (NFA2X-T)">SPLN D3. 010-1 : 2015 (NFA2X-T)</option>
+                        <option value="BS EN 50288-7">BS EN 50288-7 (Instrumentation)</option>
                       </select>
                     </div>
+
+                    {params.standard === 'BS EN 50288-7' && (
+                      <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-4">
+                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Instrumentation Options</label>
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-500 mb-1">Formation Type</label>
+                            <select
+                              value={params.formationType || 'Pair'}
+                              onChange={(e) => handleParamChange('formationType', e.target.value)}
+                              className="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border bg-white"
+                            >
+                              <option value="Core">Core</option>
+                              <option value="Pair">Pair</option>
+                              <option value="Triad">Triad</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={params.hasIndividualScreen || false}
+                                onChange={(e) => handleParamChange('hasIndividualScreen', e.target.checked)}
+                                className="rounded text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Individual Screen (IS)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={params.hasOverallScreen || false}
+                                onChange={(e) => handleParamChange('hasOverallScreen', e.target.checked)}
+                                className="rounded text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Overall Screen (OS)</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Features Section */}
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
@@ -2690,6 +3047,11 @@ export default function CableDesigner() {
                             <option value="12/20 kV">12/20 kV</option>
                             <option value="18/30 kV">18/30 kV</option>
                           </>
+                        ) : params.standard === 'BS EN 50288-7' ? (
+                          <>
+                            <option value="300 V">300 V</option>
+                            <option value="300/500 V">300/500 V</option>
+                          </>
                         ) : params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') ? (
                           <option value="300/500 V">300/500 V</option>
                         ) : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? (
@@ -2722,19 +3084,29 @@ export default function CableDesigner() {
                           />
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {(params.standard === 'IEC 60502-2' ? [1, 3] : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? [2, 3, 4, 5] : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? [1] : params.standard.includes('NFA2X-T') ? [2, 3] : params.standard.includes('NFA2X') ? [2, 4] : [1, 2, 3, 4, 5]).map((c) => (
-                            <button
-                              key={c}
-                              onClick={() => handleParamChange('cores', c)}
-                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                                params.cores === c 
-                                  ? 'bg-indigo-600 text-white shadow-sm' 
-                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                              }`}
-                            >
-                              {c}
-                            </button>
-                          ))}
+                          {(() => {
+                            let cores = [1, 2, 3, 4, 5];
+                            if (params.standard === 'IEC 60502-2') cores = [1, 3];
+                            else if (params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)')) cores = [2, 3, 4, 5];
+                            else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
+                            else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
+                            else if (params.standard.includes('NFA2X')) cores = [2, 4];
+                            else if (params.standard === 'BS EN 50288-7') cores = [1, 2, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 30, 32, 40, 50];
+                            
+                            return cores.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => handleParamChange('cores', c)}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                                  params.cores === c 
+                                    ? 'bg-indigo-600 text-white shadow-sm' 
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {c}
+                              </button>
+                            ));
+                          })()}
                         </div>
                         {params.cores > 5 && (
                           <p className="text-[9px] text-amber-600 mt-1 font-medium italic">
@@ -2752,6 +3124,9 @@ export default function CableDesigner() {
                           className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                         >
                           {CABLE_SIZES.filter(s => {
+                            if (params.standard === 'BS EN 50288-7') {
+                              return s >= 0.5 && s <= 2.5;
+                            }
                             if (params.standard === 'IEC 60502-2') {
                               return s >= 25;
                             }
@@ -2905,7 +3280,9 @@ export default function CableDesigner() {
                             const availableConductors = Array.from(new Set([...conductorMaterials, ...customConductors])).filter(mat => materialPrices[mat] !== undefined);
                             
                             return availableConductors.map((mat) => {
-                              const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || (params.standard.includes('NFA2X') && mat !== 'Al');
+                              const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || 
+                                               (params.standard.includes('NFA2X') && mat !== 'Al') ||
+                                               (params.standard === 'BS EN 50288-7' && mat !== 'Cu' && mat !== 'TCu');
                               return (
                                 <button
                                   key={mat}
@@ -4354,6 +4731,22 @@ export default function CableDesigner() {
                     <SpecRow label={`Metallic Screen (${params.mvScreenType})`} value={result.bom.mvScreenWeight} unit="kg/km" />
                   )}
 
+                  {result.bom.isWeight !== undefined && result.bom.isWeight > 0 && (
+                    <>
+                      <SpecRow label="Individual Screen (Al Foil)" value={result.bom.isAlWeight} unit="kg/km" />
+                      <SpecRow label="Individual Screen (Drain Wire)" value={result.bom.isDrainWeight} unit="kg/km" />
+                      <SpecRow label="Individual Screen (PET Tape)" value={result.bom.isPetWeight} unit="kg/km" />
+                    </>
+                  )}
+                  
+                  {result.bom.osWeight !== undefined && result.bom.osWeight > 0 && (
+                    <>
+                      <SpecRow label="Overall Screen (Al Foil)" value={result.bom.osAlWeight} unit="kg/km" />
+                      <SpecRow label="Overall Screen (Drain Wire)" value={result.bom.osDrainWeight} unit="kg/km" />
+                      <SpecRow label="Overall Screen (PET Tape)" value={result.bom.osPetWeight} unit="kg/km" />
+                    </>
+                  )}
+                  
                   {result.bom.innerCoveringWeight > 0 && (
                     <SpecRow label="Inner Covering (PVC)" value={result.bom.innerCoveringWeight} unit="kg/km" />
                   )}
@@ -4424,19 +4817,30 @@ export default function CableDesigner() {
                 
                 <div className="space-y-3">
                   <SpecRow label="Max DC Resistance @ 20°C" value={result.electrical.maxDcResistance} unit="Ω/km" precision={4} />
-                  <SpecRow 
-                    label={params.standard.includes('NFA2X') ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
-                    value={result.electrical.currentCapacityAir} 
-                    unit="A" 
-                    precision={0} 
-                  />
-                  {!params.standard.includes('NFA2X') && (
-                    <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                  {params.standard !== 'BS EN 50288-7' && (
+                    <>
+                      <SpecRow 
+                        label={params.standard.includes('NFA2X') ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
+                        value={result.electrical.currentCapacityAir} 
+                        unit="A" 
+                        precision={0} 
+                      />
+                      {!params.standard.includes('NFA2X') && (
+                        <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                      )}
+                    </>
                   )}
                   <div className="flex justify-between items-center py-1 text-sm text-slate-600">
                     <span>Test Voltage (5 min)</span>
                     <span className="font-mono text-slate-900">{result.electrical.testVoltage}</span>
                   </div>
+                  {params.standard === 'BS EN 50288-7' && (
+                    <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                      <p className="text-[9px] text-slate-400 italic">
+                        * Electrical properties (KHA) are not applicable for instrumentation standard BS EN 50288-7.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -4481,6 +4885,14 @@ export default function CableDesigner() {
                           { label: `Mica Glass Tape (MGT)`, cost: breakdown.mgt },
                           { label: `Semi-conductive Layers`, cost: breakdown.semiCond },
                           { label: `Phase Insulation (${params.insulationMaterial})`, cost: breakdown.insulation },
+                          ...(params.standard === 'BS EN 50288-7' ? [
+                            { label: `Individual Screen (Al Foil)`, cost: breakdown.isAl },
+                            { label: `Individual Screen (Drain Wire)`, cost: breakdown.isDrain },
+                            { label: `Individual Screen (PET Tape)`, cost: breakdown.isPet },
+                            { label: `Overall Screen (Al Foil)`, cost: breakdown.osAl },
+                            { label: `Overall Screen (Drain Wire)`, cost: breakdown.osDrain },
+                            { label: `Overall Screen (PET Tape)`, cost: breakdown.osPet },
+                          ] : []),
                           { label: `Earthing Insulation (${params.insulationMaterial})`, cost: breakdown.earthingInsulation },
                           { label: `Metallic Screen (${params.mvScreenType})`, cost: breakdown.mvScreen },
                           { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
