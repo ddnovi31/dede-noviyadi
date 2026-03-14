@@ -843,9 +843,19 @@ export default function CableDesigner() {
 
   const [specEdits, setSpecEdits] = useState<Record<string, any>>({});
 
-  const getDefaultInsulationColor = (cores: number, hasEarthing: boolean, isMV: boolean, isABC: boolean) => {
+  const getDefaultInsulationColor = (cores: number, hasEarthing: boolean, isMV: boolean, isABC: boolean, formationType: string | undefined) => {
     if (isABC) return 'Black';
     if (isMV) return 'Standard';
+    
+    if (formationType === 'Pair') {
+        const pairs = cores / 2;
+        return pairs > 1 ? 'Black-White and Black-White with numbering mark' : 'Black-White';
+    }
+    if (formationType === 'Triad') {
+        const triads = cores / 3;
+        return triads > 1 ? 'Black-White-Red and Black-White-Red with numbering mark' : 'Black-White-Red';
+    }
+    if (formationType === 'Core') return 'Black with Numbering printing';
     
     if (cores === 1) return 'Black';
     if (cores === 2) return 'Blue, Black';
@@ -1279,7 +1289,7 @@ export default function CableDesigner() {
       const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : '');
       const armor = p.armorType !== 'Unarmored' ? `/${p.armorType}` : '';
       const mgt = p.fireguard ? '/MGT' : '';
-      const construction = `${p.conductorMaterial}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}${mgt}/${p.sheathMaterial}`.toUpperCase();
+      const construction = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}/${p.sheathMaterial}`.toUpperCase();
       const elements = formation === 'Pair' ? '2' : (formation === 'Triad' ? '3' : '1');
       const sizeStr = formation === 'Core' ? `${p.cores} x ${p.size} mm²` : `${p.cores} x ${elements} x ${p.size} mm²`;
       return `${p.standard} ${construction} ${sizeStr} ${p.voltage}`;
@@ -1807,7 +1817,7 @@ export default function CableDesigner() {
 
               {/* Insulation & MGT */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Insulation & Tapes</h3>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Insulation, Tapes & Screens</h3>
                 {Object.entries(projectItems.reduce((acc, item) => {
                   const insMat = item.params.insulationMaterial;
                   acc[insMat] = (acc[insMat] || 0) + item.result.bom.insulationWeight;
@@ -1817,6 +1827,16 @@ export default function CableDesigner() {
                   if (item.result.bom.semiCondWeight > 0) {
                     acc['Semi-conductive Layers'] = (acc['Semi-conductive Layers'] || 0) + item.result.bom.semiCondWeight;
                   }
+                  // IS-OS/OS Materials
+                  const isOsWeight = (item.result.bom.isAlWeight || 0) + (item.result.bom.osAlWeight || 0);
+                  if (isOsWeight > 0) acc['Aluminium Foil (IS-OS/OS)'] = (acc['Aluminium Foil (IS-OS/OS)'] || 0) + isOsWeight;
+                  
+                  const drainWeight = (item.result.bom.isDrainWeight || 0) + (item.result.bom.osDrainWeight || 0);
+                  if (drainWeight > 0) acc['Drain Wire (IS-OS/OS)'] = (acc['Drain Wire (IS-OS/OS)'] || 0) + drainWeight;
+                  
+                  const petWeight = (item.result.bom.isPetWeight || 0) + (item.result.bom.osPetWeight || 0);
+                  if (petWeight > 0) acc['Polyester Tape (IS-OS/OS)'] = (acc['Polyester Tape (IS-OS/OS)'] || 0) + petWeight;
+                  
                   return acc;
                 }, {} as Record<string, number>)).map(([mat, weight]) => (
                   <div key={mat} className="flex justify-between items-center">
@@ -2000,7 +2020,17 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 font-medium">Type & Size of Cable</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
                       {items.map((item, idx) => {
-                        let itemSizeDesignation = `${item.params.cores} x ${item.params.size}`;
+                        let itemSizeDesignation = '';
+                        if (p.formationType === 'Pair') {
+                            const pairs = item.params.cores / 2;
+                            itemSizeDesignation = `${pairs} x 2 x ${item.params.size}`;
+                        } else if (p.formationType === 'Triad') {
+                            const triads = item.params.cores / 3;
+                            itemSizeDesignation = `${triads} x 3 x ${item.params.size}`;
+                        } else {
+                            itemSizeDesignation = `${item.params.cores} x ${item.params.size}`;
+                        }
+
                         if (item.params.hasEarthing && item.params.earthingCores && item.params.earthingCores > 0 && item.params.earthingSize && item.params.earthingSize > 0) {
                           if (item.params.earthingCores === 1) {
                             itemSizeDesignation += ` + ${item.params.earthingSize}`;
@@ -2029,6 +2059,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center font-bold">5</td>
                       <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Constructional Data :</td>
                     </tr>
+
 
                     {p.standard === 'BS EN 50288-7' && (
                       <tr>
@@ -2123,7 +2154,7 @@ export default function CableDesigner() {
                         <td className="border border-slate-400 p-2 pl-4">- Colour of Insulation</td>
                         <td className="border border-slate-400 p-2 text-center">-</td>
                         {items.map((_, idx) => {
-                          const defaultColor = getDefaultInsulationColor(p.cores, p.hasEarthing, isMV, isABC);
+                          const defaultColor = getDefaultInsulationColor(p.cores, p.hasEarthing, isMV, isABC, p.formationType);
                           const editKey = `${groupKey}-insulation-color-${idx}`;
                           return (
                             <td key={idx} className="border border-slate-400 p-2 text-center">
@@ -2215,7 +2246,7 @@ export default function CableDesigner() {
                       <>
                         <tr className="bg-slate-50/50">
                           <td className="border border-slate-400 p-2 text-center"></td>
-                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-tight">• Screening Data :</td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-tight">• Screening :</td>
                         </tr>
                         {p.hasIndividualScreen && (
                           <tr>
@@ -2223,7 +2254,12 @@ export default function CableDesigner() {
                             <td className="border border-slate-400 p-2 pl-4">Individual Screen (IS)</td>
                             <td className="border border-slate-400 p-2 text-center">-</td>
                             {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center">Al/PET Tape + Drain Wire</td>
+                              <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
+                                Helically Overlapped Polyester Tape<br/>
+                                Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
+                                Helically overlapped single coated aluminium tape contacted with drain wire<br/>
+                                Helically Overlapped Polyester Tape
+                              </td>
                             ))}
                           </tr>
                         )}
@@ -2233,12 +2269,18 @@ export default function CableDesigner() {
                             <td className="border border-slate-400 p-2 pl-4">Overall Screen (OS)</td>
                             <td className="border border-slate-400 p-2 text-center">-</td>
                             {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center">Al/PET Tape + Drain Wire</td>
+                              <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
+                                Helically Overlapped Polyester Tape<br/>
+                                Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
+                                Helically overlapped single coated aluminium tape contacted with drain wire<br/>
+                                Helically Overlapped Polyester Tape
+                              </td>
                             ))}
                           </tr>
                         )}
                       </>
                     )}
+
 
                     {/* Metallic Screen */}
                     {(isMV || p.hasScreen) && (
@@ -2350,7 +2392,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Armouring */}
-                    {p.armorType !== 'Unarmored' && (
+                    {(p.armorType !== 'Unarmored' || p.standard === 'BS EN 50288-7') && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
@@ -2362,14 +2404,14 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 pl-4">- Material of Armour</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType}</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType === 'Unarmored' ? '-' : p.armorType}</td>
                           ))}
                         </tr>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-4">- Diameter of Armour (Approx.)</td>
                           <td className="border border-slate-400 p-2 text-center">mm</td>
                           {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.armorThickness.toFixed(2)}</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType === 'Unarmored' ? '-' : item.result.spec.armorThickness.toFixed(2)}</td>
                           ))}
                         </tr>
                       </>
@@ -2444,7 +2486,7 @@ export default function CableDesigner() {
                           }
                           const construction = constructionName;
                           const sizeStr = `${sizeDesignation} mm²`;
-                          const defaultMarking = `${stds} MULTI KABEL ${construction} ${sizeStr} ${p.voltage} MADE IN INDONESIA`;
+                          const defaultMarking = `[${p.standard}] [MULTI KABEL] [${construction}] [${sizeDesignation} mm²] [${p.voltage}] [MADE IN INDONESIA]`;
                           
                           return (
                             <input
@@ -2548,41 +2590,49 @@ export default function CableDesigner() {
                         <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.maxDcResistance}</td>
                       ))}
                     </tr>
-                    <tr>
-                      <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
-                      <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity at 30°C</td>
-                      <td className="border border-slate-400 p-2 text-center"></td>
-                      {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-400 p-2 pl-8">In Ground</td>
-                      <td className="border border-slate-400 p-2 text-center">A</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-400 p-2 pl-8">In Air</td>
-                      <td className="border border-slate-400 p-2 text-center">A</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Max. Short Circuit Rating of Conductor</td>
-                      <td className="border border-slate-400 p-2 text-center">kA / sec</td>
-                      {items.map((item, idx) => {
-                        const isXLPE = p.insulationMaterial === 'XLPE' || p.insulationMaterial === 'EPR';
-                        const isCu = p.conductorMaterial === 'Cu';
-                        let k = 115;
-                        if (isCu) k = isXLPE ? 143 : 115;
-                        else k = isXLPE ? 94 : 76;
-                        
-                        const sc = (k * item.params.size) / 1000;
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{sc.toFixed(2)}</td>;
-                      })}
-                    </tr>
+                    {p.standard !== 'BS EN 50288-7' && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity at 30°C</td>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
+                      </tr>
+                    )}
+                    {p.standard !== 'BS EN 50288-7' && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-8">In Ground</td>
+                          <td className="border border-slate-400 p-2 text-center">A</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-8">In Air</td>
+                          <td className="border border-slate-400 p-2 text-center">A</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
+                          ))}
+                        </tr>
+                      </>
+                    )}
+                    {p.standard !== 'BS EN 50288-7' && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 pl-4">- Max. Short Circuit Rating of Conductor</td>
+                        <td className="border border-slate-400 p-2 text-center">kA / sec</td>
+                        {items.map((item, idx) => {
+                          const isXLPE = p.insulationMaterial === 'XLPE' || p.insulationMaterial === 'EPR';
+                          const isCu = p.conductorMaterial === 'Cu';
+                          let k = 115;
+                          if (isCu) k = isXLPE ? 143 : 115;
+                          else k = isXLPE ? 94 : 76;
+                          
+                          const sc = (k * item.params.size) / 1000;
+                          return <td key={idx} className="border border-slate-400 p-2 text-center">{sc.toFixed(2)}</td>;
+                        })}
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -4817,6 +4867,10 @@ export default function CableDesigner() {
                 
                 <div className="space-y-3">
                   <SpecRow label="Max DC Resistance @ 20°C" value={result.electrical.maxDcResistance} unit="Ω/km" precision={4} />
+                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
+                    <span>Test Voltage (5 min)</span>
+                    <span className="font-mono text-slate-900">{result.electrical.testVoltage}</span>
+                  </div>
                   {params.standard !== 'BS EN 50288-7' && (
                     <>
                       <SpecRow 
@@ -4830,10 +4884,6 @@ export default function CableDesigner() {
                       )}
                     </>
                   )}
-                  <div className="flex justify-between items-center py-1 text-sm text-slate-600">
-                    <span>Test Voltage (5 min)</span>
-                    <span className="font-mono text-slate-900">{result.electrical.testVoltage}</span>
-                  </div>
                   {params.standard === 'BS EN 50288-7' && (
                     <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
                       <p className="text-[9px] text-slate-400 italic">
