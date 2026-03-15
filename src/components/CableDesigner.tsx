@@ -1028,6 +1028,7 @@ export default function CableDesigner() {
   };
 
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
+  const isInstrumentationPairTriad = params.standard === 'BS EN 50288-7' && (params.formationType === 'Pair' || params.formationType === 'Triad');
   const [projectName, setProjectName] = useState('New Project');
   const [result, setResult] = useState<CalculationResult | null>(null);
 
@@ -1322,7 +1323,7 @@ export default function CableDesigner() {
       const mgt = p.fireguard ? '/MGT' : '';
       const construction = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}/${p.sheathMaterial}`.toUpperCase();
       const elements = formation === 'Pair' ? '2' : (formation === 'Triad' ? '3' : '1');
-      const sizeStr = formation === 'Core' ? `${p.cores} x ${p.size} mm²` : `${p.cores} x ${elements} x ${p.size} mm²`;
+      const sizeStr = formation === 'Core' ? `${p.cores} x ${p.size} mm²` : `${p.formationCount || 1} x ${elements} x ${p.instrumentationSize || p.size} mm²`;
       return `${p.standard} ${construction} ${sizeStr} ${p.voltage}`;
     }
 
@@ -1458,9 +1459,9 @@ export default function CableDesigner() {
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
-      isAl: bom.isAlWeight ? (bom.isAlWeight * multiplier * materialPrices.Al) / 1000 : 0,
-      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * multiplier * materialPrices.Cu) / 1000 : 0,
-      isPet: bom.isPetWeight ? (bom.isPetWeight * multiplier * materialPrices.PE) / 1000 : 0,
+      isAl: bom.isAlWeight ? (bom.isAlWeight * materialPrices.Al) / 1000 : 0,
+      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * materialPrices.Cu) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * materialPrices.PE) / 1000 : 0,
       osAl: bom.osAlWeight ? (bom.osAlWeight * materialPrices.Al) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * materialPrices.Cu) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * materialPrices.PE) / 1000 : 0,
@@ -2299,19 +2300,69 @@ export default function CableDesigner() {
                           <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-tight">• Screening :</td>
                         </tr>
                         {p.hasIndividualScreen && (
-                          <tr>
-                            <td className="border border-slate-400 p-2 text-center"></td>
-                            <td className="border border-slate-400 p-2 pl-4">Individual Screen (IS)</td>
-                            <td className="border border-slate-400 p-2 text-center">-</td>
-                            {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
-                                Helically Overlapped Polyester Tape<br/>
-                                Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
-                                Helically overlapped single coated aluminium tape contacted with drain wire<br/>
-                                Helically Overlapped Polyester Tape
-                              </td>
-                            ))}
-                          </tr>
+                          <>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">Individual Screen (IS)</td>
+                              <td className="border border-slate-400 p-2 text-center">-</td>
+                              {items.map((_, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
+                                  Helically Overlapped Polyester Tape<br/>
+                                  Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
+                                  Helically overlapped single coated aluminium tape contacted with drain wire<br/>
+                                  Helically Overlapped Polyester Tape
+                                </td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS Al Foil Weight (Unit)</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isAlWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS Al Foil Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isAlWeight || 0).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS Drain Wire Weight (Unit)</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isDrainWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS Drain Wire Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isDrainWeight || 0).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS PET Tape Weight (Unit)</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isPetWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- IS PET Tape Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
+                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
+                              {items.map((item, idx) => (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isPetWeight || 0).toFixed(2)}</td>
+                              ))}
+                            </tr>
+                          </>
                         )}
                         {p.hasOverallScreen && (
                           <tr>
@@ -3083,9 +3134,41 @@ export default function CableDesigner() {
                               <option value="Triad">Triad</option>
                             </select>
                           </div>
+
+                          {params.formationType !== 'Core' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">
+                                  Number of {params.formationType}s
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={params.formationCount || 1}
+                                  onChange={(e) => handleParamChange('formationCount', Number(e.target.value))}
+                                  className="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">
+                                  Cross Section (mm²)
+                                </label>
+                                <select
+                                  value={params.instrumentationSize || 0.5}
+                                  onChange={(e) => handleParamChange('instrumentationSize', Number(e.target.value))}
+                                  className="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border bg-white"
+                                >
+                                  {[0.5, 0.75, 1, 1.5, 2.5].map(s => (
+                                    <option key={s} value={s}>{s} mm²</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-6">
                             {(() => {
-                              const isIsAllowed = params.formationType !== 'Core' && params.cores > 1;
+                              const isIsAllowed = params.formationType !== 'Core';
                               return (
                                 <label className={`flex items-center gap-2 cursor-pointer group ${!isIsAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                   <input
@@ -3194,7 +3277,7 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Cores and Size in one row */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={`grid grid-cols-2 gap-4 ${isInstrumentationPairTriad ? 'opacity-40 pointer-events-none' : ''}`}>
                       {/* Number of Cores */}
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
@@ -3205,9 +3288,15 @@ export default function CableDesigner() {
                             max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 5 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : 80}
                             value={params.cores}
                             onChange={(e) => handleParamChange('cores', Number(e.target.value))}
-                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                            disabled={isInstrumentationPairTriad}
+                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100"
                           />
                         </div>
+                        {params.standard === 'BS EN 50288-7' && (
+                          <p className="text-[10px] text-indigo-600 mt-1 font-medium italic">
+                            {params.formationType === 'Pair' ? `(Equals ${params.cores / 2} Pairs)` : params.formationType === 'Triad' ? `(Equals ${Math.floor(params.cores / 3)} Triads)` : ''}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(() => {
                             let cores = [1, 2, 3, 4, 5];
@@ -3222,11 +3311,12 @@ export default function CableDesigner() {
                               <button
                                 key={c}
                                 onClick={() => handleParamChange('cores', c)}
+                                disabled={isInstrumentationPairTriad}
                                 className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
                                   params.cores === c 
                                     ? 'bg-indigo-600 text-white shadow-sm' 
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
+                                } disabled:opacity-50`}
                               >
                                 {c}
                               </button>
@@ -3246,7 +3336,8 @@ export default function CableDesigner() {
                         <select
                           value={params.size}
                           onChange={(e) => handleParamChange('size', Number(e.target.value))}
-                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                          disabled={isInstrumentationPairTriad}
+                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100"
                         >
                           {CABLE_SIZES.filter(s => {
                             if (params.standard === 'BS EN 50288-7') {
@@ -4872,9 +4963,12 @@ export default function CableDesigner() {
 
                   {result.bom.isWeight !== undefined && result.bom.isWeight > 0 && (
                     <>
-                      <SpecRow label="Individual Screen (Al Foil)" value={result.bom.isAlWeight} unit="kg/km" />
-                      <SpecRow label="Individual Screen (Drain Wire)" value={result.bom.isDrainWeight} unit="kg/km" />
-                      <SpecRow label="Individual Screen (PET Tape)" value={result.bom.isPetWeight} unit="kg/km" />
+                      <SpecRow label="Individual Screen (Al Foil) (Unit)" value={(result.bom.isAlWeight || 0) / (result.bom.isMultiplier || 1)} unit="kg/km" />
+                      <SpecRow label={`Individual Screen (Al Foil) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`} value={result.bom.isAlWeight || 0} unit="kg/km" />
+                      <SpecRow label="Individual Screen (Drain Wire) (Unit)" value={(result.bom.isDrainWeight || 0) / (result.bom.isMultiplier || 1)} unit="kg/km" />
+                      <SpecRow label={`Individual Screen (Drain Wire) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`} value={result.bom.isDrainWeight || 0} unit="kg/km" />
+                      <SpecRow label="Individual Screen (PET Tape) (Unit)" value={(result.bom.isPetWeight || 0) / (result.bom.isMultiplier || 1)} unit="kg/km" />
+                      <SpecRow label={`Individual Screen (PET Tape) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`} value={result.bom.isPetWeight || 0} unit="kg/km" />
                     </>
                   )}
                   
@@ -5025,9 +5119,9 @@ export default function CableDesigner() {
                           { label: `Semi-conductive Layers`, cost: breakdown.semiCond },
                           { label: `Phase Insulation (${params.insulationMaterial})`, cost: breakdown.insulation },
                           ...(params.standard === 'BS EN 50288-7' ? [
-                            { label: `Individual Screen (Al Foil)`, cost: breakdown.isAl },
-                            { label: `Individual Screen (Drain Wire)`, cost: breakdown.isDrain },
-                            { label: `Individual Screen (PET Tape)`, cost: breakdown.isPet },
+                            { label: `Individual Screen (Al Foil) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isAl },
+                            { label: `Individual Screen (Drain Wire) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isDrain },
+                            { label: `Individual Screen (PET Tape) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isPet },
                             { label: `Overall Screen (Al Foil)`, cost: breakdown.osAl },
                             { label: `Overall Screen (Drain Wire)`, cost: breakdown.osDrain },
                             { label: `Overall Screen (PET Tape)`, cost: breakdown.osPet },

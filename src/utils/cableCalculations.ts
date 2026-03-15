@@ -48,6 +48,8 @@ export interface CableDesignParams {
   
   // Instrumentation specific
   formationType?: FormationType;
+  formationCount?: number;
+  instrumentationSize?: number;
   hasIndividualScreen?: boolean;
   hasOverallScreen?: boolean;
   
@@ -367,6 +369,7 @@ export interface CalculationResult {
     osAlWeight?: number;
     osDrainWeight?: number;
     osPetWeight?: number;
+    isMultiplier?: number;
     totalWeight: number;
   };
   weights?: {
@@ -502,6 +505,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Adjust params based on standard
   const effectiveParams = { ...params };
+
+  // Instrumentation specific mapping
+  if (params.standard === 'BS EN 50288-7') {
+    if (params.formationType === 'Pair') {
+      effectiveParams.cores = (params.formationCount || 1) * 2;
+      effectiveParams.size = params.instrumentationSize || params.size;
+    } else if (params.formationType === 'Triad') {
+      effectiveParams.cores = (params.formationCount || 1) * 3;
+      effectiveParams.size = params.instrumentationSize || params.size;
+    }
+  }
+
   let innerCoveringThickness = effectiveParams.manualInnerSheathThickness;
   let sheathThickness = effectiveParams.manualSheathThickness;
   if (params.standard === 'IEC 60502-2') {
@@ -1091,16 +1106,16 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       
       isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : effectiveParams.cores);
       
-      isAlWeight = aWeight;
-      isDrainWeight = drainWireWeight;
-      isPetWeight = pWeight;
+      isAlWeight = aWeight * isMultiplier;
+      isDrainWeight = drainWireWeight * isMultiplier;
+      isPetWeight = pWeight * isMultiplier;
       isWeight = isAlWeight + isDrainWeight + isPetWeight;
       
-      formationWeight += (pWeight + aWeight + drainWireWeight) * isMultiplier;
+      formationWeight += (pWeight + aWeight + drainWireWeight);
     }
 
-    const factor = getLayingUpFactor(effectiveParams.cores);
-    laidUpDiameter = effectiveParams.manualLaidUpDiameter || (effectiveParams.cores === 1 ? formationDiameter : formationDiameter * factor);
+    const factor = getLayingUpFactor(isMultiplier);
+    laidUpDiameter = effectiveParams.manualLaidUpDiameter || (isMultiplier === 1 ? formationDiameter : formationDiameter * factor);
 
     // Overall Screen (OS)
     if (effectiveParams.hasOverallScreen) {
@@ -1401,7 +1416,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const sheathArea = Math.PI * (rOverall * rOverall - rOverArmor * rOverArmor);
   const sheathWeight = finalSheathThickness > 0 ? sheathArea * densities[effectiveParams.sheathMaterial] : 0;
 
-  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight);
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight);
 
   const scope = {
     PI: Math.PI,
@@ -1466,7 +1481,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } as any;
 
   if (isWeight > 0) {
-    weightDetails.isWeight = evalFormula(isWeight, `Individual Screen: ${effectiveParams.cores} formations * (PET + Al + Drain Wire)`, 'isWeight');
+    weightDetails.isWeight = evalFormula(isWeight, `Individual Screen: ${isMultiplier} formations * (PET + Al + Drain Wire)`, 'isWeight');
   }
   if (osWeight > 0) {
     weightDetails.osWeight = evalFormula(osWeight, `Overall Screen: PET + Al + Drain Wire`, 'osWeight');
@@ -1662,6 +1677,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       osAlWeight: osAlWeight > 0 ? Number(applyScrap(osAlWeight, 'Al').toFixed(1)) : 0,
       osDrainWeight: osDrainWeight > 0 ? Number(applyScrap(osDrainWeight, 'Cu').toFixed(1)) : 0,
       osPetWeight: osPetWeight > 0 ? Number(applyScrap(osPetWeight, 'PE').toFixed(1)) : 0,
+      isMultiplier: isMultiplier,
       totalWeight: Number(applyScrap(finalTotalWeight, 'Total').toFixed(1)),
     },
     weights: weightDetails,
