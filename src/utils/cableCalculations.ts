@@ -596,6 +596,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     effectiveParams.size = 10;
   }
 
+  // Instrumentation 300V constraint: max 1.5mm2
+  if (params.standard === 'BS EN 50288-7' && effectiveParams.voltage === '300 V' && effectiveParams.size > 1.5) {
+    effectiveParams.size = 1.5;
+  }
+
   const data = CABLE_DATA.find((d) => d.size === effectiveParams.size) || CABLE_DATA[0];
 
   // 1. Conductor
@@ -775,10 +780,31 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   if (params.standard === 'BS EN 50288-7') {
     if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
-      if (effectiveParams.size <= 1.0) insulationThickness = 0.4;
-      else if (effectiveParams.size <= 1.5) insulationThickness = 0.45;
-      else if (effectiveParams.size <= 2.5) insulationThickness = 0.55;
-      else insulationThickness = 0.6;
+      const is300V = effectiveParams.voltage === '300 V';
+      const is300_500V = effectiveParams.voltage === '300/500 V';
+      const size = effectiveParams.size;
+
+      if (is300V) {
+        if (size <= 0.5) insulationThickness = 0.40;
+        else if (size <= 0.75) insulationThickness = 0.40;
+        else if (size <= 1.25) insulationThickness = 0.40;
+        else if (size <= 1.5) insulationThickness = 0.50;
+        else {
+          // 300V only up to 1.5mm2, default to 0.50 or throw error? 
+          // Assuming default to 0.50 for now as per table limit
+          insulationThickness = 0.50;
+        }
+      } else if (is300_500V) {
+        if (size <= 0.5) insulationThickness = 0.60;
+        else if (size <= 0.75) insulationThickness = 0.60;
+        else if (size <= 1.25) insulationThickness = 0.60;
+        else if (size <= 1.5) insulationThickness = 0.60;
+        else if (size <= 2.5) insulationThickness = 0.70;
+        else insulationThickness = 0.70; // Default for larger
+      } else {
+        // Fallback
+        insulationThickness = 0.60;
+      }
     }
   } else if (effectiveParams.insulationMaterial === 'XLPE') {
     insulationThickness = insulationThickness || data.xlpeThick;
@@ -1029,6 +1055,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let isAlWeight = 0;
   let isDrainWeight = 0;
   let isPetWeight = 0;
+  let isMultiplier = 1;
   let osWeight = 0;
   let osAlWeight = 0;
   let osDrainWeight = 0;
@@ -1062,12 +1089,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const pWeight = Math.PI * (Math.pow((diaBeforeIS + 0.1)/2, 2) - Math.pow(diaBeforeIS/2, 2)) * petDensity * 2; // 2 layers
       const aWeight = Math.PI * (Math.pow((diaBeforeIS + 0.15)/2, 2) - Math.pow((diaBeforeIS + 0.1)/2, 2)) * alDensity;
       
-      isAlWeight = aWeight * effectiveParams.cores;
-      isDrainWeight = drainWireWeight * effectiveParams.cores;
-      isPetWeight = pWeight * effectiveParams.cores;
+      isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : effectiveParams.cores);
+      
+      isAlWeight = aWeight;
+      isDrainWeight = drainWireWeight;
+      isPetWeight = pWeight;
       isWeight = isAlWeight + isDrainWeight + isPetWeight;
       
-      formationWeight += (pWeight + aWeight + drainWireWeight);
+      formationWeight += (pWeight + aWeight + drainWireWeight) * isMultiplier;
     }
 
     const factor = getLayingUpFactor(effectiveParams.cores);
@@ -1494,7 +1523,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
                        (weightDetails.armor?.weight || 0) +
                        (weightDetails.separator?.weight || 0) +
                        (weightDetails.earthing?.weight || 0) +
-                       (weightDetails.isWeight?.weight || 0) +
+                       (weightDetails.isWeight?.weight || 0) * isMultiplier +
                        (weightDetails.osWeight?.weight || 0);
   }
 

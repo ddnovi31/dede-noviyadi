@@ -298,6 +298,7 @@ export default function CableDesigner() {
     const hEarth = "16a34a";
     const hInSh = "475569";
     const hSep = "64748b";
+    const hMGT = "fbbf24";
     const hArm = "334155";
     const hOutSh = "0f172a";
     const hTot = "4f46e5";
@@ -319,6 +320,7 @@ export default function CableDesigner() {
         params.hasInnerSheath ? 'InSh' : 'NoInSh',
         params.hasIndividualScreen ? 'IS' : 'NoIS',
         params.hasOverallScreen ? 'OS' : 'NoOS',
+        params.fireguard ? 'FG' : 'NoFG',
       ].join('|');
     };
 
@@ -363,7 +365,8 @@ export default function CableDesigner() {
       const hasScreen = isMV ? (sampleItem.params.mvScreenType && sampleItem.params.mvScreenType !== 'None') : (sampleItem.params.hasScreen && sampleItem.params.screenType && sampleItem.params.screenType !== 'None');
       const hasArmor = sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored';
       const hasEarth = sampleItem.params.hasEarthing && sampleItem.params.earthingSize && sampleItem.params.earthingSize > 0;
-      const hasInnerSheath = (sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None');
+      const isNoSheath = sampleItem.params.standard.includes('NYA') || sampleItem.params.standard.includes('NYAF') || sampleItem.params.standard.includes('NFA2X');
+      const hasInnerSheath = !isNoSheath && ((sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None'));
       const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
       const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X');
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
@@ -390,23 +393,32 @@ export default function CableDesigner() {
       
       // Conductor
       addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (sampleItem.params.fireguard) {
+        addGroup('MGT', hMGT, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      }
 
-      if (isMV) addGroup('Cond Screen', hCScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      addGroup('Insulation', hIns, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (isMV) addGroup('Ins Screen', hIScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (isMV) addGroup('Cond Screen', hCScr, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      addGroup('Insulation', hIns, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (isMV) addGroup('Ins Screen', hIScr, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (isMV && hasScreen) {
+        if (sampleItem.params.mvScreenType === 'CTS') {
+          addGroup('Met Screen', hMScr, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else {
+          addGroup('Met Screen', hMScr, ['Size (mm2)', 'Wire Dia (mm)', 'Wire Count', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+        }
+      }
       
       if (hasEarth) {
         if (isNFA2XT) addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
         else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
       }
 
-      if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Dia', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
-      if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Dia', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
-      if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (hasArmor) addGroup('Armor', hArm, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasArmor) addGroup('Armor', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasOuterSheath) addGroup('Outer Sheath', hOutSh, ['Thk (mm)', 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
 
       addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price']);
@@ -481,47 +493,71 @@ export default function CableDesigner() {
 
         let currentDiaFormula = `${condOdCol}${r}`;
 
+        // MGT
+        if (item.params.fireguard) {
+          const mgtThkCol = pushCol(item.result.spec.mgtThickness || 0.2, fmtNum);
+          const mgtWtCol = pushCol(item.result.bom.mgtWeight || 0, fmtNum);
+          const mgtPrcCol = pushCol(materialPrices.MGT || 120000, fmtRp);
+          pushCol(null, fmtRp, `${mgtWtCol}${r}*${mgtPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${mgtThkCol}${r})`;
+        }
+
         // Cond Screen
         let cScrCstCol, cScrThkCol, cScrWtCol;
         if (isMV) {
           cScrThkCol = pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
-          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}+${cScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
           const cScrPrcCol = pushCol(semiPrice, fmtRp);
           cScrCstCol = pushCol(null, fmtRp, `${cScrWtCol}${r}*${cScrPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
         }
 
         // Insulation
         const insThkCol = pushCol(item.result.spec.phaseCore.insulationThickness || 0, fmtNum);
-        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}`);
+        currentDiaFormula = `(${currentDiaFormula}+2*${insThkCol}${r})`;
+        pushCol(null, fmtNum, currentDiaFormula); // OD
+        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}-2*${insThkCol}${r}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}`);
         const insPrcCol = pushCol(insPrice, fmtRp);
         const insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
-        currentDiaFormula = `(${currentDiaFormula}+2*${insThkCol}${r})`;
 
         // Ins Screen
         let iScrCstCol, iScrThkCol, iScrWtCol;
         if (isMV) {
           iScrThkCol = pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
-          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}+${iScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
           const iScrPrcCol = pushCol(semiPrice, fmtRp);
           iScrCstCol = pushCol(null, fmtRp, `${iScrWtCol}${r}*${iScrPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
         }
 
         // Met Screen (MV)
         let mScrCstCol, mScrThkCol, mScrWtCol;
         if (isMV && hasScreen) {
-          mScrThkCol = pushCol(item.params.mvScreenSize || 0, fmtNum);
-          // For CTS, weight = PI * Thk * (ID + Thk) * density * 1.1 * cores
-          // For CWS, we just use static weight for now as it depends on wire count
-          let mScrWtFormula = `${item.result.bom.mvScreenWeight || 0}`;
           if (item.params.mvScreenType === 'CTS') {
-            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1*${coreCol}${r}`;
+            // CTS: Thk (mm), OD (mm), Wt (kg/km), Prc (Rp/kg), Cst (Rp/m)
+            const thk = pushCol(item.params.manualMvScreenThickness || 0.2, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+2*${thk}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            
+            let mScrWtFormula = `PI()*${thk}${r}*(${currentDiaFormula}-2*${thk}${r}+${thk}${r})*${getDensity('Cu')}*1.1*${coreCol}${r}`;
+            mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
+            const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
+            mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
+          } else {
+            // CWS: Size (mm2), Wire Dia (mm), Wire Count, OD (mm), Wt (kg/km), Prc (Rp/kg), Cst (Rp/m)
+            const sizeCol = pushCol(item.params.mvScreenSize || 0, fmtNum); // Size
+            const wireDiaCol = pushCol(item.params.manualMvScreenWireDiameter || 0.5, fmtNum);
+            pushCol(null, fmtNum, `${sizeCol}${r} / (PI() * POWER(${wireDiaCol}${r} / 2, 2))`); // Wire Count
+            
+            currentDiaFormula = `(${currentDiaFormula}+2*${wireDiaCol}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            
+            mScrWtCol = pushCol(null, fmtNum, `${item.params.mvScreenSize || 0}*${getDensity('Cu')}*1.05*${coreCol}${r}`);
+            const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
+            mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
           }
-          mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
-          const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
-          mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
         }
 
         // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
@@ -565,7 +601,7 @@ export default function CableDesigner() {
           isAlWtCol = pushCol(item.result.bom.isAlWeight || 0, fmtNum);
           const isAlPrcCol = pushCol(materialPrices.Al, fmtRp);
           pushCol(1); // Drain Wires
-          pushCol(0.8, fmtNum); // Drain Dia
+          pushCol(item.params.manualScreenWireDiameter || 0.5, fmtNum); // Drain Size (mm2)
           isDrainWtCol = pushCol(item.result.bom.isDrainWeight || 0, fmtNum);
           const isDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
           pushCol(0.05, fmtNum); // PET Thk
@@ -581,7 +617,7 @@ export default function CableDesigner() {
           osAlWtCol = pushCol(item.result.bom.osAlWeight || 0, fmtNum);
           const osAlPrcCol = pushCol(materialPrices.Al, fmtRp);
           pushCol(1); // Drain Wires
-          pushCol(0.8, fmtNum); // Drain Dia
+          pushCol(item.params.manualScreenWireDiameter || 0.5, fmtNum); // Drain Size (mm2)
           osDrainWtCol = pushCol(item.result.bom.osDrainWeight || 0, fmtNum);
           const osDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
           pushCol(0.05, fmtNum); // PET Thk
@@ -594,33 +630,36 @@ export default function CableDesigner() {
         let inShCstCol, inShThkCol, inShWtCol;
         if (hasInnerSheath) {
           inShThkCol = pushCol(item.result.spec.innerCoveringThickness || 0, fmtNum);
-          inShWtCol = pushCol(null, fmtNum, `PI()*${inShThkCol}${r}*(${currentDiaFormula}+${inShThkCol}${r})*${getDensity(item.params.innerSheathMaterial || 'PVC')}`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${inShThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          inShWtCol = pushCol(null, fmtNum, `PI()*${inShThkCol}${r}*(${currentDiaFormula}-2*${inShThkCol}${r}+${inShThkCol}${r})*${getDensity(item.params.innerSheathMaterial || 'PVC')}`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${inShThkCol}${r})`;
         }
 
         // Met Screen (LV)
         if (!isMV && hasScreen) {
           mScrThkCol = pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
+          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
           let mScrWtFormula = `${item.result.bom.screenWeight || 0}`;
           if (item.params.screenType === 'CTS') {
-            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1`;
+            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}-2*${mScrThkCol}${r}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1`;
           }
           mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
           const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
           mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
         }
 
         // Separator
         let sepCstCol, sepThkCol, sepWtCol;
         if (hasSeparator) {
           sepThkCol = pushCol(item.result.spec.separatorThickness || 0, fmtNum);
-          sepWtCol = pushCol(null, fmtNum, `PI()*${sepThkCol}${r}*(${currentDiaFormula}+${sepThkCol}${r})*${getDensity(item.params.separatorMaterial || 'PVC')}`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${sepThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          sepWtCol = pushCol(null, fmtNum, `PI()*${sepThkCol}${r}*(${currentDiaFormula}-2*${sepThkCol}${r}+${sepThkCol}${r})*${getDensity(item.params.separatorMaterial || 'PVC')}`);
           const sepPrcCol = pushCol(separatorPrice, fmtRp);
           sepCstCol = pushCol(null, fmtRp, `${sepWtCol}${r}*${sepPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+2*${sepThkCol}${r})`;
         }
 
         // Armor
@@ -650,10 +689,11 @@ export default function CableDesigner() {
             diameterAddition = `2*${armThkCol}${r}`;
           }
 
+          currentDiaFormula = `(${currentDiaFormula}+${diameterAddition})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
           armWtCol = pushCol(null, fmtNum, armWtFormula);
           const armPrcCol = pushCol(armorPrice, fmtRp);
           armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
-          currentDiaFormula = `(${currentDiaFormula}+${diameterAddition})`;
         }
 
         // Outer Sheath
@@ -1384,6 +1424,8 @@ export default function CableDesigner() {
   };
 
   const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams) => {
+    const formationType = params.formationType || 'Pair';
+    const multiplier = formationType === 'Pair' ? params.cores / 2 : (formationType === 'Triad' ? params.cores / 3 : params.cores);
     const condPrice = (params.conductorMaterial === 'Cu' ? materialPrices.Cu : (params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
     const insPrice = (materialPrices[params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE);
     const armorPrice = (
@@ -1416,9 +1458,9 @@ export default function CableDesigner() {
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
-      isAl: bom.isAlWeight ? (bom.isAlWeight * materialPrices.Al) / 1000 : 0,
-      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * materialPrices.Cu) / 1000 : 0,
-      isPet: bom.isPetWeight ? (bom.isPetWeight * materialPrices.PE) / 1000 : 0,
+      isAl: bom.isAlWeight ? (bom.isAlWeight * multiplier * materialPrices.Al) / 1000 : 0,
+      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * multiplier * materialPrices.Cu) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * multiplier * materialPrices.PE) / 1000 : 0,
       osAl: bom.osAlWeight ? (bom.osAlWeight * materialPrices.Al) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * materialPrices.Cu) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * materialPrices.PE) / 1000 : 0,
