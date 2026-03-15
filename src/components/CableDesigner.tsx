@@ -351,20 +351,24 @@ export default function CableDesigner() {
 
     let sheetCounter = 1;
 
-    Object.entries(groupedItems).forEach(([groupKey, items]) => {
+    const getDensity = (material: string) => {
+      const d: Record<string, number> = { Cu: 8.89, Al: 2.7, TCu: 8.89, XLPE: 0.922, PVC: 1.44, PE: 0.93, LSZH: 1.48, 'PVC-FR': 1.44, SHF1: 1.48, SHF2: 1.48, EPR: 1.25, HEPR: 1.25, Steel: 7.85, SteelWire: 7.85, SemiCond: 1.15, MGT: 1.4 };
+      return d[material] || 1.44;
+    };
+
+    (Object.entries(groupedItems) as [string, { item: { params: CableDesignParams, result: CalculationResult }, index: number }[]][]).forEach(([groupKey, items]) => {
       const sampleItem = items[0].item;
       const isMV = sampleItem.params.standard === 'IEC 60502-2';
       const isIEC60502_1 = sampleItem.params.standard === 'IEC 60502-1';
       const hasScreen = isMV ? (sampleItem.params.mvScreenType && sampleItem.params.mvScreenType !== 'None') : (sampleItem.params.hasScreen && sampleItem.params.screenType && sampleItem.params.screenType !== 'None');
-      const hasArmor = sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored' && sampleItem.params.armorType !== 'None';
-      const hasEarth = sampleItem.params.hasEarthing || (sampleItem.params.earthingSize && sampleItem.params.earthingSize > 0);
-      const hasInnerSheath = (sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None' && sampleItem.params.innerSheathMaterial !== 'Unarmored');
+      const hasArmor = sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored';
+      const hasEarth = sampleItem.params.hasEarthing && sampleItem.params.earthingSize && sampleItem.params.earthingSize > 0;
+      const hasInnerSheath = (sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None');
       const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
       const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X');
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
       const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7';
 
-      // Generate a clean sheet name based on construction
       let sheetName = getCableDesignation(sampleItem.params, sampleItem.result).split(' ')[0];
       sheetName = `${sheetCounter++}. ${sheetName}`.replace(/[\\/?*[\]:]/g, '_').substring(0, 31);
 
@@ -385,65 +389,33 @@ export default function CableDesigner() {
       addGroup('General', hGen, ['No', 'Core', 'Size', 'Laid-up Dia']);
       
       // Conductor
-      addGroup('Conductor', hCond, ['Wires', 'Dia (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
 
-      if (isMV) {
-        addGroup('Cond Screen', hCScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
+      if (isMV) addGroup('Cond Screen', hCScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       addGroup('Insulation', hIns, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-
-      if (isMV) {
-        addGroup('Ins Screen', hIScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (isMV && hasScreen) {
-        addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
+      if (isMV) addGroup('Ins Screen', hIScr, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      
       if (hasEarth) {
-        if (isNFA2XT) {
-          addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
-        } else {
-          addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
-        }
+        if (isNFA2XT) addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
+        else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
       }
 
-      if (isInstrumentation && sampleItem.params.hasIndividualScreen) {
-        addGroup('Indv Screen', hMScr, ['Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
+      if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Dia', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Dia', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasArmor) addGroup('Armor', hArm, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasOuterSheath) addGroup('Outer Sheath', hOutSh, ['Thk (mm)', 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
 
-      if (isInstrumentation && sampleItem.params.hasOverallScreen) {
-        addGroup('Ovrl Screen', hMScr, ['Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (hasInnerSheath) {
-        addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (!isMV && hasScreen) {
-        addGroup('Met Screen', hMScr, ['Thk/Size', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (hasSeparator) {
-        addGroup('Separator', hSep, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (hasArmor) {
-        addGroup('Armor', hArm, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      if (hasOuterSheath) {
-        addGroup('Outer Sheath', hOutSh, ['Thk (mm)', 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
-      addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price', 'Total Price']);
+      addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price']);
 
       sheetsData[sheetName] = [topHeaders, subHeaders];
       sheetsMerges[sheetName] = merges;
 
       items.forEach(({ item, index }) => {
-        const r = sheetsData[sheetName].length + 1; // Excel row number for this sheet (1-based)
+        const r = sheetsData[sheetName].length + 1;
         
         const condPrice = (item.params.conductorMaterial === 'Cu' ? materialPrices.Cu : (item.params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
         const insPrice = materialPrices[item.params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE;
@@ -491,135 +463,205 @@ export default function CableDesigner() {
 
         // General
         pushCol(index + 1);
-        pushCol(item.params.cores);
+        const coreCol = pushCol(item.params.cores);
         pushCol(item.params.size);
-        pushCol(item.result.spec.laidUpDiameter || 0, fmtNum);
+        
+        // We will fill Laid-up Dia formula later once we know Core OD
+        const laidUpDiaColIdx = colIdx;
+        const laidUpDiaCol = getColName(colIdx++);
+        row.push(null); // Placeholder for Laid-up Dia
 
         // Conductor
-        pushCol(item.result.spec.phaseCore.wireCount || 0);
-        pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
-        const condWtCol = pushCol(item.result.bom.conductorWeight || 0, fmtNum);
+        const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
+        const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
+        const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
+        const condWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${wiresCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}`);
         const condPrcCol = pushCol(condPrice, fmtRp);
         const condCstCol = pushCol(null, fmtRp, `${condWtCol}${r}*${condPrcCol}${r}/1000`);
 
+        let currentDiaFormula = `${condOdCol}${r}`;
+
         // Cond Screen
-        let cScrCstCol;
+        let cScrCstCol, cScrThkCol, cScrWtCol;
         if (isMV) {
-          pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
-          const cScrWtCol = pushCol(0, fmtNum); // We don't have split weights in BOM
+          cScrThkCol = pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
+          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}+${cScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
           const cScrPrcCol = pushCol(semiPrice, fmtRp);
           cScrCstCol = pushCol(null, fmtRp, `${cScrWtCol}${r}*${cScrPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
         }
 
         // Insulation
-        pushCol(item.result.spec.phaseCore.insulationThickness || 0, fmtNum);
-        const insWtCol = pushCol(item.result.bom.insulationWeight || 0, fmtNum);
+        const insThkCol = pushCol(item.result.spec.phaseCore.insulationThickness || 0, fmtNum);
+        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}`);
         const insPrcCol = pushCol(insPrice, fmtRp);
         const insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
+        currentDiaFormula = `(${currentDiaFormula}+2*${insThkCol}${r})`;
 
         // Ins Screen
-        let iScrCstCol;
+        let iScrCstCol, iScrThkCol, iScrWtCol;
         if (isMV) {
-          pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
-          const iScrWtCol = pushCol(item.result.bom.semiCondWeight || 0, fmtNum); // Put all semi-cond weight here
+          iScrThkCol = pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
+          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}+${iScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}`);
           const iScrPrcCol = pushCol(semiPrice, fmtRp);
           iScrCstCol = pushCol(null, fmtRp, `${iScrWtCol}${r}*${iScrPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
         }
 
         // Met Screen (MV)
-        let mScrCstCol;
+        let mScrCstCol, mScrThkCol, mScrWtCol;
         if (isMV && hasScreen) {
-          pushCol(item.result.spec.mvScreenThickness || item.params.mvScreenSize || 0, fmtNum);
-          const mScrWtCol = pushCol(item.result.bom.mvScreenWeight || 0, fmtNum);
+          mScrThkCol = pushCol(item.params.mvScreenSize || 0, fmtNum);
+          // For CTS, weight = PI * Thk * (ID + Thk) * density * 1.1 * cores
+          // For CWS, we just use static weight for now as it depends on wire count
+          let mScrWtFormula = `${item.result.bom.mvScreenWeight || 0}`;
+          if (item.params.mvScreenType === 'CTS') {
+            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1*${coreCol}${r}`;
+          }
+          mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
           const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
           mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
         }
 
+        // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
+        const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1); // Approximate factor
+        row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
+        currentDiaFormula = `${laidUpDiaCol}${r}`;
+
         // Earth
-        let earthCstCol, earthInsCstCol;
+        let earthCstCol, earthInsCstCol, earthWtCol, earthInsWtCol;
         if (hasEarth) {
           pushCol(item.params.earthingSize || 0, fmtNum);
           if (isNFA2XT) {
-            pushCol(item.result.spec.earthingCore?.wireCount || 0);
-            pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            pushCol(item.result.spec.earthingCore?.steelWireCount || 0);
-            pushCol(item.result.spec.earthingCore?.steelWireDiameter || 0, fmtNum);
+            const alWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
+            const alDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
+            const stWiresCol = pushCol(item.result.spec.earthingCore?.steelWireCount || 0);
+            const stDiaCol = pushCol(item.result.spec.earthingCore?.steelWireDiameter || 0, fmtNum);
             
-            const earthWtCol = pushCol(item.result.bom.earthingConductorWeight || 0, fmtNum);
+            earthWtCol = pushCol(null, fmtNum, `PI()*(${alDiaCol}${r}/2)^2*${alWiresCol}${r}*${getDensity('Al')} + PI()*(${stDiaCol}${r}/2)^2*${stWiresCol}${r}*${getDensity('SteelWire')}`);
             if (item.result.bom.earthingAlWeight !== undefined && item.result.bom.earthingSteelWeight !== undefined) {
               earthCstCol = pushCol(null, fmtRp, `(${item.result.bom.earthingAlWeight}*${materialPrices.Al}+${item.result.bom.earthingSteelWeight}*${materialPrices.SteelWire})/1000`);
             } else {
               earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
             }
           } else {
-            pushCol(item.result.spec.earthingCore?.wireCount || 0);
-            pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            const earthWtCol = pushCol(item.result.bom.earthingConductorWeight || 0, fmtNum);
+            const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
+            const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
+            earthWtCol = pushCol(null, fmtNum, `PI()*(${earthWireDiaCol}${r}/2)^2*${earthWiresCol}${r}*${getDensity(item.params.conductorMaterial)}`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
-          pushCol(item.result.spec.earthingCore?.insulationThickness || 0, fmtNum);
-          const earthInsWtCol = pushCol(item.result.bom.earthingInsulationWeight || 0, fmtNum);
+          const earthInsThkCol = pushCol(item.result.spec.earthingCore?.insulationThickness || 0, fmtNum);
+          let earthCurrentDiaFormula = isNFA2XT ? `(${getColName(colIdx - 5)}${r})` : `(${getColName(colIdx - 3)}${r})`;
+          earthInsWtCol = pushCol(null, fmtNum, `PI()*${earthInsThkCol}${r}*(${earthCurrentDiaFormula}+${earthInsThkCol}${r})*${getDensity(item.params.insulationMaterial)}`);
           earthInsCstCol = pushCol(null, fmtRp, `${earthInsWtCol}${r}*${insPrcCol}${r}/1000`);
         }
 
         // IS
-        let isCstCol;
+        let isCstCol, isAlWtCol, isDrainWtCol, isPetWtCol;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) {
-          const isWtCol = pushCol(item.result.bom.isWeight || 0, fmtNum);
-          const isPrcCol = pushCol(materialPrices.Cu, fmtRp);
-          isCstCol = pushCol(null, fmtRp, `${isWtCol}${r}*${isPrcCol}${r}/1000`);
+          pushCol(0.05, fmtNum); // Al Foil Thk
+          isAlWtCol = pushCol(item.result.bom.isAlWeight || 0, fmtNum);
+          const isAlPrcCol = pushCol(materialPrices.Al, fmtRp);
+          pushCol(1); // Drain Wires
+          pushCol(0.8, fmtNum); // Drain Dia
+          isDrainWtCol = pushCol(item.result.bom.isDrainWeight || 0, fmtNum);
+          const isDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
+          pushCol(0.05, fmtNum); // PET Thk
+          isPetWtCol = pushCol(item.result.bom.isPetWeight || 0, fmtNum);
+          const isPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
+          isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
 
         // OS
-        let osCstCol;
+        let osCstCol, osAlWtCol, osDrainWtCol, osPetWtCol;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) {
-          const osWtCol = pushCol(item.result.bom.osWeight || 0, fmtNum);
-          const osPrcCol = pushCol(materialPrices.Cu, fmtRp);
-          osCstCol = pushCol(null, fmtRp, `${osWtCol}${r}*${osPrcCol}${r}/1000`);
+          pushCol(0.05, fmtNum); // Al Foil Thk
+          osAlWtCol = pushCol(item.result.bom.osAlWeight || 0, fmtNum);
+          const osAlPrcCol = pushCol(materialPrices.Al, fmtRp);
+          pushCol(1); // Drain Wires
+          pushCol(0.8, fmtNum); // Drain Dia
+          osDrainWtCol = pushCol(item.result.bom.osDrainWeight || 0, fmtNum);
+          const osDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
+          pushCol(0.05, fmtNum); // PET Thk
+          osPetWtCol = pushCol(item.result.bom.osPetWeight || 0, fmtNum);
+          const osPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
+          osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
 
         // Inner Sheath
-        let inShCstCol;
+        let inShCstCol, inShThkCol, inShWtCol;
         if (hasInnerSheath) {
-          pushCol(item.result.spec.innerCoveringThickness || 0, fmtNum);
-          const inShWtCol = pushCol(item.result.bom.innerCoveringWeight || 0, fmtNum);
+          inShThkCol = pushCol(item.result.spec.innerCoveringThickness || 0, fmtNum);
+          inShWtCol = pushCol(null, fmtNum, `PI()*${inShThkCol}${r}*(${currentDiaFormula}+${inShThkCol}${r})*${getDensity(item.params.innerSheathMaterial || 'PVC')}`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${inShThkCol}${r})`;
         }
 
         // Met Screen (LV)
         if (!isMV && hasScreen) {
-          pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
-          const mScrWtCol = pushCol(item.result.bom.screenWeight || 0, fmtNum);
+          mScrThkCol = pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
+          let mScrWtFormula = `${item.result.bom.screenWeight || 0}`;
+          if (item.params.screenType === 'CTS') {
+            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1`;
+          }
+          mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
           const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
           mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
         }
 
         // Separator
-        let sepCstCol;
+        let sepCstCol, sepThkCol, sepWtCol;
         if (hasSeparator) {
-          pushCol(item.result.spec.separatorThickness || 0, fmtNum);
-          const sepWtCol = pushCol(item.result.bom.separatorWeight || 0, fmtNum);
+          sepThkCol = pushCol(item.result.spec.separatorThickness || 0, fmtNum);
+          sepWtCol = pushCol(null, fmtNum, `PI()*${sepThkCol}${r}*(${currentDiaFormula}+${sepThkCol}${r})*${getDensity(item.params.separatorMaterial || 'PVC')}`);
           const sepPrcCol = pushCol(separatorPrice, fmtRp);
           sepCstCol = pushCol(null, fmtRp, `${sepWtCol}${r}*${sepPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+2*${sepThkCol}${r})`;
         }
 
         // Armor
-        let armCstCol;
+        let armCstCol, armThkCol, armWtCol;
         if (hasArmor) {
-          pushCol(item.result.spec.armorThickness || 0, fmtNum);
-          const armWtCol = pushCol(item.result.bom.armorWeight || 0, fmtNum);
+          armThkCol = pushCol(item.result.spec.armorThickness || 0, fmtNum);
+          let armWtFormula = `${item.result.bom.armorWeight || 0}`;
+          let diameterAddition = `2*${armThkCol}${r}`;
+
+          if (item.params.armorType === 'STA' || item.params.armorType === 'AWA' && item.result.spec.armorThickness < 1) {
+            diameterAddition = `4*${armThkCol}${r}`;
+            armWtFormula = `PI()*(${currentDiaFormula}+2*${armThkCol}${r})*2*${armThkCol}${r}*${getDensity(armorMat)}*1.02`;
+          } else if (item.params.armorType === 'SWA' || item.params.armorType === 'AWA') {
+            const armDensity = getDensity(item.params.armorType === 'AWA' ? 'Al' : 'SteelWire');
+            armWtFormula = `INT(PI()*(${currentDiaFormula}+${armThkCol}${r})/(${armThkCol}${r}*1.05)) * PI() * (${armThkCol}${r}/2)^2 * ${armDensity} * 1.05`;
+            diameterAddition = `2*${armThkCol}${r}`;
+          } else if (item.params.armorType === 'SFA') {
+            armWtFormula = `(PI()*(${currentDiaFormula}+${armThkCol}${r}*0.8)*${armThkCol}${r}*0.8*0.9*1.02 + PI()*(${currentDiaFormula}+2*${armThkCol}${r}*0.8+${armThkCol}${r}*0.2)*${armThkCol}${r}*0.2*1.2*1.02)*${getDensity('Steel')}`;
+            diameterAddition = `2*${armThkCol}${r}`;
+          } else if (item.params.armorType === 'RGB') {
+            armWtFormula = `(INT(PI()*(${currentDiaFormula}+${armThkCol}${r}*0.85)/(${armThkCol}${r}*0.85*1.1))*PI()*(${armThkCol}${r}*0.85/2)^2*1.05 + PI()*(${currentDiaFormula}+2*${armThkCol}${r}*0.85+${armThkCol}${r}*0.15)*${armThkCol}${r}*0.15*1.2*1.02)*${getDensity('Steel')}`;
+            diameterAddition = `2*${armThkCol}${r}`;
+          } else if (item.params.armorType === 'GSWB' || item.params.armorType === 'TCWB') {
+            const coverage = (item.params.braidCoverage || 90) / 100;
+            const armDensity = getDensity(item.params.armorType === 'TCWB' ? 'TCu' : 'Steel');
+            armWtFormula = `PI()*(${currentDiaFormula}+${armThkCol}${r}/2)*${armThkCol}${r}*${coverage}*${armDensity}`;
+            diameterAddition = `2*${armThkCol}${r}`;
+          }
+
+          armWtCol = pushCol(null, fmtNum, armWtFormula);
           const armPrcCol = pushCol(armorPrice, fmtRp);
           armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
+          currentDiaFormula = `(${currentDiaFormula}+${diameterAddition})`;
         }
 
         // Outer Sheath
-        let outShCstCol;
+        let outShCstCol, outShThkCol, overallDiaCol, outShWtCol;
         if (hasOuterSheath) {
-          pushCol(item.result.spec.sheathThickness || 0, fmtNum);
-          pushCol(item.result.spec.overallDiameter || 0, fmtNum);
-          const outShWtCol = pushCol(item.result.bom.sheathWeight || 0, fmtNum);
+          outShThkCol = pushCol(item.result.spec.sheathThickness || 0, fmtNum);
+          overallDiaCol = pushCol(null, fmtNum, `${currentDiaFormula}+2*${outShThkCol}${r}`);
+          outShWtCol = pushCol(null, fmtNum, `PI()*${outShThkCol}${r}*(${currentDiaFormula}+${outShThkCol}${r})*${getDensity(item.params.sheathMaterial)}`);
           const outShPrcCol = pushCol(sheathPrice, fmtRp);
           outShCstCol = pushCol(null, fmtRp, `${outShWtCol}${r}*${outShPrcCol}${r}/1000`);
         }
@@ -644,12 +686,25 @@ export default function CableDesigner() {
         const hppCol = pushCol(null, fmtRp, `${baseHppCol}${r}*(1+${ohCol}${r}/100)`);
         const mgCol = pushCol(item.params.margin || 0, fmtNum);
         const sellPrcCol = pushCol(null, fmtRp, `${hppCol}${r}*(1+${mgCol}${r}/100)`);
-        const totPrcCol = pushCol(null, fmtRp, `${sellPrcCol}${r}*${item.params.orderLength || 1000}`);
 
         sheetsData[sheetName].push(row);
 
         // Add to summary sheet
         const sumRow = summaryDataAOA.length + 1;
+        
+        // Calculate Total Weight Formula for Summary Sheet
+        let totalWtFormula = `'${sheetName}'!${condWtCol}${r}`;
+        if (isMV) totalWtFormula += `+'${sheetName}'!${cScrWtCol}${r}+'${sheetName}'!${iScrWtCol}${r}`;
+        totalWtFormula += `+'${sheetName}'!${insWtCol}${r}`;
+        if (hasScreen) totalWtFormula += `+'${sheetName}'!${mScrWtCol}${r}`;
+        if (hasEarth) totalWtFormula += `+'${sheetName}'!${earthWtCol}${r}+'${sheetName}'!${earthInsWtCol}${r}`;
+        if (isInstrumentation && sampleItem.params.hasIndividualScreen) totalWtFormula += `+'${sheetName}'!${isAlWtCol}${r}+'${sheetName}'!${isDrainWtCol}${r}+'${sheetName}'!${isPetWtCol}${r}`;
+        if (isInstrumentation && sampleItem.params.hasOverallScreen) totalWtFormula += `+'${sheetName}'!${osAlWtCol}${r}+'${sheetName}'!${osDrainWtCol}${r}+'${sheetName}'!${osPetWtCol}${r}`;
+        if (hasInnerSheath) totalWtFormula += `+'${sheetName}'!${inShWtCol}${r}`;
+        if (hasSeparator) totalWtFormula += `+'${sheetName}'!${sepWtCol}${r}`;
+        if (hasArmor) totalWtFormula += `+'${sheetName}'!${armWtCol}${r}`;
+        if (hasOuterSheath) totalWtFormula += `+'${sheetName}'!${outShWtCol}${r}`;
+
         summaryDataAOA.push([
           { v: index + 1, t: 'n' },
           { v: getCableDesignation(item.params, item.result), t: 's' },
@@ -657,13 +712,13 @@ export default function CableDesigner() {
           { v: item.params.voltage, t: 's' },
           { v: item.params.cores, t: 'n' },
           { v: item.params.size, t: 'n' },
-          { v: item.result.spec.overallDiameter, t: 'n', z: fmtNum },
-          { v: item.result.bom.totalWeight, t: 'n', z: fmtNum },
+          { t: 'n', f: hasOuterSheath ? `'${sheetName}'!${overallDiaCol}${r}` : `'${sheetName}'!${laidUpDiaCol}${r}`, z: fmtNum },
+          { t: 'n', f: totalWtFormula, z: fmtNum },
           { v: `${packing.selectedDrum.type} (${packing.standardLength}m)`, t: 's' },
           { v: item.params.orderLength || 1000, t: 'n' },
           { t: 'n', f: `'${sheetName}'!${hppCol}${r}`, z: fmtRp },
           { t: 'n', f: `'${sheetName}'!${sellPrcCol}${r}`, z: fmtRp },
-          { t: 'n', f: `'${sheetName}'!${totPrcCol}${r}`, z: fmtRp }
+          { t: 'n', f: `L${sumRow}*J${sumRow}`, z: fmtRp }
         ]);
       });
     });
@@ -1311,6 +1366,15 @@ export default function CableDesigner() {
 
   const addToProject = () => {
     if (!result) return;
+    if (params.hasIndividualScreen && params.hasOverallScreen) {
+      if (params.formationType === 'Pair' || params.formationType === 'Triad') {
+        const formationCount = params.formationType === 'Triad' ? params.cores / 3 : params.cores / 2;
+        if (formationCount <= 1) {
+          alert('Untuk konfigurasi IS-OS, jumlah pair atau triad harus lebih besar dari 1.');
+          return;
+        }
+      }
+    }
     setProjectItems(prev => [...prev, { params: { ...params, id: crypto.randomUUID() }, result }]);
     setParams(prev => ({ ...DEFAULT_PARAMS, projectName: prev.projectName }));
   };
