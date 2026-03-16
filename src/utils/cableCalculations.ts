@@ -325,6 +325,13 @@ export interface CalculationResult {
     innerCoveringThickness: number;
     diameterUnderArmor: number;
     armorThickness: number;
+    armorWireDiameter?: number;
+    armorTapeThickness?: number;
+    armorFlatThickness?: number;
+    gswbCarriers?: number;
+    gswbWiresPerCarrier?: number;
+    gswbLayPitch?: number;
+    gswbCoverage?: number;
     diameterOverArmor: number;
     sheathThickness: number;
     overallDiameter: number;
@@ -353,6 +360,8 @@ export interface CalculationResult {
     screenWeight: number;
     separatorWeight: number;
     armorWeight: number;
+    armorWireWeight?: number;
+    armorTapeWeight?: number;
     sheathWeight: number;
     semiCondWeight: number;
     mvScreenWeight: number;
@@ -1079,6 +1088,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard === 'BS EN 50288-7') {
     const formationType = effectiveParams.formationType || 'Pair';
     const elementsPerFormation = formationType === 'Pair' ? 2 : (formationType === 'Triad' ? 3 : 1);
+    isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : effectiveParams.cores);
     
     // Diameter of one pair or triad
     if (formationType === 'Pair') {
@@ -1103,8 +1113,6 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       
       const pWeight = Math.PI * (Math.pow((diaBeforeIS + 0.1)/2, 2) - Math.pow(diaBeforeIS/2, 2)) * petDensity * 2; // 2 layers
       const aWeight = Math.PI * (Math.pow((diaBeforeIS + 0.15)/2, 2) - Math.pow((diaBeforeIS + 0.1)/2, 2)) * alDensity;
-      
-      isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : effectiveParams.cores);
       
       isAlWeight = aWeight * isMultiplier;
       isDrainWeight = drainWireWeight * isMultiplier;
@@ -1264,6 +1272,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   // 5. Armor
   let armorThickness = effectiveParams.manualArmorThickness || 0;
   let armorWeight = 0;
+  let armorWireWeight = 0;
+  let armorTapeWeight = 0;
+  let armorWireDiameter = 0;
+  let armorTapeThickness = 0;
+  let armorFlatThickness = 0;
+  let gswbCarriers = 0;
+  let gswbWiresPerCarrier = 0;
+  let gswbLayPitch = 0;
+  let gswbCoverage = 0;
   let diameterOverArmor = effectiveParams.manualDiameterOverArmor || diameterUnderArmor;
 
   if (effectiveParams.standard.includes('NFA2X')) {
@@ -1289,15 +1306,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
     const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
-    armorWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
+    armorWireWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
+    armorWeight = armorWireWeight;
+    armorWireDiameter = armorThickness;
   } else if (effectiveParams.armorType === 'STA') {
     if (!effectiveParams.manualArmorThickness) {
       // STA Tape thickness
-      if (diameterUnderArmor <= 30) armorThickness = 0.2;
+      if (diameterUnderArmor <= 30) armorThickness = 0.5;
       else if (diameterUnderArmor <= 70) armorThickness = 0.5;
       else armorThickness = 0.8;
     }
 
+    armorTapeThickness = armorThickness;
     // 2 layers of tape, approx 25% overlap -> effective thickness ~ 2 * thickness
     if (!effectiveParams.manualDiameterOverArmor) {
       diameterOverArmor = diameterUnderArmor + 4 * armorThickness;
@@ -1305,12 +1325,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness;
-    armorWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
+    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
+    armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
     // Flat wire approx 0.8mm, Tape approx 0.2mm
-    const flatThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.8 : 0.8;
-    const tapeThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.2 : 0.2;
+    const flatThickness = 0.8;
+    let tapeThickness = 0;
+    if (diameterUnderArmor <= 30) tapeThickness = 0.3;
+    else tapeThickness = 0.5;
+
+    armorFlatThickness = flatThickness;
+    armorTapeThickness = tapeThickness;
     armorThickness = flatThickness + tapeThickness;
     if (!effectiveParams.manualDiameterOverArmor) {
       diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
@@ -1321,12 +1347,29 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2; // Overlap
     
-    armorWeight = (flatArea * 1.02 + tapeArea * 1.02) * (densities.SFA || densities.Steel); // 2% lay factor
+    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel); // 2% lay factor
+    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel);
+    armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
-    // Wire approx 1.25mm, Tape approx 0.2mm
-    const wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.85 : 1.25;
-    const tapeThickness = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.15 : 0.2;
+    // Wire approx matches SWA, Tape approx 0.3/0.5mm (Matching SFA tape thickness)
+    let wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness * 0.85 : 0;
+    if (!effectiveParams.manualArmorThickness) {
+      if (diameterUnderArmor <= 10) wireDia = 0.8;
+      else if (diameterUnderArmor <= 15) wireDia = 1.25;
+      else if (diameterUnderArmor <= 25) wireDia = 1.6;
+      else if (diameterUnderArmor <= 35) wireDia = 2.0;
+      else if (diameterUnderArmor <= 60) wireDia = 2.5;
+      else wireDia = 3.15;
+    }
+    
+    let tapeThickness = 0;
+    if (diameterUnderArmor <= 30) tapeThickness = 0.3;
+    else tapeThickness = 0.5;
+    if (effectiveParams.manualArmorThickness) tapeThickness = effectiveParams.manualArmorThickness * 0.15;
+    
+    armorWireDiameter = wireDia;
+    armorTapeThickness = tapeThickness;
     armorThickness = wireDia + tapeThickness;
     if (!effectiveParams.manualDiameterOverArmor) {
       diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
@@ -1338,7 +1381,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2;
     
-    armorWeight = (wireArea * 1.05 + tapeArea * 1.02) * (densities.RGB || densities.Steel); // 5% lay factor for wire, 2% for tape
+    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel); // 5% lay factor for wire
+    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel); // 2% for tape
+    armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
     
@@ -1349,6 +1394,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       else wireDia = 0.4;
     }
     
+    armorWireDiameter = wireDia;
+
     // Number of carriers (C) - typical industrial values
     let carriers = 24;
     if (diameterUnderArmor <= 10) carriers = 16;
@@ -1356,6 +1403,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     else if (diameterUnderArmor <= 35) carriers = 32;
     else if (diameterUnderArmor <= 50) carriers = 48;
     else carriers = 64;
+
+    gswbCarriers = carriers;
 
     // Braid angle (alpha) - typically 45 degrees for good coverage
     const braidAngleDeg = 45; 
@@ -1372,10 +1421,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const exactN = (F * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
     const n = Math.ceil(exactN); // Number of wires per carrier must be integer
     
+    gswbWiresPerCarrier = n;
+    gswbLayPitch = Math.PI * meanBraidDiameter * Math.tan(braidAngleDeg * Math.PI / 180);
+    gswbCoverage = (2 * F - F * F) * 100;
+
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
     const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (densities.GSWB || densities.Steel);
     
-    armorWeight = (n * carriers) * wireArea * armorDensity * layFactor;
+    armorWireWeight = (n * carriers) * wireArea * armorDensity * layFactor;
+    armorWeight = armorWireWeight;
     
     armorThickness = wireDia * 2; // Double wire diameter for braid thickness
     if (!effectiveParams.manualDiameterOverArmor) {
@@ -1538,7 +1592,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
                        (weightDetails.armor?.weight || 0) +
                        (weightDetails.separator?.weight || 0) +
                        (weightDetails.earthing?.weight || 0) +
-                       (weightDetails.isWeight?.weight || 0) * isMultiplier +
+                       (weightDetails.isWeight?.weight || 0) +
                        (weightDetails.osWeight?.weight || 0);
   }
 
@@ -1653,6 +1707,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       overallDiameterMax,
       braidWireDiameter,
       braidCoverage: (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') ? (effectiveParams.braidCoverage || 90) : undefined,
+      armorWireDiameter,
+      armorTapeThickness,
+      armorFlatThickness,
+      gswbCarriers,
+      gswbWiresPerCarrier,
+      gswbLayPitch,
+      gswbCoverage,
+      aluminiumThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
+      drainWireSize: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.5 : undefined,
+      polyesterTapeThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
+      pairTriadDiameter: formationDiameter,
     },
     bom: {
       conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),
@@ -1661,6 +1726,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       screenWeight: Number(applyScrap(screenWeight, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
       separatorWeight: Number(applyScrap(weightDetails.separator?.weight || separatorWeight, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
       armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : (effectiveParams.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))))).toFixed(1)),
+      armorWireWeight: Number(applyScrap(armorWireWeight, 'SteelWire').toFixed(1)),
+      armorTapeWeight: Number(applyScrap(armorTapeWeight, 'Steel').toFixed(1)),
       sheathWeight: Number(applyScrap(weightDetails.outerSheath?.weight || sheathWeight, effectiveParams.sheathMaterial).toFixed(1)),
       semiCondWeight: Number(applyScrap((weightDetails.conductorScreen?.weight || 0) + (weightDetails.insulationScreen?.weight || 0), 'SemiCond').toFixed(1)),
       mvScreenWeight: Number(applyScrap(weightDetails.metallicScreen?.weight || totalMvScreenWeight, 'Cu').toFixed(1)),

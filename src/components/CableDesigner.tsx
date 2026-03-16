@@ -321,6 +321,7 @@ export default function CableDesigner() {
         params.hasIndividualScreen ? 'IS' : 'NoIS',
         params.hasOverallScreen ? 'OS' : 'NoOS',
         params.fireguard ? 'FG' : 'NoFG',
+        params.formationType
       ].join('|');
     };
 
@@ -373,6 +374,9 @@ export default function CableDesigner() {
       const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7';
 
       let sheetName = getCableDesignation(sampleItem.params, sampleItem.result).split(' ')[0];
+      if (isInstrumentation) {
+        sheetName = `Inst ${sampleItem.params.formationType || 'Pair'}`;
+      }
       sheetName = `${sheetCounter++}. ${sheetName}`.replace(/[\\/?*[\]:]/g, '_').substring(0, 31);
 
       const topHeaders: any[] = [];
@@ -389,7 +393,8 @@ export default function CableDesigner() {
       };
 
       // General
-      addGroup('General', hGen, ['No', 'Core', 'Size', 'Laid-up Dia']);
+      const coreLabel = isInstrumentation ? (sampleItem.params.formationType || 'Pair') : 'Core';
+      addGroup('General', hGen, ['No', coreLabel, 'Size', 'Laid-up Dia']);
       
       // Conductor
       addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
@@ -413,12 +418,26 @@ export default function CableDesigner() {
         else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
       }
 
-      if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
-      if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Thk', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wires', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (hasArmor) addGroup('Armor', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasArmor) {
+        if (sampleItem.params.armorType === 'STA') {
+          addGroup('Armor (STA)', hArm, ['Tape Thk (mm)', 'OD (mm)', 'Tape Wt (kg/km)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else if (sampleItem.params.armorType === 'SWA' || sampleItem.params.armorType === 'AWA') {
+          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Wire Dia (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else if (sampleItem.params.armorType === 'SFA') {
+          addGroup('Armor (SFA)', hArm, ['Flat Thk (mm)', 'Tape Thk (mm)', 'OD (mm)', 'Flat Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else if (sampleItem.params.armorType === 'RGB') {
+          addGroup('Armor (RGB)', hArm, ['Wire Dia (mm)', 'Tape Thk (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else if (sampleItem.params.armorType === 'GSWB' || sampleItem.params.armorType === 'TCWB') {
+          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Wire Dia (mm)', 'Carriers', 'Wires/Carrier', 'Lay Pitch (mm)', 'Coverage (%)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else {
+          addGroup('Armor', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+        }
+      }
       if (hasOuterSheath) addGroup('Outer Sheath', hOutSh, ['Thk (mm)', 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
 
       addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price']);
@@ -434,16 +453,16 @@ export default function CableDesigner() {
         const innerPrice = materialPrices[item.params.innerSheathMaterial || 'PVC'] || materialPrices.PVC;
         
         const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : (item.params.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))));
-        const armorPrice = (
+        const armorWirePrice = (
           item.params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
           item.params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
-          item.params.armorType === 'STA' ? (materialPrices.STA || materialPrices.Steel) : 
-          item.params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.Steel) : 
-          item.params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.Steel) : 
-          item.params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.Steel) : 
+          item.params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.SteelWire) : 
+          item.params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.SteelWire) : 
+          item.params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.SteelWire) : 
           item.params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
-          materialPrices.Steel
+          materialPrices.SteelWire || materialPrices.Steel
         );
+        const armorTapePrice = materialPrices.STA || materialPrices.Steel;
 
         const sheathPrice = materialPrices[item.params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC;
         const semiPrice = materialPrices.SemiCond || 65000;
@@ -475,7 +494,8 @@ export default function CableDesigner() {
 
         // General
         pushCol(index + 1);
-        const coreCol = pushCol(item.params.cores);
+        const coreVal = isInstrumentation ? (item.params.formationCount || 1) : item.params.cores;
+        const coreCol = pushCol(coreVal);
         pushCol(item.params.size);
         
         // We will fill Laid-up Dia formula later once we know Core OD
@@ -561,6 +581,7 @@ export default function CableDesigner() {
         }
 
         // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
+        const coreDiaFormula = currentDiaFormula;
         const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1); // Approximate factor
         row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
         currentDiaFormula = `${laidUpDiaCol}${r}`;
@@ -597,15 +618,24 @@ export default function CableDesigner() {
         // IS
         let isCstCol, isAlWtCol, isDrainWtCol, isPetWtCol;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) {
-          pushCol(0.05, fmtNum); // Al Foil Thk
-          isAlWtCol = pushCol(item.result.bom.isAlWeight || 0, fmtNum);
+          const isMultiplier = item.result.bom.isMultiplier || 1;
+          const pairTriadFactor = item.params.formationType === 'Triad' ? 2.15 : (item.params.formationType === 'Pair' ? 2 : 1);
+          let isDiaFormula = `(${coreDiaFormula}*${pairTriadFactor})`;
+
+          pushCol(isMultiplier, fmtNum); // Al Foil Qty
+          const isAlThkCol = pushCol(item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
+          isDiaFormula = `(${isDiaFormula}+2*${isAlThkCol}${r})`;
+          pushCol(null, fmtNum, isDiaFormula); // OD
+          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*1.1*${isMultiplier}`);
           const isAlPrcCol = pushCol(materialPrices.Al, fmtRp);
-          pushCol(1); // Drain Wires
-          pushCol(item.params.manualScreenWireDiameter || 0.5, fmtNum); // Drain Size (mm2)
-          isDrainWtCol = pushCol(item.result.bom.isDrainWeight || 0, fmtNum);
+          pushCol(isMultiplier, fmtNum); // Drain Wire Qty
+          const drainSizeCol = pushCol(item.result.spec.drainWireSize || 0.5, fmtNum); // Drain Size (mm2)
+          isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*1*${getDensity('TCu')}*1.02*${isMultiplier}`);
           const isDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
-          pushCol(0.05, fmtNum); // PET Thk
-          isPetWtCol = pushCol(item.result.bom.isPetWeight || 0, fmtNum);
+          pushCol(isMultiplier, fmtNum); // PET Tape Qty
+          const isPetThkCol = pushCol(item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
+          isDiaFormula = `(${isDiaFormula}+2*${isPetThkCol}${r})`;
+          isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*1.1*${isMultiplier}`);
           const isPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
@@ -613,15 +643,20 @@ export default function CableDesigner() {
         // OS
         let osCstCol, osAlWtCol, osDrainWtCol, osPetWtCol;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) {
-          pushCol(0.05, fmtNum); // Al Foil Thk
-          osAlWtCol = pushCol(item.result.bom.osAlWeight || 0, fmtNum);
+          pushCol(1, fmtNum); // Al Foil Qty
+          const osAlThkCol = pushCol(item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
+          currentDiaFormula = `(${currentDiaFormula}+2*${osAlThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*1.1`);
           const osAlPrcCol = pushCol(materialPrices.Al, fmtRp);
-          pushCol(1); // Drain Wires
-          pushCol(item.params.manualScreenWireDiameter || 0.5, fmtNum); // Drain Size (mm2)
-          osDrainWtCol = pushCol(item.result.bom.osDrainWeight || 0, fmtNum);
+          pushCol(1, fmtNum); // Drain Wire Qty
+          const drainSizeCol = pushCol(item.result.spec.drainWireSize || 0.5, fmtNum); // Drain Size (mm2)
+          osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*1*${getDensity('TCu')}*1.02`);
           const osDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
-          pushCol(0.05, fmtNum); // PET Thk
-          osPetWtCol = pushCol(item.result.bom.osPetWeight || 0, fmtNum);
+          pushCol(1, fmtNum); // PET Tape Qty
+          const osPetThkCol = pushCol(item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
+          currentDiaFormula = `(${currentDiaFormula}+2*${osPetThkCol}${r})`;
+          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*1.1`);
           const osPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
@@ -665,35 +700,61 @@ export default function CableDesigner() {
         // Armor
         let armCstCol, armThkCol, armWtCol;
         if (hasArmor) {
-          armThkCol = pushCol(item.result.spec.armorThickness || 0, fmtNum);
-          let armWtFormula = `${item.result.bom.armorWeight || 0}`;
-          let diameterAddition = `2*${armThkCol}${r}`;
-
-          if (item.params.armorType === 'STA' || item.params.armorType === 'AWA' && item.result.spec.armorThickness < 1) {
-            diameterAddition = `4*${armThkCol}${r}`;
-            armWtFormula = `PI()*(${currentDiaFormula}+2*${armThkCol}${r})*2*${armThkCol}${r}*${getDensity(armorMat)}*1.02`;
+          if (item.params.armorType === 'STA') {
+            armThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+4*${armThkCol}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            armWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${armThkCol}${r})*2*${armThkCol}${r}*${getDensity('Steel')}*1.02`);
+            const armPrcCol = pushCol(armorTapePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           } else if (item.params.armorType === 'SWA' || item.params.armorType === 'AWA') {
-            const armDensity = getDensity(item.params.armorType === 'AWA' ? 'Al' : 'SteelWire');
-            armWtFormula = `INT(PI()*(${currentDiaFormula}+${armThkCol}${r})/(${armThkCol}${r}*1.05)) * PI() * (${armThkCol}${r}/2)^2 * ${armDensity} * 1.05`;
-            diameterAddition = `2*${armThkCol}${r}`;
+            armThkCol = pushCol(item.result.spec.armorWireDiameter || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+2*${armThkCol}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            const densityKey = item.params.armorType === 'AWA' ? 'Al' : 'SteelWire';
+            armWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${armThkCol}${r})*${armThkCol}${r}*${getDensity(densityKey)}*1.05`);
+            const armPrcCol = pushCol(armorWirePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           } else if (item.params.armorType === 'SFA') {
-            armWtFormula = `(PI()*(${currentDiaFormula}+${armThkCol}${r}*0.8)*${armThkCol}${r}*0.8*0.9*1.02 + PI()*(${currentDiaFormula}+2*${armThkCol}${r}*0.8+${armThkCol}${r}*0.2)*${armThkCol}${r}*0.2*1.2*1.02)*${getDensity('Steel')}`;
-            diameterAddition = `2*${armThkCol}${r}`;
+            const flatThkCol = pushCol(item.result.spec.armorFlatThickness || 0, fmtNum);
+            const tapeThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+2*(${flatThkCol}${r}+${tapeThkCol}${r}))`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            const flatWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-${flatThkCol}${r})*${flatThkCol}${r}*${getDensity('SFA')}*0.9*1.02`);
+            const tapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('SFA')}*1.2*1.02`);
+            const flatPrcCol = pushCol(armorWirePrice, fmtRp);
+            const tapePrcCol = pushCol(armorTapePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `(${flatWtCol}${r}*${flatPrcCol}${r}+${tapeWtCol}${r}*${tapePrcCol}${r})/1000`);
           } else if (item.params.armorType === 'RGB') {
-            armWtFormula = `(INT(PI()*(${currentDiaFormula}+${armThkCol}${r}*0.85)/(${armThkCol}${r}*0.85*1.1))*PI()*(${armThkCol}${r}*0.85/2)^2*1.05 + PI()*(${currentDiaFormula}+2*${armThkCol}${r}*0.85+${armThkCol}${r}*0.15)*${armThkCol}${r}*0.15*1.2*1.02)*${getDensity('Steel')}`;
-            diameterAddition = `2*${armThkCol}${r}`;
+            const wireDiaCol = pushCol(item.result.spec.armorWireDiameter || 0, fmtNum);
+            const tapeThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+2*(${wireDiaCol}${r}+${tapeThkCol}${r}))`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            const wireWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-${wireDiaCol}${r})*${wireDiaCol}${r}*${getDensity('RGB')}*1.05`);
+            const tapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('RGB')}*1.2*1.02`);
+            const wirePrcCol = pushCol(armorWirePrice, fmtRp);
+            const tapePrcCol = pushCol(armorTapePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `(${wireWtCol}${r}*${wirePrcCol}${r}+${tapeWtCol}${r}*${tapePrcCol}${r})/1000`);
           } else if (item.params.armorType === 'GSWB' || item.params.armorType === 'TCWB') {
-            const coverage = (item.params.braidCoverage || 90) / 100;
-            const armDensity = getDensity(item.params.armorType === 'TCWB' ? 'TCu' : 'Steel');
-            armWtFormula = `PI()*(${currentDiaFormula}+${armThkCol}${r}/2)*${armThkCol}${r}*${coverage}*${armDensity}`;
-            diameterAddition = `2*${armThkCol}${r}`;
+            const wireDiaCol = pushCol(item.result.spec.armorWireDiameter || 0, fmtNum);
+            const carriersCol = pushCol(item.result.spec.gswbCarriers || 0, fmtNum);
+            const wiresPerCarrierCol = pushCol(item.result.spec.gswbWiresPerCarrier || 0, fmtNum);
+            pushCol(item.result.spec.gswbLayPitch || 0, fmtNum);
+            pushCol(item.result.spec.gswbCoverage || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+4*${wireDiaCol}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            const densityKey = item.params.armorType === 'TCWB' ? 'TCu' : 'SteelWire';
+            armWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${carriersCol}${r}*${wiresPerCarrierCol}${r}*${getDensity(densityKey)}*1.05`);
+            const armPrcCol = pushCol(armorWirePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
+          } else {
+            armThkCol = pushCol(item.result.spec.armorThickness || 0, fmtNum);
+            currentDiaFormula = `(${currentDiaFormula}+2*${armThkCol}${r})`;
+            pushCol(null, fmtNum, currentDiaFormula); // OD
+            armWtCol = pushCol(item.result.bom.armorWeight || 0, fmtNum);
+            const armPrcCol = pushCol(armorWirePrice, fmtRp);
+            armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           }
-
-          currentDiaFormula = `(${currentDiaFormula}+${diameterAddition})`;
-          pushCol(null, fmtNum, currentDiaFormula); // OD
-          armWtCol = pushCol(null, fmtNum, armWtFormula);
-          const armPrcCol = pushCol(armorPrice, fmtRp);
-          armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
         }
 
         // Outer Sheath
@@ -862,13 +923,15 @@ export default function CableDesigner() {
     
     if (formationType === 'Pair') {
         const pairs = cores / 2;
-        return pairs > 1 ? 'Black-White and Black-White with numbering mark' : 'Black-White';
+        return pairs > 1 ? 'Black-White with numbering mark' : 'Black-White';
     }
     if (formationType === 'Triad') {
         const triads = cores / 3;
-        return triads > 1 ? 'Black-White-Red and Black-White-Red with numbering mark' : 'Black-White-Red';
+        return triads > 1 ? 'Black, White, Red with numbering mark' : 'Black, White, Red';
     }
-    if (formationType === 'Core') return 'Black with Numbering printing';
+    if (formationType === 'Core') {
+        return cores > 1 ? 'Black with numbering mark' : 'Black';
+    }
     
     if (cores === 1) return 'Black';
     if (cores === 2) return 'Blue, Black';
@@ -1088,10 +1151,23 @@ export default function CableDesigner() {
         newParams.manualConductorDiameter = undefined;
       }
       
-      if (key === 'cores' || key === 'formationType') {
-        const newCores = key === 'cores' ? value : prev.cores;
+      if (key === 'formationCount' || key === 'formationType') {
         const newFormation = key === 'formationType' ? value : prev.formationType;
-        const isIsAllowed = newFormation !== 'Core' && newCores > 1;
+        const newCount = key === 'formationCount' ? value : (prev.formationCount || 1);
+        
+        if (newParams.standard === 'BS EN 50288-7') {
+          if (newFormation === 'Pair') {
+            newParams.cores = newCount * 2;
+          } else if (newFormation === 'Triad') {
+            newParams.cores = newCount * 3;
+          }
+        }
+      }
+
+      if (key === 'cores' || key === 'formationType' || key === 'formationCount') {
+        const newFormation = key === 'formationType' ? value : prev.formationType;
+        const newCount = key === 'formationCount' ? value : (prev.formationCount || 1);
+        const isIsAllowed = newFormation !== 'Core' && newCount > 1;
         if (!isIsAllowed) {
           newParams.hasIndividualScreen = false;
         }
@@ -1099,8 +1175,8 @@ export default function CableDesigner() {
       
       if (key === 'hasIndividualScreen' && value === true) {
         const isIsAllowed = prev.formationType !== 'Core' && 
-                            !(prev.formationType === 'Pair' && prev.cores <= 2) && 
-                            !(prev.formationType === 'Triad' && prev.cores <= 3);
+                            !(prev.formationType === 'Pair' && (prev.formationCount || 1) <= 1) && 
+                            !(prev.formationType === 'Triad' && (prev.formationCount || 1) <= 1);
         if (!isIsAllowed) {
           newParams.hasIndividualScreen = false;
         } else {
@@ -1300,6 +1376,7 @@ export default function CableDesigner() {
             newParams.conductorType = 're';
           }
           if (!newParams.formationType) newParams.formationType = 'Pair';
+          newParams.cores = (newParams.formationCount || 1) * (newParams.formationType === 'Triad' ? 3 : 2);
         }
       }
 
@@ -1318,7 +1395,7 @@ export default function CableDesigner() {
     
     if (p.standard === 'BS EN 50288-7') {
       const formation = p.formationType || 'Pair';
-      const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : '');
+      const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : (p.hasIndividualScreen ? 'IS' : ''));
       const armor = p.armorType !== 'Unarmored' ? `/${p.armorType}` : '';
       const mgt = p.fireguard ? '/MGT' : '';
       const construction = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}/${p.sheathMaterial}`.toUpperCase();
@@ -1373,7 +1450,10 @@ export default function CableDesigner() {
       p.mvScreenType,
       p.fireguard,
       p.stopfire,
-      p.flameRetardantCategory
+      p.flameRetardantCategory,
+      p.formationType,
+      p.hasIndividualScreen,
+      p.hasOverallScreen
     ].join('|');
   };
 
@@ -1409,7 +1489,7 @@ export default function CableDesigner() {
     if (!result) return;
     if (params.hasIndividualScreen && params.hasOverallScreen) {
       if (params.formationType === 'Pair' || params.formationType === 'Triad') {
-        const formationCount = params.formationType === 'Triad' ? params.cores / 3 : params.cores / 2;
+        const formationCount = params.formationCount || 1;
         if (formationCount <= 1) {
           alert('Untuk konfigurasi IS-OS, jumlah pair atau triad harus lebih besar dari 1.');
           return;
@@ -1429,16 +1509,16 @@ export default function CableDesigner() {
     const multiplier = formationType === 'Pair' ? params.cores / 2 : (formationType === 'Triad' ? params.cores / 3 : params.cores);
     const condPrice = (params.conductorMaterial === 'Cu' ? materialPrices.Cu : (params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
     const insPrice = (materialPrices[params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE);
-    const armorPrice = (
+    const armorWirePrice = (
       params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
       params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
-      params.armorType === 'STA' ? (materialPrices.STA || materialPrices.Steel) : 
-      params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.Steel) : 
-      params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.Steel) : 
-      params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.Steel) : 
+      params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.SteelWire) : 
+      params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.SteelWire) : 
+      params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.SteelWire) : 
       params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
-      materialPrices.Steel
+      materialPrices.SteelWire || materialPrices.Steel
     );
+    const armorTapePrice = materialPrices.STA || materialPrices.Steel;
     const sheathPrice = (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC);
     const innerPrice = (materialPrices[params.innerSheathMaterial || 'PVC'] || materialPrices.PVC);
     const separatorPrice = (materialPrices[params.separatorMaterial || 'PVC'] || materialPrices.PVC);
@@ -1451,7 +1531,8 @@ export default function CableDesigner() {
     const breakdown: any = {
       conductor: ((bom.conductorWeight - bom.earthingConductorWeight) * condPrice) / 1000,
       insulation: ((bom.insulationWeight - bom.earthingInsulationWeight) * insPrice) / 1000,
-      armor: (bom.armorWeight * armorPrice) / 1000,
+      armorWire: bom.armorWireWeight ? (bom.armorWireWeight * armorWirePrice) / 1000 : 0,
+      armorTape: bom.armorTapeWeight ? (bom.armorTapeWeight * armorTapePrice) / 1000 : 0,
       sheath: (bom.sheathWeight * sheathPrice) / 1000,
       innerCovering: (bom.innerCoveringWeight * innerPrice) / 1000,
       screen: (bom.screenWeight * screenPrice) / 1000,
@@ -1459,9 +1540,9 @@ export default function CableDesigner() {
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
-      isAl: bom.isAlWeight ? (bom.isAlWeight * materialPrices.Al) / 1000 : 0,
+      isAl: bom.isAlWeight ? (bom.isAlWeight * (materialPrices['Aluminium Foil'] || materialPrices.Al)) / 1000 : 0,
       isDrain: bom.isDrainWeight ? (bom.isDrainWeight * materialPrices.Cu) / 1000 : 0,
-      isPet: bom.isPetWeight ? (bom.isPetWeight * materialPrices.PE) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * (materialPrices['Polyester Tape'] || materialPrices.PE)) / 1000 : 0,
       osAl: bom.osAlWeight ? (bom.osAlWeight * materialPrices.Al) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * materialPrices.Cu) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * materialPrices.PE) / 1000 : 0,
@@ -1978,7 +2059,14 @@ export default function CableDesigner() {
 
             // Get construction name (material part of designation)
             const designation = getCableDesignation(p, firstItem.result);
-            const constructionName = designation.split(' ')[0];
+            let constructionName = designation.split(' ')[0];
+            if (p.standard === 'BS EN 50288-7') {
+              const formation = p.formationType || 'Pair';
+              const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : (p.hasIndividualScreen ? 'IS' : ''));
+              const armor = p.armorType !== 'Unarmored' ? `/${p.armorType}` : '';
+              const mgt = p.fireguard ? '/MGT' : '';
+              constructionName = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}/${p.sheathMaterial}`.toUpperCase();
+            }
 
             let sizeDesignation = `${p.cores} x ${p.size}`;
             if (p.hasEarthing && p.earthingCores && p.earthingCores > 0 && p.earthingSize && p.earthingSize > 0) {
@@ -2009,7 +2097,7 @@ export default function CableDesigner() {
                 <div className="text-center mb-4 print:mb-2 space-y-1">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">Technical Specifications</h2>
                   <p className="text-xs text-slate-600 font-medium print:text-[10px]">
-                    {isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'} ({p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)
+                    {p.standard === 'BS EN 50288-7' ? 'Instrument Cable' : (isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable')} {p.standard !== 'BS EN 50288-7' && `(${p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)`}
                   </p>
                 </div>
 
@@ -2112,16 +2200,7 @@ export default function CableDesigner() {
                     </tr>
 
 
-                    {p.standard === 'BS EN 50288-7' && (
-                      <tr>
-                        <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 font-bold">• Formation Type</td>
-                        <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((item, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">{item.params.formationType || 'Pair'}</td>
-                        ))}
-                      </tr>
-                    )}
+
                     
                     {/* Conductor (Phase) */}
                     <tr>
@@ -2314,54 +2393,7 @@ export default function CableDesigner() {
                                 </td>
                               ))}
                             </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS Al Foil Weight (Unit)</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isAlWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS Al Foil Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isAlWeight || 0).toFixed(2)}</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS Drain Wire Weight (Unit)</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isDrainWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS Drain Wire Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isDrainWeight || 0).toFixed(2)}</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS PET Tape Weight (Unit)</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{((item.result.bom.isPetWeight || 0) / (item.result.bom.isMultiplier || 1)).toFixed(2)}</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- IS PET Tape Weight x {items[0]?.result.bom.isMultiplier} {items[0]?.params.formationType || 'Pair'}</td>
-                              <td className="border border-slate-400 p-2 text-center">kg/km</td>
-                              {items.map((item, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">{(item.result.bom.isPetWeight || 0).toFixed(2)}</td>
-                              ))}
-                            </tr>
+
                           </>
                         )}
                         {p.hasOverallScreen && (
@@ -2605,7 +2637,7 @@ export default function CableDesigner() {
                           }
                         }
                         
-                        const defaultMarking = `[${p.standard}] [MULTI KABEL] [${construction}] [${itemSizeDesignation} mm²] [${p.voltage}] [MADE IN INDONESIA]`;
+                        const defaultMarking = `${p.standard} MULTI KABEL ${construction} ${itemSizeDesignation} mm² ${p.voltage} MADE IN INDONESIA`;
                         
                         return (
                           <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
@@ -4845,16 +4877,39 @@ export default function CableDesigner() {
                     {params.armorType !== 'Unarmored' && (
                       <>
                         <SpecRow label="Diameter Under Armor" value={result.spec.diameterUnderArmor} unit="mm" />
-                        {result.spec.braidWireDiameter ? (
+                        
+                        {params.armorType === 'RGB' && (
                           <>
-                            <SpecRow label="Braid Wire Diameter" value={result.spec.braidWireDiameter} unit="mm" />
-                            {result.spec.braidCoverage && (
-                              <SpecRow label="Braid Coverage" value={result.spec.braidCoverage} unit="%" precision={0} />
-                            )}
+                            <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter} unit="mm" />
+                            <SpecRow label="Armor Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
                           </>
-                        ) : (
-                          <SpecRow label="Armor Wire/Tape Thickness" value={result.spec.armorThickness} unit="mm" />
                         )}
+                        
+                        {params.armorType === 'SFA' && (
+                          <>
+                            <SpecRow label="Steel Flat Armor Thickness" value={result.spec.armorFlatThickness} unit="mm" />
+                            <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
+                          </>
+                        )}
+                        
+                        {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
+                          <>
+                            <SpecRow label="Braid Wire Diameter" value={result.spec.armorWireDiameter || result.spec.braidWireDiameter} unit="mm" />
+                            <SpecRow label="Number of Carriers" value={result.spec.gswbCarriers} unit="" precision={0} />
+                            <SpecRow label="Wires per Carrier" value={result.spec.gswbWiresPerCarrier} unit="" precision={0} />
+                            <SpecRow label="Lay Pitch" value={result.spec.gswbLayPitch} unit="mm" />
+                            <SpecRow label="Braid Coverage" value={result.spec.gswbCoverage || result.spec.braidCoverage} unit="%" precision={1} />
+                          </>
+                        )}
+                        
+                        {params.armorType === 'STA' && (
+                          <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness || result.spec.armorThickness} unit="mm" />
+                        )}
+                        
+                        {(params.armorType === 'SWA' || params.armorType === 'AWA') && (
+                          <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter || result.spec.armorThickness} unit="mm" />
+                        )}
+
                         <SpecRow label="Diameter Over Armor" value={result.spec.diameterOverArmor} unit="mm" />
                       </>
                     )}
@@ -4993,7 +5048,17 @@ export default function CableDesigner() {
                   )}
                   
                   {params.armorType !== 'Unarmored' && (
-                    <SpecRow label={`Armor (${params.armorType})`} value={result.bom.armorWeight} unit="kg/km" />
+                    <>
+                      {result.bom.armorWireWeight !== undefined && result.bom.armorWireWeight > 0 ? (
+                        <SpecRow label={`Armor Wire/Flat (${params.armorType})`} value={result.bom.armorWireWeight} unit="kg/km" />
+                      ) : null}
+                      {result.bom.armorTapeWeight !== undefined && result.bom.armorTapeWeight > 0 ? (
+                        <SpecRow label={`Armor Tape (${params.armorType})`} value={result.bom.armorTapeWeight} unit="kg/km" />
+                      ) : null}
+                      {(!result.bom.armorWireWeight && !result.bom.armorTapeWeight) && (
+                        <SpecRow label={`Armor (${params.armorType})`} value={result.bom.armorWeight} unit="kg/km" />
+                      )}
+                    </>
                   )}
                   
                   {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
@@ -5119,8 +5184,11 @@ export default function CableDesigner() {
                           { label: `Semi-conductive Layers`, cost: breakdown.semiCond },
                           { label: `Phase Insulation (${params.insulationMaterial})`, cost: breakdown.insulation },
                           ...(params.standard === 'BS EN 50288-7' ? [
+                            { label: `Individual Screen (Al Foil) (Unit)`, cost: breakdown.isAl / (result.bom.isMultiplier || 1), isInformational: true },
                             { label: `Individual Screen (Al Foil) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isAl },
+                            { label: `Individual Screen (Drain Wire) (Unit)`, cost: breakdown.isDrain / (result.bom.isMultiplier || 1), isInformational: true },
                             { label: `Individual Screen (Drain Wire) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isDrain },
+                            { label: `Individual Screen (PET Tape) (Unit)`, cost: breakdown.isPet / (result.bom.isMultiplier || 1), isInformational: true },
                             { label: `Individual Screen (PET Tape) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isPet },
                             { label: `Overall Screen (Al Foil)`, cost: breakdown.osAl },
                             { label: `Overall Screen (Drain Wire)`, cost: breakdown.osDrain },
@@ -5131,20 +5199,21 @@ export default function CableDesigner() {
                           { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
                           { label: `Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`, cost: breakdown.screen },
                           { label: `Separator Sheath (${params.separatorMaterial || 'PVC'})`, cost: breakdown.separator },
-                          { label: `Armor (${params.armorType})`, cost: breakdown.armor },
+                          { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
+                          { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
                         ].filter(item => item.cost > 0);
 
-                        const totalMaterialCost = items.reduce((acc, item) => acc + item.cost, 0);
+                        const totalMaterialCost = items.reduce((acc, item) => acc + (item.isInformational ? 0 : item.cost), 0);
                         const overheadCost = totalMaterialCost * (params.overhead || 0) / 100;
 
                         return (
                           <>
                             {items.map((item, idx) => (
-                              <div key={idx} className="flex justify-between text-[11px] text-slate-600">
+                              <div key={idx} className={`flex justify-between text-[11px] ${item.isInformational ? 'text-slate-400 italic pl-2' : 'text-slate-600'}`}>
                                 <span>{item.label}</span>
-                                <span className="font-mono text-slate-900">Rp {item.cost.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
+                                <span className={`font-mono ${item.isInformational ? 'text-slate-400' : 'text-slate-900'}`}>Rp {item.cost.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
                               </div>
                             ))}
                             <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between text-[11px] text-slate-400 italic">
@@ -5215,10 +5284,16 @@ export default function CableDesigner() {
                           <span>Insulation ({item.params.insulationMaterial}):</span>
                           <span className="font-mono">{item.result.bom.insulationWeight} kg/km</span>
                         </div>
-                        {item.result.bom.armorWeight > 0 && (
+                        {item.result.bom.armorWireWeight > 0 && (
                           <div className="flex justify-between text-[10px] text-slate-500">
-                            <span>Armor ({item.params.armorType}):</span>
-                            <span className="font-mono">{item.result.bom.armorWeight} kg/km</span>
+                            <span>Armor Wire/Flat ({item.params.armorType}):</span>
+                            <span className="font-mono">{item.result.bom.armorWireWeight} kg/km</span>
+                          </div>
+                        )}
+                        {item.result.bom.armorTapeWeight > 0 && (
+                          <div className="flex justify-between text-[10px] text-slate-500">
+                            <span>Armor Tape ({item.params.armorType}):</span>
+                            <span className="font-mono">{item.result.bom.armorTapeWeight} kg/km</span>
                           </div>
                         )}
                         {item.result.bom.mvScreenWeight > 0 && (
