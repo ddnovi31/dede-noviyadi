@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload } from 'lucide-react';
 import {
   calculateCable,
   CABLE_DATA,
@@ -169,6 +169,7 @@ export default function CableDesigner() {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
 
+  const [dbFileHandle, setDbFileHandle] = useState<any>(null);
   const [sqlConfig, setSqlConfig] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cable_sql_config');
@@ -224,22 +225,53 @@ export default function CableDesigner() {
   };
 
   const handleSaveProject = async () => {
-    if (!sqlConfig) {
-      setShowSqlModal(true);
-      return;
-    }
     if (projectItems.length === 0) {
       alert('No items to save.');
       return;
     }
+    
+    const id = projectId || crypto.randomUUID();
+    const project: SavedProject = {
+      id,
+      name: projectName,
+      items: projectItems,
+      updatedAt: Date.now(),
+    };
+
+    if (dbFileHandle) {
+      try {
+        const file = await dbFileHandle.getFile();
+        const contents = await file.text();
+        let allProjects = [];
+        try {
+          allProjects = JSON.parse(contents);
+        } catch(e) {}
+        
+        const existingIdx = allProjects.findIndex((p: any) => p.id === id);
+        if (existingIdx >= 0) {
+          allProjects[existingIdx] = project;
+        } else {
+          allProjects.push(project);
+        }
+        
+        const writable = await dbFileHandle.createWritable();
+        await writable.write(JSON.stringify(allProjects));
+        await writable.close();
+        
+        setProjectId(id);
+        alert('Project saved successfully to local database!');
+        return;
+      } catch (err) {
+        console.error('Error saving to local DB:', err);
+        alert('Gagal menyimpan ke database lokal. Pastikan Anda memberikan izin.');
+      }
+    }
+
+    if (!sqlConfig) {
+      setShowSqlModal(true);
+      return;
+    }
     try {
-      const id = projectId || crypto.randomUUID();
-      const project: SavedProject = {
-        id,
-        name: projectName,
-        items: projectItems,
-        updatedAt: Date.now(),
-      };
       await saveProjectToDB(project);
       setProjectId(id);
       alert('Project saved successfully to SQL database!');
@@ -250,6 +282,20 @@ export default function CableDesigner() {
   };
 
   const handleLoadProjects = async () => {
+    if (dbFileHandle) {
+      try {
+        const file = await dbFileHandle.getFile();
+        const contents = await file.text();
+        const projects = JSON.parse(contents);
+        setSavedProjects(projects.sort((a: any, b: any) => b.updatedAt - a.updatedAt));
+        setShowProjectsModal(true);
+        return;
+      } catch (err) {
+        console.error('Error loading from local DB:', err);
+        alert('Gagal memuat dari database lokal.');
+      }
+    }
+
     if (!sqlConfig) {
       setShowSqlModal(true);
       return;
@@ -890,41 +936,59 @@ export default function CableDesigner() {
     XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
   };
 
-  const handleCreateAccessDB = () => {
-    if (projectItems.length === 0) {
-      alert('Tidak ada item untuk diekspor ke database.');
-      return;
+  const handleCreateLocalDB = async () => {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: 'cabledesign.db',
+        types: [{
+          description: 'Database File',
+          accept: { 'application/octet-stream': ['.db'] },
+        }],
+      });
+      
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify([]));
+      await writable.close();
+      
+      setDbFileHandle(handle);
+      alert('Database berhasil dibuat dan dikoneksikan!');
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Error creating DB:', err);
+        alert('Gagal membuat database.');
+      }
     }
+  };
 
-    // Prepare data for export in a flat format suitable for Access tables
-    const data = projectItems.map((item, index) => {
-      const hpp = calculateHPP(item.result, item.params);
-      const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
-      return {
-        ID: item.params.id,
-        No: index + 1,
-        Project_Name: projectName,
-        Designation: getCableDesignation(item.params, item.result),
-        Standard: item.params.standard,
-        Voltage: item.params.voltage,
-        Cores: item.params.cores,
-        Size: item.params.size,
-        Overall_Diameter_mm: item.result.spec.overallDiameter,
-        Total_Weight_kg_km: item.result.bom.totalWeight,
-        HPP_IDR_m: hpp,
-        Selling_Price_IDR_m: sellingPrice,
-        Created_At: new Date().toLocaleString()
-      };
-    });
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cable_Projects");
-
-    // Export as Excel which is the standard way to import data into MS Access
-    XLSX.writeFile(wb, `${projectName.replace(/\s+/g, '_')}_Access_Import.xlsx`);
-    
-    alert('Database Microsoft Access (.accdb) siap diimpor!\n\nFile Excel telah diunduh. Untuk menyimpannya sebagai .accdb:\n1. Buka Microsoft Access.\n2. Pilih "External Data" > "New Data Source" > "From File" > "Excel".\n3. Pilih file ini dan ikuti petunjuk untuk menyimpannya ke database lokal Anda.');
+  const handleOpenLocalDB = async () => {
+    try {
+      const [handle] = await (window as any).showOpenFilePicker({
+        types: [{
+          description: 'Database File',
+          accept: { 'application/octet-stream': ['.db'] },
+        }],
+      });
+      
+      const file = await handle.getFile();
+      const contents = await file.text();
+      
+      try {
+        const data = JSON.parse(contents);
+        if (Array.isArray(data)) {
+          setDbFileHandle(handle);
+          alert('Database berhasil dikoneksikan!');
+        } else {
+          alert('Format file database tidak valid.');
+        }
+      } catch (e) {
+        alert('File database rusak atau tidak valid.');
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Error opening DB:', err);
+        alert('Gagal membuka database.');
+      }
+    }
   };
 
   const handleOpenProject = (project: SavedProject) => {
@@ -936,6 +1000,31 @@ export default function CableDesigner() {
 
   const handleDeleteProject = async (id: string) => {
     if (!confirm('Are you sure you want to delete this project?')) return;
+    
+    if (dbFileHandle) {
+      try {
+        const file = await dbFileHandle.getFile();
+        const contents = await file.text();
+        let allProjects = JSON.parse(contents);
+        allProjects = allProjects.filter((p: any) => p.id !== id);
+        
+        const writable = await dbFileHandle.createWritable();
+        await writable.write(JSON.stringify(allProjects));
+        await writable.close();
+        
+        setSavedProjects(allProjects.sort((a: any, b: any) => b.updatedAt - a.updatedAt));
+        if (projectId === id) {
+          setProjectId(null);
+          setProjectName('New Project');
+          setProjectItems([]);
+        }
+        return;
+      } catch (err) {
+        console.error('Error deleting from local DB:', err);
+        alert('Gagal menghapus dari database lokal.');
+      }
+    }
+
     try {
       await deleteProjectFromDB(id);
       setSavedProjects(prev => prev.filter(p => p.id !== id));
@@ -4810,15 +4899,36 @@ export default function CableDesigner() {
                       </div>
 
                       <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
-                        <h3 className="text-sm font-bold text-slate-900 mb-2">Microsoft Access Database</h3>
-                        <p className="text-xs text-slate-500 mb-4">Buat database lokal (.accdb) untuk menyimpan data proyek di disk lokal Anda.</p>
-                        <button
-                          onClick={handleCreateAccessDB}
-                          className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
-                        >
-                          <Database className="w-4 h-4 text-red-600" />
-                          Buat Database .accdb (Local Disk)
-                        </button>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-bold text-slate-900">Database Lokal (.db)</h3>
+                          {dbFileHandle && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Terkoneksi
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mb-4">
+                          {dbFileHandle 
+                            ? `Terkoneksi dengan: ${dbFileHandle.name}. Setiap kali Anda menyimpan proyek, data akan otomatis disimpan ke file ini.`
+                            : 'Buat atau buka file cabledesign.db untuk menyimpan proyek secara lokal di komputer Anda.'}
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={handleCreateLocalDB}
+                            className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <Database className="w-4 h-4 text-indigo-600" />
+                            Buat Database (.db)
+                          </button>
+                          <button
+                            onClick={handleOpenLocalDB}
+                            className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <FolderOpen className="w-4 h-4 text-emerald-600" />
+                            Buka Database (.db)
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
