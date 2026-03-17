@@ -15,6 +15,7 @@ import {
   MvScreenType,
   MaterialDensities,
   FlameRetardantCategory,
+  NYCY_DATA,
 } from '../utils/cableCalculations';
 import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
@@ -1362,6 +1363,59 @@ export default function CableDesigner() {
             newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 4) newParams.cores = 4;
+          }
+        } else if (newParams.standard === 'SPLN 43-4 (NYCY)') {
+          newParams.insulationMaterial = 'PVC';
+          newParams.hasScreen = true;
+          newParams.screenType = 'CWS';
+          newParams.armorType = 'Unarmored';
+          newParams.hasInnerSheath = true;
+          newParams.innerSheathMaterial = 'PVC';
+          
+          // Auto-set screen size based on NYCY_DATA or SPLN 43-4 rules
+          const nycyPrefix = `${newParams.cores}x${newParams.size}/`;
+          const matchingKey = Object.keys(NYCY_DATA).find(k => k.startsWith(nycyPrefix));
+          if (matchingKey) {
+            newParams.screenSize = NYCY_DATA[matchingKey].screenSize;
+          } else {
+            // Fallback / Control Cable Logic based on SPLN 43-4
+            if (newParams.cores > 4) {
+              if (newParams.size === 1.5) {
+                if (newParams.cores <= 12) newParams.screenSize = 2.5;
+                else if (newParams.cores <= 30) newParams.screenSize = 6;
+                else newParams.screenSize = 10;
+              } else if (newParams.size === 2.5) {
+                if (newParams.cores <= 10) newParams.screenSize = 4;
+                else if (newParams.cores <= 24) newParams.screenSize = 10;
+                else newParams.screenSize = 16;
+              } else {
+                // For larger sizes in multi-core, follow power cable rule
+                if (newParams.size <= 16) newParams.screenSize = newParams.size;
+                else if (newParams.size <= 35) newParams.screenSize = 16;
+                else if (newParams.size <= 50) newParams.screenSize = 25;
+                else if (newParams.size <= 70) newParams.screenSize = 35;
+                else if (newParams.size <= 95) newParams.screenSize = 50;
+                else if (newParams.size <= 150) newParams.screenSize = 70;
+                else if (newParams.size <= 185) newParams.screenSize = 95;
+                else if (newParams.size <= 240) newParams.screenSize = 120;
+                else if (newParams.size <= 300) newParams.screenSize = 150;
+                else if (newParams.size <= 400) newParams.screenSize = 185;
+                else if (newParams.size <= 500) newParams.screenSize = 240;
+              }
+            } else {
+              // Standard Power Cable Logic
+              if (newParams.size <= 16) newParams.screenSize = newParams.size;
+              else if (newParams.size <= 35) newParams.screenSize = 16;
+              else if (newParams.size <= 50) newParams.screenSize = 25;
+              else if (newParams.size <= 70) newParams.screenSize = 35;
+              else if (newParams.size <= 95) newParams.screenSize = 50;
+              else if (newParams.size <= 150) newParams.screenSize = 70;
+              else if (newParams.size <= 185) newParams.screenSize = 95;
+              else if (newParams.size <= 240) newParams.screenSize = 120;
+              else if (newParams.size <= 300) newParams.screenSize = 150;
+              else if (newParams.size <= 400) newParams.screenSize = 185;
+              else if (newParams.size <= 500) newParams.screenSize = 240;
+            }
           }
         } else if (newParams.standard === 'BS EN 50288-7') {
           if (newParams.voltage !== '300 V' && newParams.voltage !== '300/500 V') {
@@ -2805,6 +2859,8 @@ export default function CableDesigner() {
   if (!result) return null;
 
   const isIEC60502_1 = params.standard === 'IEC 60502-1';
+  const isNYCY = params.standard === 'SPLN 43-4 (NYCY)';
+  const isLV = isIEC60502_1 || isNYCY;
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
@@ -3139,6 +3195,7 @@ export default function CableDesigner() {
                       >
                         <option value="IEC 60502-1">IEC 60502-1 (Low Voltage)</option>
                         <option value="IEC 60502-2">IEC 60502-2 (Medium Voltage)</option>
+                        <option value="SPLN 43-4 (NYCY)">SPLN 43-4 (NYCY)</option>
                         <option value="IEC 60092-353">IEC 60092-353 (Marine Cable)</option>
                         <option value="SNI 04-6629.4 (NYM)">SNI 04-6629.4 (NYM)</option>
                         <option value="SNI 04-6629.3 (NYA)">SNI 04-6629.3 (NYA)</option>
@@ -3316,8 +3373,8 @@ export default function CableDesigner() {
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : 1}
-                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 5 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : 80}
+                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : params.standard === 'SPLN 43-4 (NYCY)' ? 1 : 1}
+                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 5 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
                             value={params.cores}
                             onChange={(e) => handleParamChange('cores', Number(e.target.value))}
                             disabled={isInstrumentationPairTriad}
@@ -3333,6 +3390,7 @@ export default function CableDesigner() {
                           {(() => {
                             let cores = [1, 2, 3, 4, 5];
                             if (params.standard === 'IEC 60502-2') cores = [1, 3];
+                            else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
                             else if (params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)')) cores = [2, 3, 4, 5];
                             else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
                             else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
@@ -3377,6 +3435,9 @@ export default function CableDesigner() {
                             }
                             if (params.standard === 'IEC 60502-2') {
                               return s >= 25;
+                            }
+                            if (params.standard === 'SPLN 43-4 (NYCY)') {
+                              return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
                             }
                             if (params.standard.includes('(NYMHY)')) {
                               return [0.75, 1, 1.5, 2.5].includes(s);
@@ -3677,6 +3738,7 @@ export default function CableDesigner() {
                               let isDisabled = false;
                               if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
                               if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                              if (isNYCY) isDisabled = mat !== 'PVC';
                               
                               return (
                                 <option key={mat} value={mat} disabled={isDisabled}>
@@ -3885,31 +3947,32 @@ export default function CableDesigner() {
                       </div>
 
                     {/* Screen Section */}
-                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isIEC60502_1 ? 'opacity-50' : ''}`}>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen {!isIEC60502_1 && '(IEC 60502-1 Only)'}</label>
+                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isLV ? 'opacity-50' : ''}`}>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen {!isLV && '(IEC 60502-1 or NYCY Only)'}</label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                        <label className={`flex items-center justify-between ${!isIEC60502_1 ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
+                        <label className={`flex items-center justify-between ${!isLV || isNYCY ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                           <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Screen</span>
                           <div className="relative">
                             <input
                               type="checkbox"
                               className="sr-only"
-                              disabled={!isIEC60502_1}
-                              checked={isIEC60502_1 && (params.hasScreen || false)}
+                              disabled={!isLV || isNYCY}
+                              checked={isLV && (params.hasScreen || false)}
                               onChange={(e) => handleParamChange('hasScreen', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${isIEC60502_1 && params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isIEC60502_1 && params.hasScreen ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${isLV && params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isLV && params.hasScreen ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {isIEC60502_1 && params.hasScreen && (
+                        {isLV && params.hasScreen && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-3">
                             <div>
                               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
                               <select
                                 value={params.screenType || 'CTS'}
+                                disabled={isNYCY}
                                 onChange={(e) => handleParamChange('screenType', e.target.value as any)}
-                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                               >
                                 <option value="CTS">CTS (Copper Tape Screen)</option>
                                 <option value="CWS">CWS (Copper Wire Screen)</option>
@@ -3920,10 +3983,11 @@ export default function CableDesigner() {
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Size (mm²)</label>
                                 <select
                                   value={params.screenSize || 16}
+                                  disabled={isNYCY}
                                   onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
-                                  className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                                  className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                                 >
-                                  {[16, 25, 35, 50, 70, 95, 120, 150].map(s => (
+                                  {[1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240].map(s => (
                                     <option key={s} value={s}>{s} mm²</option>
                                   ))}
                                 </select>
@@ -4039,7 +4103,7 @@ export default function CableDesigner() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                         <select
                           value={params.armorType}
-                          disabled={params.standard.includes('SNI 04-6629')}
+                          disabled={params.standard.includes('SNI 04-6629') || isNYCY}
                           onChange={(e) => handleParamChange('armorType', e.target.value as ArmorType)}
                           className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
                         >
@@ -5122,13 +5186,16 @@ export default function CableDesigner() {
                   {params.standard !== 'BS EN 50288-7' && (
                     <>
                       <SpecRow 
-                        label={params.standard.includes('NFA2X') ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
+                        label={params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)' ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
                         value={result.electrical.currentCapacityAir} 
                         unit="A" 
                         precision={0} 
                       />
-                      {!params.standard.includes('NFA2X') && (
+                      {!(params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)') && (
                         <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                      )}
+                      {params.standard === 'SPLN 43-4 (NYCY)' && (
+                        <SpecRow label="KHA (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
                       )}
                     </>
                   )}

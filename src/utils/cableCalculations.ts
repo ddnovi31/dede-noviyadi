@@ -8,7 +8,7 @@ export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
 export type ScreenType = 'None' | 'CTS' | 'CWS';
-export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7';
+export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)';
 export type FormationType = 'Core' | 'Pair' | 'Triad';
 export type DesignMode = 'standard' | 'advance';
 
@@ -234,46 +234,130 @@ const NFA2X_DATA: Record<string, ABCData> = {
 };
 
 const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMessengerData, netWeight: number }> = {
-  '2x35+35': {
+  '3x35+25': {
     phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
-    messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.19, condWeight: 142.3, insulationThickness: 1.50, coreDiameter: 11.19, resistance: 0.836, ampacity: 125, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73 },
-    netWeight: 479
+    messenger: { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.38, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.13, steelWireCount: 1, steelWireDiameter: 2.13 },
+    netWeight: 545
   },
-  '2x50+50': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.06, condWeight: 138.17, insulationThickness: 1.60, coreDiameter: 12.26, resistance: 0.641, ampacity: 154, netWeight: 0 },
-    messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.78, condWeight: 202.91, insulationThickness: 1.60, coreDiameter: 12.98, resistance: 0.585, ampacity: 154, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26 },
-    netWeight: 643
+  '3x50+35': {
+    phase: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.60, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    messenger: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.986, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.52, steelWireCount: 1, steelWireDiameter: 2.52 },
+    netWeight: 750
   },
-  '2x70+70': {
-    phase: { size: 70, wireCount: 19, wireDiameter: 2.17, condDiameter: 10.85, condWeight: 193.64, insulationThickness: 1.80, coreDiameter: 14.45, resistance: 0.443, ampacity: 196, netWeight: 0 },
-    messenger: { size: 70, wireCount: 7, wireDiameter: 3.85, condDiameter: 11.55, condWeight: 283.01, insulationThickness: 1.60, coreDiameter: 14.75, resistance: 0.418, ampacity: 196, netWeight: 0, alWireCount: 6, alWireDiameter: 3.85, steelWireCount: 1, steelWireDiameter: 3.85 },
-    netWeight: 898
-  },
-  '3x35+35': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
-    messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.19, condWeight: 142.3, insulationThickness: 1.50, coreDiameter: 11.19, resistance: 0.836, ampacity: 125, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73 },
-    netWeight: 622
-  },
-  '3x50+50': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.06, condWeight: 138.17, insulationThickness: 1.60, coreDiameter: 12.26, resistance: 0.641, ampacity: 154, netWeight: 0 },
-    messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.78, condWeight: 202.91, insulationThickness: 1.60, coreDiameter: 12.98, resistance: 0.585, ampacity: 154, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26 },
-    netWeight: 1018
-  },
-  '3x70+70': {
-    phase: { size: 70, wireCount: 19, wireDiameter: 2.17, condDiameter: 10.85, condWeight: 193.64, insulationThickness: 1.80, coreDiameter: 14.45, resistance: 0.443, ampacity: 196, netWeight: 0 },
-    messenger: { size: 70, wireCount: 7, wireDiameter: 3.85, condDiameter: 11.55, condWeight: 283.01, insulationThickness: 1.60, coreDiameter: 14.75, resistance: 0.418, ampacity: 196, netWeight: 0, alWireCount: 6, alWireDiameter: 3.85, steelWireCount: 1, steelWireDiameter: 3.85 },
-    netWeight: 1165
-  },
-  '3x95+95': {
-    phase: { size: 95, wireCount: 19, wireDiameter: 2.52, condDiameter: 12.60, condWeight: 261.14, insulationThickness: 1.80, coreDiameter: 16.20, resistance: 0.320, ampacity: 242, netWeight: 0 },
-    messenger: { size: 95, wireCount: 33, wireDiameter: 0, condDiameter: 14.00, condWeight: 386.61, insulationThickness: 1.60, coreDiameter: 17.20, resistance: 0.308, ampacity: 242, netWeight: 0, alWireCount: 26, alWireDiameter: 2.16, steelWireCount: 7, steelWireDiameter: 1.68 },
-    netWeight: 1497
-  },
-  '3x120+95': {
-    phase: { size: 120, wireCount: 19, wireDiameter: 2.84, condDiameter: 14.20, condWeight: 331.67, insulationThickness: 1.80, coreDiameter: 17.80, resistance: 0.253, ampacity: 296, netWeight: 0 },
-    messenger: { size: 95, wireCount: 33, wireDiameter: 0, condDiameter: 14.00, condWeight: 386.61, insulationThickness: 1.60, coreDiameter: 17.20, resistance: 0.308, ampacity: 296, netWeight: 0, alWireCount: 26, alWireDiameter: 2.16, steelWireCount: 7, steelWireDiameter: 1.68 },
-    netWeight: 1845
-  },
+  '3x70+50': {
+    phase: { size: 70, wireCount: 19, wireDiameter: 2.17, condDiameter: 10.85, condWeight: 192.4, insulationThickness: 1.80, coreDiameter: 14.45, resistance: 0.443, ampacity: 191, netWeight: 0 },
+    messenger: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.60, coreDiameter: 12.35, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 19, alWireDiameter: 1.83, steelWireCount: 1, steelWireDiameter: 1.83 },
+    netWeight: 1050
+  }
+};
+
+export interface NYCYData {
+  size: number;
+  screenSize: number;
+  insulationThick: number;
+  innerSheathEkstrusi: number;
+  innerSheathPita: number;
+  outerSheathThick: number;
+  khaTanah: number;
+  khaUdara: number;
+}
+
+export const NYCY_DATA: Record<string, NYCYData> = {
+  '1x1.5/1.5': { size: 1.5, screenSize: 1.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 37, khaUdara: 26 },
+  '1x2.5/2.5': { size: 2.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 50, khaUdara: 35 },
+  '1x4/4': { size: 4, screenSize: 4, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 65, khaUdara: 46 },
+  '1x6/6': { size: 6, screenSize: 6, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 83, khaUdara: 58 },
+  '1x10/10': { size: 10, screenSize: 10, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 110, khaUdara: 80 },
+  '1x16/16': { size: 16, screenSize: 16, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 145, khaUdara: 105 },
+  '1x25/16': { size: 25, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 190, khaUdara: 140 },
+  '1x35/16': { size: 35, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 235, khaUdara: 175 },
+  '1x50/25': { size: 50, screenSize: 25, insulationThick: 1.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 280, khaUdara: 215 },
+  '1x70/35': { size: 70, screenSize: 35, insulationThick: 1.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 350, khaUdara: 270 },
+  '1x95/50': { size: 95, screenSize: 50, insulationThick: 1.6, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 420, khaUdara: 335 },
+  '1x120/70': { size: 120, screenSize: 70, insulationThick: 1.6, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 480, khaUdara: 390 },
+  '1x150/70': { size: 150, screenSize: 70, insulationThick: 1.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 540, khaUdara: 445 },
+  '1x185/95': { size: 185, screenSize: 95, insulationThick: 2.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 620, khaUdara: 510 },
+  '1x240/120': { size: 240, screenSize: 120, insulationThick: 2.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.9, khaTanah: 720, khaUdara: 620 },
+  '1x300/150': { size: 300, screenSize: 150, insulationThick: 2.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 820, khaUdara: 710 },
+  '1x400/185': { size: 400, screenSize: 185, insulationThick: 2.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.1, khaTanah: 960, khaUdara: 850 },
+  '1x500/240': { size: 500, screenSize: 240, insulationThick: 2.8, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.3, khaTanah: 1110, khaUdara: 1000 },
+  
+  '2x1.5/1.5': { size: 1.5, screenSize: 1.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 30, khaUdara: 21 },
+  '2x2.5/2.5': { size: 2.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 41, khaUdara: 29 },
+  '2x4/4': { size: 4, screenSize: 4, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 53, khaUdara: 38 },
+  '2x6/6': { size: 6, screenSize: 6, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 66, khaUdara: 48 },
+  '2x10/10': { size: 10, screenSize: 10, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 88, khaUdara: 66 },
+  '2x16/16': { size: 16, screenSize: 16, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 115, khaUdara: 90 },
+  '2x25/16': { size: 25, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 150, khaUdara: 120 },
+  '2x35/16': { size: 35, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 180, khaUdara: 150 },
+  '2x50/25': { size: 50, screenSize: 25, insulationThick: 1.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 210, khaUdara: 180 },
+  '2x70/35': { size: 70, screenSize: 35, insulationThick: 1.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 260, khaUdara: 230 },
+  '2x95/50': { size: 95, screenSize: 50, insulationThick: 1.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.1, khaTanah: 315, khaUdara: 280 },
+  '2x120/70': { size: 120, screenSize: 70, insulationThick: 1.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.2, khaTanah: 360, khaUdara: 320 },
+  '2x150/70': { size: 150, screenSize: 70, insulationThick: 1.8, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.4, khaTanah: 400, khaUdara: 375 },
+  '2x185/95': { size: 185, screenSize: 95, insulationThick: 2.0, innerSheathEkstrusi: 1.4, innerSheathPita: 0.4, outerSheathThick: 2.5, khaTanah: 460, khaUdara: 430 },
+  '2x240/120': { size: 240, screenSize: 120, insulationThick: 2.2, innerSheathEkstrusi: 1.4, innerSheathPita: 0.6, outerSheathThick: 2.8, khaTanah: 530, khaUdara: 510 },
+  '2x300/150': { size: 300, screenSize: 150, insulationThick: 2.4, innerSheathEkstrusi: 1.6, innerSheathPita: 0.6, outerSheathThick: 3.0, khaTanah: 590, khaUdara: 590 },
+
+  '3x1.5/1.5': { size: 1.5, screenSize: 1.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 27, khaUdara: 18 },
+  '3x2.5/2.5': { size: 2.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 36, khaUdara: 25 },
+  '3x4/4': { size: 4, screenSize: 4, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 46, khaUdara: 34 },
+  '3x6/6': { size: 6, screenSize: 6, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 58, khaUdara: 44 },
+  '3x10/10': { size: 10, screenSize: 10, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 77, khaUdara: 60 },
+  '3x16/16': { size: 16, screenSize: 16, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 100, khaUdara: 80 },
+  '3x25/16': { size: 25, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 130, khaUdara: 105 },
+  '3x35/16': { size: 35, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 155, khaUdara: 130 },
+  '3x50/25': { size: 50, screenSize: 25, insulationThick: 1.4, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.9, khaTanah: 185, khaUdara: 160 },
+  '3x70/35': { size: 70, screenSize: 35, insulationThick: 1.4, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 230, khaUdara: 200 },
+  '3x95/50': { size: 95, screenSize: 50, insulationThick: 1.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.2, khaTanah: 275, khaUdara: 245 },
+  '3x120/70': { size: 120, screenSize: 70, insulationThick: 1.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.3, khaTanah: 315, khaUdara: 285 },
+  '3x150/70': { size: 150, screenSize: 70, insulationThick: 1.8, innerSheathEkstrusi: 1.4, innerSheathPita: 0.4, outerSheathThick: 2.4, khaTanah: 355, khaUdara: 325 },
+  '3x185/95': { size: 185, screenSize: 95, insulationThick: 2.0, innerSheathEkstrusi: 1.4, innerSheathPita: 0.4, outerSheathThick: 2.6, khaTanah: 400, khaUdara: 355 },
+  '3x240/120': { size: 240, screenSize: 120, insulationThick: 2.2, innerSheathEkstrusi: 1.6, innerSheathPita: 0.6, outerSheathThick: 2.8, khaTanah: 465, khaUdara: 435 },
+  '3x300/150': { size: 300, screenSize: 150, insulationThick: 2.4, innerSheathEkstrusi: 1.8, innerSheathPita: 0.6, outerSheathThick: 3.0, khaTanah: 600, khaUdara: 600 },
+
+  '4x1.5/1.5': { size: 1.5, screenSize: 1.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 27, khaUdara: 18 },
+  '4x2.5/2.5': { size: 2.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 36, khaUdara: 25 },
+  '4x4/4': { size: 4, screenSize: 4, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 46, khaUdara: 34 },
+  '4x6/6': { size: 6, screenSize: 6, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 58, khaUdara: 44 },
+  '4x10/10': { size: 10, screenSize: 10, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 77, khaUdara: 60 },
+  '4x16/16': { size: 16, screenSize: 16, insulationThick: 1.0, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 100, khaUdara: 80 },
+  '4x25/16': { size: 25, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 130, khaUdara: 105 },
+  '4x35/16': { size: 35, screenSize: 16, insulationThick: 1.2, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 155, khaUdara: 130 },
+  '4x50/25': { size: 50, screenSize: 25, insulationThick: 1.4, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 185, khaUdara: 160 },
+  '4x70/35': { size: 70, screenSize: 35, insulationThick: 1.4, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.1, khaTanah: 230, khaUdara: 205 },
+  '4x95/50': { size: 95, screenSize: 50, insulationThick: 1.6, innerSheathEkstrusi: 1.2, innerSheathPita: 0.4, outerSheathThick: 2.3, khaTanah: 275, khaUdara: 245 },
+  '4x120/70': { size: 120, screenSize: 70, insulationThick: 1.6, innerSheathEkstrusi: 1.4, innerSheathPita: 0.4, outerSheathThick: 2.4, khaTanah: 315, khaUdara: 285 },
+  '4x150/70': { size: 150, screenSize: 70, insulationThick: 1.8, innerSheathEkstrusi: 1.4, innerSheathPita: 0.4, outerSheathThick: 2.6, khaTanah: 355, khaUdara: 315 },
+  '4x185/95': { size: 185, screenSize: 95, insulationThick: 2.0, innerSheathEkstrusi: 1.4, innerSheathPita: 0.6, outerSheathThick: 2.8, khaTanah: 400, khaUdara: 355 },
+  '4x240/120': { size: 240, screenSize: 120, insulationThick: 2.2, innerSheathEkstrusi: 1.6, innerSheathPita: 0.6, outerSheathThick: 3.0, khaTanah: 465, khaUdara: 415 },
+  '4x300/150': { size: 300, screenSize: 150, insulationThick: 2.4, innerSheathEkstrusi: 1.6, innerSheathPita: 0.6, outerSheathThick: 3.2, khaTanah: 520, khaUdara: 465 },
+
+  // Multi-core Control Cables (1.5 mm2)
+  '5x1.5/2.5': { size: 1.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 22, khaUdara: 14 },
+  '7x1.5/2.5': { size: 1.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 19, khaUdara: 12 },
+  '10x1.5/2.5': { size: 1.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 17, khaUdara: 11 },
+  '12x1.5/2.5': { size: 1.5, screenSize: 2.5, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 16, khaUdara: 10 },
+  '14x1.5/6': { size: 1.5, screenSize: 6, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 15, khaUdara: 9 },
+  '19x1.5/6': { size: 1.5, screenSize: 6, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 13, khaUdara: 8 },
+  '24x1.5/6': { size: 1.5, screenSize: 6, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.9, khaTanah: 12, khaUdara: 7 },
+  '30x1.5/6': { size: 1.5, screenSize: 6, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 11, khaUdara: 7 },
+  '37x1.5/10': { size: 1.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.1, khaTanah: 10, khaUdara: 6 },
+  '48x1.5/10': { size: 1.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.2, khaTanah: 9, khaUdara: 5 },
+  '61x1.5/10': { size: 1.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.4, khaTanah: 8, khaUdara: 5 },
+
+  // Multi-core Control Cables (2.5 mm2)
+  '5x2.5/4': { size: 2.5, screenSize: 4, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 29, khaUdara: 19 },
+  '7x2.5/4': { size: 2.5, screenSize: 4, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 25, khaUdara: 16 },
+  '10x2.5/4': { size: 2.5, screenSize: 4, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 22, khaUdara: 14 },
+  '12x2.5/10': { size: 2.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.8, khaTanah: 21, khaUdara: 13 },
+  '14x2.5/10': { size: 2.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 1.9, khaTanah: 20, khaUdara: 12 },
+  '19x2.5/10': { size: 2.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.0, khaTanah: 18, khaUdara: 11 },
+  '24x2.5/10': { size: 2.5, screenSize: 10, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.1, khaTanah: 16, khaUdara: 10 },
+  '30x2.5/16': { size: 2.5, screenSize: 16, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.2, khaTanah: 15, khaUdara: 9 },
+  '37x2.5/16': { size: 2.5, screenSize: 16, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.4, khaTanah: 14, khaUdara: 8 },
+  '48x2.5/16': { size: 2.5, screenSize: 16, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.6, khaTanah: 12, khaUdara: 7 },
+  '61x2.5/16': { size: 2.5, screenSize: 16, insulationThick: 0.8, innerSheathEkstrusi: 1.0, innerSheathPita: 0.4, outerSheathThick: 2.8, khaTanah: 11, khaUdara: 6 },
 };
 
 function getLayingUpFactor(cores: number): number {
@@ -541,10 +625,13 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (!effectiveParams.manualConductorScreenThickness) effectiveParams.manualConductorScreenThickness = 0;
     if (!effectiveParams.manualInsulationScreenThickness) effectiveParams.manualInsulationScreenThickness = 0;
     
-    if (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)') || params.standard.includes('NFA2X')) {
+    if (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)') || params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)') {
       effectiveParams.armorType = 'Unarmored';
-      effectiveParams.hasInnerSheath = false;
-      effectiveParams.hasScreen = false;
+      effectiveParams.hasInnerSheath = params.standard === 'SPLN 43-4 (NYCY)';
+      effectiveParams.hasScreen = params.standard === 'SPLN 43-4 (NYCY)';
+      if (params.standard === 'SPLN 43-4 (NYCY)') {
+        effectiveParams.screenType = 'CWS';
+      }
       effectiveParams.manualSheathThickness = 0;
     }
   }
@@ -578,6 +665,20 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     effectiveParams.conductorType = 'f';
     effectiveParams.armorType = 'Unarmored';
     effectiveParams.hasInnerSheath = false;
+  } else if (params.standard === 'SPLN 43-4 (NYCY)') {
+    effectiveParams.voltage = '0.6/1 kV';
+    effectiveParams.insulationMaterial = 'PVC';
+    effectiveParams.sheathMaterial = 'PVC';
+    effectiveParams.innerSheathMaterial = 'PVC';
+    effectiveParams.hasInnerSheath = true;
+    effectiveParams.hasScreen = true;
+    effectiveParams.screenType = 'CWS';
+    // Conductor type based on size
+    if (effectiveParams.size <= 4) {
+      effectiveParams.conductorType = 're';
+    } else {
+      effectiveParams.conductorType = 'rm';
+    }
   } else if (params.standard === 'IEC 60092-353') {
     effectiveParams.voltage = '0.6/1 kV';
     effectiveParams.insulationMaterial = 'XLPE';
@@ -665,6 +766,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let currentCapacityAir = effectiveParams.conductorMaterial === 'Cu' 
     ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_CU[effectiveParams.size]) || 0 
     : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_AL[effectiveParams.size]) || 0;
+  let currentCapacityGround = effectiveParams.conductorMaterial === 'Cu' 
+    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_CU[effectiveParams.size]) || 0 
+    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_AL[effectiveParams.size]) || 0;
   let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial];
 
   // ABC Specific Data Overrides
@@ -974,6 +1078,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
   }
 
+  // NYCY Specific Data Overrides
+  const nycyKey = `${effectiveParams.cores}x${effectiveParams.size}/${effectiveParams.screenSize || effectiveParams.size}`;
+  const nycyData = effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? NYCY_DATA[nycyKey] : null;
+
+  if (nycyData) {
+    insulationThickness = nycyData.insulationThick;
+    innerCoveringThickness = nycyData.innerSheathEkstrusi;
+    sheathThickness = nycyData.outerSheathThick;
+    currentCapacityAir = nycyData.khaUdara;
+    currentCapacityGround = nycyData.khaTanah;
+  }
+
   const coreDiameter = diameterOverMgt + (2 * conductorScreenThickness) + (2 * insulationThickness) + (2 * insulationScreenThickness);
   
   // Earthing Core Diameter
@@ -1243,6 +1359,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       
       diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
     }
+  } else if (effectiveParams.standard === 'SPLN 43-4 (NYCY)' && effectiveParams.hasScreen) {
+    const cwsSize = effectiveParams.screenSize || (nycyData ? nycyData.screenSize : effectiveParams.size);
+    screenWeight = cwsSize * densities.Cu * 1.1; // 10% lay factor for concentric wires
+    // Add copper tape weight (approx 0.1mm x width)
+    const tapeWeight = Math.PI * diameterUnderArmor * 0.1 * densities.Cu * 1.2; 
+    screenWeight += tapeWeight;
+    
+    if (!effectiveParams.manualScreenThickness) {
+      screenThickness = 0.5 + 0.1; // wires + tape approx
+    }
+    diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
   }
 
   // 4.6 Separator Sheath - New Feature
@@ -1620,10 +1747,6 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   // Electrical
   // maxDcResistance, currentCapacityAir already calculated or overridden above
   
-  const currentCapacityGround = effectiveParams.conductorMaterial === 'Cu' 
-    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_CU[effectiveParams.size]) || 0 
-    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_AL[effectiveParams.size]) || 0;
-
   // Test Voltage Calculation
   let testVoltage = '3.5 kV';
   let displayVoltage = effectiveParams.voltage;
