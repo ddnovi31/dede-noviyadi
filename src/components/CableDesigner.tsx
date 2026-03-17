@@ -17,7 +17,6 @@ import {
   FlameRetardantCategory,
   NYCY_DATA,
 } from '../utils/cableCalculations';
-import CableCrossSection from './CableCrossSection';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject } from '../lib/db';
 import * as XLSX from 'xlsx-js-style';
@@ -278,15 +277,15 @@ export default function CableDesigner() {
       v: text,
       t: 's',
       s: {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
         fill: { fgColor: { rgb: bgColor } },
         border: {
           top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "medium", color: { rgb: "000000" } },
           left: { style: "thin", color: { rgb: "000000" } },
           right: { style: "thin", color: { rgb: "000000" } }
         },
-        alignment: { horizontal: "center", vertical: "center" }
+        alignment: { horizontal: "center", vertical: "center", wrapText: true }
       }
     });
 
@@ -740,12 +739,28 @@ export default function CableDesigner() {
             const wireDiaCol = pushCol(item.result.spec.armorWireDiameter || 0, fmtNum);
             const carriersCol = pushCol(item.result.spec.gswbCarriers || 0, fmtNum);
             const wiresPerCarrierCol = pushCol(item.result.spec.gswbWiresPerCarrier || 0, fmtNum);
-            pushCol(item.result.spec.gswbLayPitch || 0, fmtNum);
-            pushCol(item.result.spec.gswbCoverage || 0, fmtNum);
+            
+            // Braid Pitch Formula: L = (PI * D) / tan(alpha)
+            const diaUnderArmorFormula = currentDiaFormula;
+            const meanDiaFormula = `(${diaUnderArmorFormula}+${wireDiaCol}${r})`;
+            const alphaDeg = 45;
+            const alphaRad = alphaDeg * Math.PI / 180;
+            const tanAlpha = Math.tan(alphaRad).toFixed(3);
+            const cosAlpha = Math.cos(alphaRad).toFixed(3);
+            const layFactor = (1 / Math.cos(alphaRad)).toFixed(3);
+
+            pushCol(null, fmtNum, `PI()*${meanDiaFormula}/${tanAlpha}`); // Lay Pitch
+            
+            // Coverage Formula: K = (2p - p^2) * 100 where p = (n*m*d)/(2*PI*D*cos(alpha))
+            const pFormula = `(${wiresPerCarrierCol}${r}*${carriersCol}${r}*${wireDiaCol}${r})/(2*PI()*${meanDiaFormula}*${cosAlpha})`;
+            pushCol(null, fmtNum, `(2*${pFormula}-POWER(${pFormula},2))*100`); // Coverage
+            
             currentDiaFormula = `(${currentDiaFormula}+4*${wireDiaCol}${r})`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
+            
             const densityKey = item.params.armorType === 'TCWB' ? 'TCu' : 'SteelWire';
-            armWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${carriersCol}${r}*${wiresPerCarrierCol}${r}*${getDensity(densityKey)}*1.05*(1+${materialScrap[densityKey] || 0}/100)`);
+            // Weight Formula: W = (n * m * PI * d^2 / 4) * density * layFactor
+            armWtCol = pushCol(null, fmtNum, `(${wiresPerCarrierCol}${r}*${carriersCol}${r}*PI()*POWER(${wireDiaCol}${r}/2,2))*${getDensity(densityKey)}*${layFactor}*(1+${materialScrap[densityKey] || 0}/100)`);
             const armPrcCol = pushCol(armorWirePrice, fmtRp);
             armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           } else {
@@ -4767,31 +4782,35 @@ export default function CableDesigner() {
           <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
             
             {/* Cable Designation */}
-            <div className="bg-indigo-600 rounded-2xl p-6 shadow-md text-white flex flex-col md:flex-row justify-between items-center relative overflow-hidden gap-6">
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-10 blur-2xl"></div>
-              <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full bg-white opacity-10 blur-xl"></div>
-              
-              <div className="flex-1 text-center md:text-left z-10">
-                <h3 className="text-indigo-200 text-sm font-medium uppercase tracking-wider mb-2">Cable Designation</h3>
-                <div className="text-2xl md:text-4xl font-bold tracking-tight font-mono">
-                  {getCableDesignation(params, result)}
-                </div>
-                <div className="mt-4 inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm">
-                  Overall Diameter: <span className="font-bold">{result.spec.overallDiameter} mm</span>
-                </div>
+            <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 rounded-2xl p-10 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-white/10">
+              {/* Decorative elements for 3D feel */}
+              <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
               </div>
 
-              <div className="z-10 bg-white/10 rounded-full backdrop-blur-sm p-4">
-                <CableCrossSection 
-                  cores={params.cores} 
-                  earthingCores={params.hasEarthing ? (params.earthingCores || 0) : 0}
-                  armorType={params.armorType} 
-                  conductorType={params.conductorType} 
-                  standard={params.standard}
-                  mvScreenType={params.mvScreenType}
-                  hasMgt={params.fireguard}
-                  conductorMaterial={params.conductorMaterial}
-                />
+              <div className="relative z-10 w-full max-w-4xl">
+                <div className="flex flex-col items-center gap-4 mb-6">
+                  <span className="px-4 py-1.5 bg-white/20 rounded-full text-xs font-black uppercase tracking-[0.3em] backdrop-blur-md border border-white/10 shadow-inner">
+                    Cable Designation
+                  </span>
+                  <div className="h-px w-24 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                </div>
+                
+                <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter mb-8 drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] bg-clip-text text-transparent bg-gradient-to-b from-white to-indigo-100 leading-tight">
+                  {getCableDesignation(params, result)}
+                </h2>
+                
+                <div className="flex flex-wrap justify-center items-center gap-6">
+                  <div className="flex flex-col items-center bg-white/10 px-8 py-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl transition-transform hover:scale-105">
+                    <span className="text-indigo-200 uppercase text-[11px] font-black tracking-[0.2em] mb-1">Overall Diameter</span>
+                    <span className="text-3xl font-black">{result.spec.overallDiameter} <span className="text-sm font-medium opacity-70">mm</span></span>
+                  </div>
+                  <div className="flex flex-col items-center bg-white/10 px-8 py-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl transition-transform hover:scale-105">
+                    <span className="text-indigo-200 uppercase text-[11px] font-black tracking-[0.2em] mb-1">Total Weight</span>
+                    <span className="text-3xl font-black">{Math.round(result.bom.totalWeight)} <span className="text-sm font-medium opacity-70">kg/km</span></span>
+                  </div>
+                </div>
               </div>
             </div>
 

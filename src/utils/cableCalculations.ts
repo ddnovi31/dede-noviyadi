@@ -1513,6 +1513,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
+    // Formula based on standard industry practices (e.g., Belden, Alpha Wire)
     
     let wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness / 2 : 0.3;
     if (!effectiveParams.manualArmorThickness) {
@@ -1523,7 +1524,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     armorWireDiameter = wireDia;
 
-    // Number of carriers (C) - typical industrial values
+    // 1. Number of carriers (m) - typical industrial braiding machine spindles
     let carriers = 24;
     if (diameterUnderArmor <= 10) carriers = 16;
     else if (diameterUnderArmor <= 20) carriers = 24;
@@ -1533,25 +1534,42 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     gswbCarriers = carriers;
 
-    // Braid angle (alpha) - typically 45 degrees for good coverage
+    // 2. Braid angle (alpha) - typically 45 degrees is the design target for optimal flexibility and coverage
     const braidAngleDeg = 45; 
-    const cosAlpha = Math.cos(braidAngleDeg * Math.PI / 180);
+    const alphaRad = braidAngleDeg * Math.PI / 180;
+    const cosAlpha = Math.cos(alphaRad);
+    const sinAlpha = Math.sin(alphaRad);
+    
+    // 3. Lay Factor (Take-up factor) - accounts for the extra length of wire due to helical path
     const layFactor = 1 / cosAlpha;
     
     const meanBraidDiameter = diameterUnderArmor + wireDia;
     const coverageTarget = (effectiveParams.braidCoverage || 90) / 100;
     
-    // Standard formula: Coverage K = 2F - F^2 => Filling factor F = 1 - sqrt(1 - K)
-    const F = 1 - Math.sqrt(1 - coverageTarget);
+    // 4. Filling Factor (p)
+    // Standard formula: Coverage K = (2p - p^2)
+    // Solving for p: p = 1 - sqrt(1 - K)
+    const fillingFactor = 1 - Math.sqrt(1 - coverageTarget);
     
-    // N = (F * 2 * PI * Dm * cos(alpha)) / (C * d)
-    const exactN = (F * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
-    const n = Math.ceil(exactN); // Number of wires per carrier must be integer
+    // 5. Number of wires per carrier (n)
+    // p = (n * m * d) / (2 * PI * D * cos(alpha))
+    // n = (p * 2 * PI * D * cos(alpha)) / (m * d)
+    const exactN = (fillingFactor * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
+    const n = Math.ceil(exactN); // Must be an integer
     
     gswbWiresPerCarrier = n;
-    gswbLayPitch = Math.PI * meanBraidDiameter * Math.tan(braidAngleDeg * Math.PI / 180);
-    gswbCoverage = (2 * F - F * F) * 100;
+    
+    // 6. Braid Pitch (L)
+    // L = (PI * D) / tan(alpha)
+    gswbLayPitch = (Math.PI * meanBraidDiameter) / Math.tan(alphaRad);
+    
+    // 7. Actual Coverage (K)
+    // Re-calculate p based on integer n
+    const actualP = (n * carriers * wireDia) / (2 * Math.PI * meanBraidDiameter * cosAlpha);
+    gswbCoverage = (2 * actualP - actualP * actualP) * 100;
 
+    // 8. Braiding Weight (W)
+    // W = (n * m * PI * d^2 / 4) * density * layFactor
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
     const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (densities.GSWB || densities.Steel);
     
@@ -1691,9 +1709,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   if (armorWeight > 0) {
-    const defaultFormula = effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA'
-      ? `${Math.floor((Math.PI * (diameterUnderArmor + armorThickness)) / (armorThickness * 1.05))} wires * π * (${armorThickness}/2)² * ${effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel} * 1.05`
-      : `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`;
+    let defaultFormula = '';
+    if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
+      defaultFormula = `${Math.floor((Math.PI * (diameterUnderArmor + armorThickness)) / (armorThickness * 1.05))} wires * π * (${armorThickness}/2)² * ${effectiveParams.armorType === 'AWA' ? densities.Al : densities.Steel} * 1.05`;
+    } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
+      const layFactor = (1 / Math.cos(45 * Math.PI / 180)).toFixed(3);
+      defaultFormula = `(n=${gswbWiresPerCarrier} * m=${gswbCarriers}) * π * (d=${armorWireDiameter}/2)² * density * LayFactor(${layFactor})`;
+    } else {
+      defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`;
+    }
     weightDetails.armor = evalFormula(armorWeight, defaultFormula, 'armor');
   }
 
@@ -1889,3 +1913,21 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 }
 
 export const CABLE_SIZES = CABLE_DATA.map(d => d.size);
+
+export function calculateOverallDiameter(phaseSize: number, earthSize: number, configType: '3+1' | '3+2' | '3+3'): number {
+  const phaseData = CABLE_DATA.find(d => d.size === phaseSize);
+  const earthData = CABLE_DATA.find(d => d.size === earthSize);
+  
+  if (!phaseData || !earthData) return 0;
+  
+  const d1 = phaseData.diameter + (2 * phaseData.xlpeThick);
+  const d2 = earthData.diameter + (2 * earthData.xlpeThick);
+  
+  if (configType === '3+1') {
+    return (d1 * 2.154) + (d2 * 0.483);
+  } else if (configType === '3+2') {
+    return (d1 * 2.154) + (d2 * 0.82);
+  } else {
+    return (d1 * 2.154) + (d2 * 1.0);
+  }
+}
