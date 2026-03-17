@@ -897,21 +897,25 @@ export default function CableDesigner() {
     }
 
     // Prepare data for export in a flat format suitable for Access tables
-    const data = projectItems.map((item, index) => ({
-      ID: item.params.id,
-      No: index + 1,
-      Project_Name: projectName,
-      Designation: getCableDesignation(item.params, item.result),
-      Standard: item.params.standard,
-      Voltage: item.params.voltage,
-      Cores: item.params.cores,
-      Size: item.params.size,
-      Overall_Diameter_mm: item.result.spec.overallDiameter,
-      Total_Weight_kg_km: item.result.bom.totalWeight,
-      HPP_IDR_m: item.result.costs.totalHppPerMeter,
-      Selling_Price_IDR_m: item.result.costs.sellingPricePerMeter,
-      Created_At: new Date().toLocaleString()
-    }));
+    const data = projectItems.map((item, index) => {
+      const hpp = calculateHPP(item.result, item.params);
+      const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
+      return {
+        ID: item.params.id,
+        No: index + 1,
+        Project_Name: projectName,
+        Designation: getCableDesignation(item.params, item.result),
+        Standard: item.params.standard,
+        Voltage: item.params.voltage,
+        Cores: item.params.cores,
+        Size: item.params.size,
+        Overall_Diameter_mm: item.result.spec.overallDiameter,
+        Total_Weight_kg_km: item.result.bom.totalWeight,
+        HPP_IDR_m: hpp,
+        Selling_Price_IDR_m: sellingPrice,
+        Created_At: new Date().toLocaleString()
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
