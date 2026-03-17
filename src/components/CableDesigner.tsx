@@ -150,7 +150,18 @@ const DEFAULT_PARAMS: CableDesignParams = {
 };
 
 export default function CableDesigner() {
-  const [params, setParams] = useState<CableDesignParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useState<CableDesignParams>(() => {
+    if (typeof window !== 'undefined') {
+      const savedMargin = localStorage.getItem('cable_default_margin');
+      const savedOverhead = localStorage.getItem('cable_default_overhead');
+      return {
+        ...DEFAULT_PARAMS,
+        margin: savedMargin ? parseFloat(savedMargin) : DEFAULT_PARAMS.margin,
+        overhead: savedOverhead ? parseFloat(savedOverhead) : DEFAULT_PARAMS.overhead,
+      };
+    }
+    return DEFAULT_PARAMS;
+  });
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
@@ -1135,6 +1146,21 @@ export default function CableDesigner() {
     localStorage.setItem('cable_drum_data', JSON.stringify(drumData));
   }, [drumData]);
 
+  const [lmeParams, setLmeParams] = useState(() => {
+    const saved = localStorage.getItem('cable_lme_params');
+    return saved ? JSON.parse(saved) : {
+      lmeCu: 0,
+      premiumCu: 0,
+      lmeAl: 0,
+      premiumAl: 0,
+      kurs: 16000
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
+  }, [lmeParams]);
+
   const [materialPrices, setMaterialPrices] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('cable_material_prices');
     const prices = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_PRICES };
@@ -1197,6 +1223,9 @@ export default function CableDesigner() {
     localStorage.setItem('cable_material_densities', JSON.stringify(materialDensities));
     localStorage.setItem('cable_material_scrap', JSON.stringify(materialScrap));
     localStorage.setItem('cable_material_categories', JSON.stringify(materialCategories));
+    localStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
+    localStorage.setItem('cable_default_margin', params.margin?.toString() || '0');
+    localStorage.setItem('cable_default_overhead', params.overhead?.toString() || '0');
     
     // Simple feedback
     const btn = document.activeElement as HTMLButtonElement;
@@ -1261,10 +1290,16 @@ export default function CableDesigner() {
         setMaterialDensities(DEFAULT_MATERIAL_DENSITIES);
         setMaterialScrap(DEFAULT_MATERIAL_SCRAP);
         setMaterialCategories({});
+        setLmeParams({ lmeCu: 0, premiumCu: 0, lmeAl: 0, premiumAl: 0, kurs: 16000 });
+        
         localStorage.removeItem('cable_material_prices');
         localStorage.removeItem('cable_material_densities');
         localStorage.removeItem('cable_material_scrap');
         localStorage.removeItem('cable_material_categories');
+        localStorage.removeItem('cable_lme_params');
+        localStorage.removeItem('cable_default_margin');
+        localStorage.removeItem('cable_default_overhead');
+        
         setConfirmModal(prev => ({ ...prev, show: false }));
       },
       type: 'danger'
@@ -1278,6 +1313,21 @@ export default function CableDesigner() {
     const res = calculateCable(params, materialDensities, materialScrap);
     setResult(res);
   }, [params, materialDensities, materialScrap]);
+
+  const handleLmeChange = (field: keyof typeof lmeParams, value: number) => {
+    const newLme = { ...lmeParams, [field]: value };
+    setLmeParams(newLme);
+    
+    // Update material prices (LME + Premium is per MT, so divide by 1000 for per kg)
+    const cuPrice = Math.round(((newLme.lmeCu + newLme.premiumCu) / 1000) * newLme.kurs);
+    const alPrice = Math.round(((newLme.lmeAl + newLme.premiumAl) / 1000) * newLme.kurs);
+    
+    setMaterialPrices(prev => ({
+      ...prev,
+      Cu: cuPrice,
+      Al: alPrice
+    }));
+  };
 
   const handleParamChange = (key: keyof CableDesignParams, value: any) => {
     if (value === 'ADD_NEW_COMPOUND' || value === 'ADD_NEW_OUTER_SHEATH') {
@@ -1964,7 +2014,7 @@ export default function CableDesigner() {
 
           <div className={reviewTab === 'summary' ? 'block print:block space-y-6 print-landscape-page' : 'hidden print:hidden'}>
             {/* Project Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-scale">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 print-scale">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</div>
                   <div className="text-3xl font-bold text-slate-900">{projectItems.length} Cables</div>
@@ -1973,6 +2023,23 @@ export default function CableDesigner() {
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Estimated Project HPP (per meter sum)</div>
                   <div className="text-3xl font-bold text-indigo-600 font-mono">
                     Rp {totalProjectPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">LME & Exchange Rate</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-500">Kurs USD:</span>
+                      <span className="text-xs font-bold text-slate-700">Rp {lmeParams.kurs.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-500">LME Cu:</span>
+                      <span className="text-xs font-bold text-orange-600">${lmeParams.lmeCu}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-500">LME Al:</span>
+                      <span className="text-xs font-bold text-slate-600">${lmeParams.lmeAl}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4654,10 +4721,106 @@ export default function CableDesigner() {
 
                 {activeTab === 'prices' && (
                   <div className="space-y-4 animate-in fade-in duration-300">
-                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4">
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                       <p className="text-xs text-indigo-700 leading-relaxed">
                         Update material prices (IDR/kg) and densities (g/cm³) to calculate the estimated HPP per meter.
                       </p>
+                      <div className="flex gap-2 shrink-0">
+                        <button 
+                          onClick={handleResetToDefault}
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-rose-200 shadow-sm transition-all"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Reset to Default
+                        </button>
+                        <button 
+                          onClick={saveMaterialSettings}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                        >
+                          <Download className="w-3 h-3" />
+                          Save All Settings
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-indigo-500" />
+                        <label className="block text-sm font-semibold text-slate-700">LME & Exchange Rate</label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">USD Exchange Rate (Kurs)</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">Rp</span>
+                            <input
+                              type="number"
+                              value={lmeParams.kurs || 0}
+                              onChange={(e) => handleLmeChange('kurs', parseFloat(e.target.value) || 0)}
+                              className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-orange-600 uppercase tracking-wider">Copper (Cu)</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">LME ($/MT)</label>
+                              <input
+                                type="number"
+                                value={lmeParams.lmeCu || 0}
+                                onChange={(e) => handleLmeChange('lmeCu', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Premium ($/MT)</label>
+                              <input
+                                type="number"
+                                value={lmeParams.premiumCu || 0}
+                                onChange={(e) => handleLmeChange('premiumCu', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="bg-orange-50 p-2 rounded-lg border border-orange-100 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-orange-800 uppercase">Calculated Price</span>
+                            <span className="text-sm font-black text-orange-600">Rp {materialPrices.Cu?.toLocaleString()}/kg</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Aluminium (Al)</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">LME ($/MT)</label>
+                              <input
+                                type="number"
+                                value={lmeParams.lmeAl || 0}
+                                onChange={(e) => handleLmeChange('lmeAl', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Premium ($/MT)</label>
+                              <input
+                                type="number"
+                                value={lmeParams.premiumAl || 0}
+                                onChange={(e) => handleLmeChange('premiumAl', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="bg-slate-100 p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Calculated Price</span>
+                            <span className="text-sm font-black text-slate-700">Rp {materialPrices.Al?.toLocaleString()}/kg</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
@@ -4758,22 +4921,6 @@ export default function CableDesigner() {
 
                       <div className="flex items-center justify-between mb-2 px-1">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Material List</h4>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={handleResetToDefault}
-                            className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 transition-all"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            Reset to Default
-                          </button>
-                          <button 
-                            onClick={saveMaterialSettings}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 transition-all"
-                          >
-                            <Download className="w-3 h-3" />
-                            Save All Settings
-                          </button>
-                        </div>
                       </div>
 
                       <div className="space-y-6 pr-2">
