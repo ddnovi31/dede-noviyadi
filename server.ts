@@ -1,8 +1,13 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import mysql from "mysql2/promise";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
+
+// Lazy load DB modules
+let mysql: any;
+let sqlite3: any;
+let open: any;
 
 const app = express();
 const PORT = 3000;
@@ -10,8 +15,20 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Database configuration
-const dbConfig = {
+// Directory for SQLite databases
+const DB_DIR = path.join(process.cwd(), "databases");
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR);
+}
+
+// Global state for active database
+let activeDbType: 'mysql' | 'sqlite' = 'mysql';
+let activeSqliteDb: string | null = null;
+let sqliteConn: any = null;
+let mysqlPool: any = null;
+
+// MySQL configuration
+const mysqlConfig = {
   host: "sql107.infinityfree.com",
   port: 3306,
   user: "if0_41301335",
@@ -22,13 +39,13 @@ const dbConfig = {
   queueLimit: 0
 };
 
-let pool: mysql.Pool;
-
-async function initDB() {
+async function initMysql() {
   try {
-    pool = mysql.createPool(dbConfig);
-    
-    // Create table if it doesn't exist
+    if (!mysql) {
+      const m = await import("mysql2/promise");
+      mysql = m.default || m;
+    }
+    mysqlPool = mysql.createPool(mysqlConfig);
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS projects (
         id VARCHAR(255) PRIMARY KEY,
@@ -37,27 +54,122 @@ async function initDB() {
         updatedAt BIGINT NOT NULL
       )
     `;
-    
-    await pool.query(createTableQuery);
-    console.log("Database initialized and connected successfully.");
+    await mysqlPool.query(createTableQuery);
+    console.log("MySQL initialized.");
   } catch (error) {
-    console.error("Failed to connect or initialize database:", error);
-    // Note: InfinityFree often blocks remote connections. 
-    // If it fails, we log it but don't crash the server so the frontend can still load.
+    console.error("MySQL initialization failed:", error);
+    mysqlPool = null;
   }
 }
 
-// API Routes
+async function initSqlite(dbName: string) {
+  try {
+    if (!sqlite3 || !open) {
+      const s = await import("sqlite3");
+      sqlite3 = s.default || s;
+      const o = await import("sqlite");
+      open = o.open;
+    }
+    
+    const dbPath = path.join(DB_DIR, dbName.endsWith('.db') ? dbName : `${dbName}.db`);
+    sqliteConn = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+
+    await sqliteConn.exec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        items TEXT NOT NULL,
+        updatedAt INTEGER NOT NULL
+      )
+    `);
+    activeSqliteDb = dbName;
+    activeDbType = 'sqlite';
+    console.log(`SQLite initialized: ${dbName}`);
+  } catch (error) {
+    console.error("SQLite initialization failed:", error);
+    throw error;
+  }
+}
+
+// Test route
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", message: "Server is alive" });
 });
 
+// Database Management Routes
+app.get("/api/databases", (req, res) => {
+  const files = fs.readdirSync(DB_DIR).filter(f => f.endsWith('.db'));
+  res.json({
+    activeType: activeDbType,
+    activeDb: activeSqliteDb,
+    sqliteFiles: files,
+    mysqlAvailable: !!mysqlPool
+  });
+});
+
+app.post("/api/databases", async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+  
+  try {
+    await initSqlite(name);
+    res.json({ success: true, name });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create database" });
+  }
+});
+
+app.post("/api/databases/select", async (req, res) => {
+  const { type, name } = req.body;
+  
+  try {
+    if (type === 'mysql') {
+      if (!mysqlPool) await initMysql();
+      activeDbType = 'mysql';
+      activeSqliteDb = null;
+    } else {
+      await initSqlite(name);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to select database" });
+  }
+});
+
+app.delete("/api/databases/:name", (req, res) => {
+  const { name } = req.params;
+  const dbPath = path.join(DB_DIR, name.endsWith('.db') ? name : `${name}.db`);
+  
+  if (activeSqliteDb === name) {
+    activeSqliteDb = null;
+    activeDbType = 'mysql';
+  }
+  
+  if (fs.existsSync(dbPath)) {
+    fs.unlinkSync(dbPath);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: "Database not found" });
+  }
+});
+
+// Project Routes (Unified)
 app.get("/api/projects", async (req, res) => {
   try {
-    if (!pool) throw new Error("Database not initialized");
-    const [rows] = await pool.query("SELECT * FROM projects ORDER BY updatedAt DESC");
+    let rows: any[] = [];
+    if (activeDbType === 'mysql' && mysqlPool) {
+      const [mysqlRows] = await mysqlPool.query("SELECT * FROM projects ORDER BY updatedAt DESC");
+      rows = mysqlRows as any[];
+    } else if (activeDbType === 'sqlite' && sqliteConn) {
+      rows = await sqliteConn.all("SELECT * FROM projects ORDER BY updatedAt DESC");
+    } else {
+      return res.json([]);
+    }
     
-    const projects = (rows as any[]).map(row => ({
+    const projects = rows.map(row => ({
       id: row.id,
       name: row.name,
       items: JSON.parse(row.items),
@@ -73,22 +185,32 @@ app.get("/api/projects", async (req, res) => {
 
 app.post("/api/projects", async (req, res) => {
   try {
-    if (!pool) throw new Error("Database not initialized");
     const { id, name, items, updatedAt } = req.body;
-    
     const itemsJson = JSON.stringify(items);
     
-    // Upsert logic for MySQL
-    const query = `
-      INSERT INTO projects (id, name, items, updatedAt)
-      VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        name = VALUES(name),
-        items = VALUES(items),
-        updatedAt = VALUES(updatedAt)
-    `;
+    if (activeDbType === 'mysql' && mysqlPool) {
+      const query = `
+        INSERT INTO projects (id, name, items, updatedAt)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          name = VALUES(name),
+          items = VALUES(items),
+          updatedAt = VALUES(updatedAt)
+      `;
+      await mysqlPool.query(query, [id, name, itemsJson, updatedAt]);
+    } else if (activeDbType === 'sqlite' && sqliteConn) {
+      await sqliteConn.run(`
+        INSERT INTO projects (id, name, items, updatedAt)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          name = excluded.name,
+          items = excluded.items,
+          updatedAt = excluded.updatedAt
+      `, [id, name, itemsJson, updatedAt]);
+    } else {
+      throw new Error("No active database");
+    }
     
-    await pool.query(query, [id, name, itemsJson, updatedAt]);
     res.json({ success: true });
   } catch (error) {
     console.error("Error saving project:", error);
@@ -98,10 +220,16 @@ app.post("/api/projects", async (req, res) => {
 
 app.delete("/api/projects/:id", async (req, res) => {
   try {
-    if (!pool) throw new Error("Database not initialized");
     const { id } = req.params;
     
-    await pool.query("DELETE FROM projects WHERE id = ?", [id]);
+    if (activeDbType === 'mysql' && mysqlPool) {
+      await mysqlPool.query("DELETE FROM projects WHERE id = ?", [id]);
+    } else if (activeDbType === 'sqlite' && sqliteConn) {
+      await sqliteConn.run("DELETE FROM projects WHERE id = ?", [id]);
+    } else {
+      throw new Error("No active database");
+    }
+    
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting project:", error);
@@ -110,26 +238,55 @@ app.delete("/api/projects/:id", async (req, res) => {
 });
 
 async function startServer() {
-  await initDB();
-
-  // Vite middleware for development
+  console.log("Starting server...");
+  
   if (process.env.NODE_ENV !== "production") {
+    console.log("Setting up Vite middleware...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    
+    // SPA fallback
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
     });
+  } else {
+    console.log("Setting up production static serving...");
+    const distPath = path.join(process.cwd(), "dist");
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
+
+  // Init DBs in background AFTER server starts listening
+  setTimeout(async () => {
+    try {
+      await initMysql();
+      const files = fs.readdirSync(DB_DIR).filter(f => f.endsWith('.db'));
+      if (files.length > 0) {
+        await initSqlite(files[0]);
+      }
+    } catch (err) {
+      console.error("Background DB initialization failed:", err);
+    }
+  }, 1000);
 }
 
 startServer();

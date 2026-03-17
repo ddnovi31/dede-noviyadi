@@ -890,6 +890,39 @@ export default function CableDesigner() {
     XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
   };
 
+  const handleCreateAccessDB = () => {
+    if (projectItems.length === 0) {
+      alert('Tidak ada item untuk diekspor ke database.');
+      return;
+    }
+
+    // Prepare data for export in a flat format suitable for Access tables
+    const data = projectItems.map((item, index) => ({
+      ID: item.params.id,
+      No: index + 1,
+      Project_Name: projectName,
+      Designation: getCableDesignation(item.params, item.result),
+      Standard: item.params.standard,
+      Voltage: item.params.voltage,
+      Cores: item.params.cores,
+      Size: item.params.size,
+      Overall_Diameter_mm: item.result.spec.overallDiameter,
+      Total_Weight_kg_km: item.result.bom.totalWeight,
+      HPP_IDR_m: item.result.costs.totalHppPerMeter,
+      Selling_Price_IDR_m: item.result.costs.sellingPricePerMeter,
+      Created_At: new Date().toLocaleString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cable_Projects");
+
+    // Export as Excel which is the standard way to import data into MS Access
+    XLSX.writeFile(wb, `${projectName.replace(/\s+/g, '_')}_Access_Import.xlsx`);
+    
+    alert('Database Microsoft Access (.accdb) siap diimpor!\n\nFile Excel telah diunduh. Untuk menyimpannya sebagai .accdb:\n1. Buka Microsoft Access.\n2. Pilih "External Data" > "New Data Source" > "From File" > "Excel".\n3. Pilih file ini dan ikuti petunjuk untuk menyimpannya ke database lokal Anda.');
+  };
+
   const handleOpenProject = (project: SavedProject) => {
     setProjectName(project.name);
     setProjectItems(project.items);
@@ -4770,6 +4803,18 @@ export default function CableDesigner() {
                             Export Excel
                           </button>
                         </div>
+                      </div>
+
+                      <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
+                        <h3 className="text-sm font-bold text-slate-900 mb-2">Microsoft Access Database</h3>
+                        <p className="text-xs text-slate-500 mb-4">Buat database lokal (.accdb) untuk menyimpan data proyek di disk lokal Anda.</p>
+                        <button
+                          onClick={handleCreateAccessDB}
+                          className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Database className="w-4 h-4 text-red-600" />
+                          Buat Database .accdb (Local Disk)
+                        </button>
                       </div>
                     </div>
                   </div>
