@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus } from 'lucide-react';
 import {
   calculateCable,
   CABLE_DATA,
@@ -18,7 +18,7 @@ import {
   NYCY_DATA,
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
-import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject } from '../lib/db';
+import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle } from '../lib/db';
 import * as XLSX from 'xlsx-js-style';
 
 const DEFAULT_MATERIAL_PRICES = {
@@ -168,6 +168,9 @@ export default function CableDesigner() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('New Project');
+  const [projectNumber, setProjectNumber] = useState('');
+  const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
 
   const [dbFileHandle, setDbFileHandle] = useState<any>(null);
   const [sqlConfig, setSqlConfig] = useState(() => {
@@ -224,6 +227,28 @@ export default function CableDesigner() {
     }, 100);
   };
 
+  useEffect(() => {
+    const loadDbHandle = async () => {
+      try {
+        const handle = await getDbHandle();
+        if (handle) {
+          // Verify if we still have permission, if not we will request it when saving
+          const options = { mode: 'readwrite' };
+          if ((await handle.queryPermission(options)) === 'granted') {
+            setDbFileHandle(handle);
+          } else {
+            // We have the handle but lack permission. We can still set it, 
+            // and request permission when the user tries to save.
+            setDbFileHandle(handle);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load DB handle from IndexedDB', e);
+      }
+    };
+    loadDbHandle();
+  }, []);
+
   const handleSaveProject = async () => {
     if (projectItems.length === 0) {
       alert('No items to save.');
@@ -234,12 +259,22 @@ export default function CableDesigner() {
     const project: SavedProject = {
       id,
       name: projectName,
+      projectNumber,
       items: projectItems,
       updatedAt: Date.now(),
     };
 
     if (dbFileHandle) {
       try {
+        // Request permission if not granted
+        if ((await dbFileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+          const permission = await dbFileHandle.requestPermission({ mode: 'readwrite' });
+          if (permission !== 'granted') {
+            alert('Izin ditolak. Tidak dapat menyimpan ke database lokal.');
+            return;
+          }
+        }
+
         const file = await dbFileHandle.getFile();
         const contents = await file.text();
         let allProjects = [];
@@ -933,7 +968,7 @@ export default function CableDesigner() {
       XLSX.utils.book_append_sheet(wb, wsDetails, sheetName);
     });
 
-    XLSX.writeFile(wb, `${projectName || 'Cable_Project'}.xlsx`);
+    XLSX.writeFile(wb, `${projectNumber ? projectNumber + '_' : ''}${projectName || 'Cable_Project'}.xlsx`);
   };
 
   const handleCreateLocalDB = async () => {
@@ -951,6 +986,7 @@ export default function CableDesigner() {
       await writable.close();
       
       setDbFileHandle(handle);
+      await setDbHandle(handle);
       alert('Database berhasil dibuat dan dikoneksikan!');
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -976,6 +1012,7 @@ export default function CableDesigner() {
         const data = JSON.parse(contents);
         if (Array.isArray(data)) {
           setDbFileHandle(handle);
+          await setDbHandle(handle);
           alert('Database berhasil dikoneksikan!');
         } else {
           alert('Format file database tidak valid.');
@@ -993,6 +1030,7 @@ export default function CableDesigner() {
 
   const handleOpenProject = (project: SavedProject) => {
     setProjectName(project.name);
+    setProjectNumber(project.projectNumber || '');
     setProjectItems(project.items);
     setProjectId(project.id);
     setShowProjectsModal(false);
@@ -1016,6 +1054,7 @@ export default function CableDesigner() {
         if (projectId === id) {
           setProjectId(null);
           setProjectName('New Project');
+          setProjectNumber('');
           setProjectItems([]);
         }
         return;
@@ -1232,9 +1271,7 @@ export default function CableDesigner() {
     });
   };
 
-  const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
   const isInstrumentationPairTriad = params.standard === 'BS EN 50288-7' && (params.formationType === 'Pair' || params.formationType === 'Triad');
-  const [projectName, setProjectName] = useState('New Project');
   const [result, setResult] = useState<CalculationResult | null>(null);
 
   useEffect(() => {
@@ -3085,6 +3122,9 @@ export default function CableDesigner() {
                     <div key={project.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group">
                       <div>
                         <h4 className="font-bold text-slate-900">{project.name || 'Untitled Project'}</h4>
+                        {project.projectNumber && (
+                          <div className="text-xs font-semibold text-indigo-600 mt-0.5">No: {project.projectNumber}</div>
+                        )}
                         <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
                           <span>{project.items.length} items</span>
                           <span>•</span>
@@ -3238,15 +3278,36 @@ export default function CableDesigner() {
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               {/* Compact Project Control Bar */}
-              <div className="flex items-center justify-between p-3 border-b border-slate-100 bg-slate-50 gap-2">
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="Project Name"
-                  className="bg-white border border-slate-200 text-sm font-semibold text-indigo-600 rounded-lg p-2 flex-grow placeholder:text-slate-300"
-                />
-                <div className="flex items-center gap-1">
+              <div className="flex flex-col p-3 border-b border-slate-100 bg-slate-50 gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <input
+                    type="text"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Project Name"
+                    className="bg-white border border-slate-200 text-sm font-semibold text-indigo-600 rounded-lg p-2 flex-grow placeholder:text-slate-300"
+                  />
+                  <input
+                    type="text"
+                    value={projectNumber}
+                    onChange={(e) => setProjectNumber(e.target.value)}
+                    placeholder="Project Number"
+                    className="bg-white border border-slate-200 text-xs font-medium text-slate-600 rounded-lg p-2 flex-grow placeholder:text-slate-300"
+                  />
+                </div>
+                <div className="flex items-center gap-1 justify-end">
+                  <button 
+                    onClick={() => {
+                      setProjectId(null);
+                      setProjectName('New Project');
+                      setProjectNumber('');
+                      setProjectItems([]);
+                    }} 
+                    className="p-2 text-slate-400 hover:text-blue-600 transition-colors" 
+                    title="New Project"
+                  >
+                    <FilePlus className="w-4 h-4" />
+                  </button>
                   <button onClick={() => setProjectItems([])} className="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Clear List"><Trash2 className="w-4 h-4" /></button>
                   <button onClick={handleLoadProjects} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Open Project"><FolderOpen className="w-4 h-4" /></button>
                   <button onClick={handleSaveProject} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Save Project"><Save className="w-4 h-4" /></button>
