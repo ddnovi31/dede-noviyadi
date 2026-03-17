@@ -3686,33 +3686,47 @@ export default function CableDesigner() {
                         </div>
                         
                         {params.hasEarthing && (
-                          <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
-                              <select
-                                value={params.earthingCores || 0}
-                                disabled={params.standard.includes('NFA2X-T')}
-                                onChange={(e) => handleParamChange('earthingCores', Number(e.target.value))}
-                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
-                              >
-                                <option value={0}>None</option>
-                                <option value={1}>1 Core</option>
-                                <option value={2}>2 Cores</option>
-                                <option value={3}>3 Cores</option>
-                              </select>
+                          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Number of Cores</label>
+                                <select
+                                  value={params.earthingCores || 0}
+                                  disabled={params.standard.includes('NFA2X-T')}
+                                  onChange={(e) => handleParamChange('earthingCores', Number(e.target.value))}
+                                  className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                                >
+                                  <option value={0}>None</option>
+                                  <option value={1}>1 Core</option>
+                                  <option value={2}>2 Cores</option>
+                                  <option value={3}>3 Cores</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
+                                <select
+                                  value={params.earthingSize || 0}
+                                  disabled={params.standard.includes('NFA2X-T')}
+                                  onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
+                                  className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                                >
+                                  <option value={0}>None</option>
+                                  {CABLE_SIZES.map((s) => (
+                                    <option key={s} value={s}>{s} mm²</option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Cabling Model</label>
                               <select
-                                value={params.earthingSize || 0}
-                                disabled={params.standard.includes('NFA2X-T')}
-                                onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
-                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
+                                value={params.cablingModel || 'Auto'}
+                                onChange={(e) => handleParamChange('cablingModel', e.target.value)}
+                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                               >
-                                <option value={0}>None</option>
-                                {CABLE_SIZES.map((s) => (
-                                  <option key={s} value={s}>{s} mm²</option>
-                                ))}
+                                <option value="Auto">Auto (Minimum Diameter)</option>
+                                <option value="Single Circle">Single Circle (Lingkaran Tunggal)</option>
+                                <option value="Groove">Groove (Celah/Lekukan)</option>
                               </select>
                             </div>
                           </div>

@@ -44,6 +44,7 @@ export interface CableDesignParams {
   hasEarthing?: boolean;
   earthingCores?: number;
   earthingSize?: number;
+  cablingModel?: 'Auto' | 'Single Circle' | 'Groove';
   orderLength?: number; // In meters
   
   // Instrumentation specific
@@ -378,6 +379,109 @@ function getLayingUpFactor(cores: number): number {
   
   // Fallback to formula for very large core counts
   return 1.15 * Math.sqrt(cores);
+}
+
+/**
+ * Calculates the laying up diameter for mixed core configurations (e.g., 3+1, 3+2, 4+1).
+ * It calculates two geometric models:
+ * 1. Single Circle: All cores push each other into a circular arrangement.
+ * 2. Groove: Large cores touch each other, small cores sit in the outer interstices.
+ * The cable naturally assumes the most compact configuration, so it returns the minimum of the two.
+ */
+function calculateMixedLayingUpDiameter(D: number, d: number, nB: number, nS: number, model: 'Auto' | 'Single Circle' | 'Groove' = 'Auto'): number {
+  if (nB === 0 && nS === 0) return 0;
+  if (nB === 0) return d * getLayingUpFactor(nS);
+  if (nS === 0) return D * getLayingUpFactor(nB);
+
+  const R = D / 2;
+  const r = d / 2;
+
+  // 1. Single Circle Model (all cores push each other into a circular arrangement)
+  let N_BB = 0;
+  let N_BS = 0;
+  let N_SS = 0;
+
+  if (nS === 1) {
+    // nB-S (e.g., 2+1, 3+1, 4+1)
+    N_BB = nB - 1;
+    N_BS = 2;
+    N_SS = 0;
+  } else if (nB === 3 && nS === 2) {
+    // 3+2 (B-B-S-B-S)
+    N_BB = 1;
+    N_BS = 4;
+    N_SS = 0;
+  } else if (nB === 3 && nS === 3) {
+    // 3+3 (B-S-B-S-B-S)
+    N_BB = 0;
+    N_BS = 6;
+    N_SS = 0;
+  } else {
+    // Fallback for other mixed configurations
+    if (nB >= nS) {
+      N_BS = 2 * nS;
+      N_BB = nB - nS;
+      N_SS = 0;
+    } else {
+      N_BS = 2 * nB;
+      N_SS = nS - nB;
+      N_BB = 0;
+    }
+  }
+
+  let minRc = Math.max(R, r, (R+r)/2) + 1e-6;
+  if (N_BB > 0) minRc = Math.max(minRc, R + 1e-6);
+  if (N_BS > 0) minRc = Math.max(minRc, (R+r)/2 + 1e-6);
+  if (N_SS > 0) minRc = Math.max(minRc, r + 1e-6);
+
+  let maxRc = (nB * D + nS * d) / 2; // Perimeter approximation
+  if (maxRc < minRc) maxRc = minRc + 10;
+
+  const f = (Rc: number) => {
+    let sum = 0;
+    if (N_BB > 0) sum += N_BB * Math.asin(Math.min(1, R / Rc));
+    if (N_BS > 0) sum += N_BS * Math.asin(Math.min(1, (R + r) / (2 * Rc)));
+    if (N_SS > 0) sum += N_SS * Math.asin(Math.min(1, r / Rc));
+    return sum - Math.PI;
+  };
+
+  let low = minRc;
+  let high = maxRc;
+  let Rc = (low + high) / 2;
+
+  for (let i = 0; i < 50; i++) {
+    Rc = (low + high) / 2;
+    const val = f(Rc);
+    if (Math.abs(val) < 1e-6) break;
+    if (val > 0) {
+      low = Rc; // sum > pi, meaning Rc is too small
+    } else {
+      high = Rc; // sum < pi, meaning Rc is too large
+    }
+  }
+
+  const singleCircleDia = 2 * (Rc + Math.max(R, r));
+
+  // 2. Groove Model (large cores touch each other, small cores sit in the outer interstices)
+  let grooveDia = Infinity;
+  if (nS <= nB && nB >= 2) {
+    // Circumcircle radius of the large cores touching each other
+    const R_nB = nB === 2 ? R : R / Math.sin(Math.PI / nB);
+    
+    // Distance from center to the center of a small core in the groove
+    const cosTerm = nB === 2 ? 0 : Math.cos(Math.PI / nB);
+    const y_small = R_nB * cosTerm + Math.sqrt(Math.pow(R + r, 2) - Math.pow(R, 2));
+    
+    // The overall radius is the maximum of the large cores' outer edge and the small cores' outer edge
+    const maxRadius = Math.max(R_nB + R, y_small + r);
+    grooveDia = 2 * maxRadius;
+  }
+
+  if (model === 'Single Circle') return singleCircleDia;
+  if (model === 'Groove') return grooveDia === Infinity ? singleCircleDia : grooveDia;
+  
+  // Auto: The cable will naturally assume the most compact configuration
+  return Math.min(singleCircleDia, grooveDia);
 }
 
 export interface CoreSpec {
@@ -1182,11 +1286,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 3. Laying up
   const totalCores = effectiveParams.cores + earthingCores;
-  let laidUpFactor = getLayingUpFactor(totalCores);
   
-  // If earthing cores are present and smaller, we use the phase core diameter for laying up
-  // but the factor is based on total cores. This is a common approximation.
-  let laidUpDiameter = effectiveParams.manualLaidUpDiameter || (totalCores === 1 ? diameterOverScreen : diameterOverScreen * laidUpFactor);
+  let laidUpDiameter = effectiveParams.manualLaidUpDiameter;
+  
+  if (!laidUpDiameter) {
+    if (earthingCores > 0 && earthingCoreDiameter < diameterOverScreen) {
+      laidUpDiameter = calculateMixedLayingUpDiameter(diameterOverScreen, earthingCoreDiameter, effectiveParams.cores, earthingCores, effectiveParams.cablingModel);
+    } else {
+      let laidUpFactor = getLayingUpFactor(totalCores);
+      laidUpDiameter = totalCores === 1 ? diameterOverScreen : diameterOverScreen * laidUpFactor;
+    }
+  }
   
   // Instrumentation Formation Logic
   let formationDiameter = coreDiameter;
