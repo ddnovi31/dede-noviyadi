@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search } from 'lucide-react';
 import {
   calculateCable,
   CABLE_DATA,
@@ -179,6 +179,7 @@ export default function CableDesigner() {
   const [printingGroupId, setPrintingGroupId] = useState<number | null>(null);
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState('New Project');
   const [projectNumber, setProjectNumber] = useState('');
@@ -329,6 +330,7 @@ export default function CableDesigner() {
   };
 
   const handleLoadProjects = async () => {
+    setProjectSearchQuery('');
     if (dbFileHandle) {
       try {
         const file = await dbFileHandle.getFile();
@@ -3224,46 +3226,78 @@ export default function CableDesigner() {
                 <Plus className="w-5 h-5 rotate-45" />
               </button>
             </div>
+            <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Cari nama atau nomor project..."
+                  value={projectSearchQuery}
+                  onChange={(e) => setProjectSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
+                />
+              </div>
+            </div>
             <div className="p-6 overflow-y-auto flex-1">
-              {savedProjects.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Database className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                  <p>No saved projects found in SQL database.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {savedProjects.map((project) => (
-                    <div key={project.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group">
-                      <div>
-                        <h4 className="font-bold text-slate-900">{project.name || 'Untitled Project'}</h4>
-                        {project.projectNumber && (
-                          <div className="text-xs font-semibold text-indigo-600 mt-0.5">No: {project.projectNumber}</div>
-                        )}
-                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
-                          <span>{project.items.length} items</span>
-                          <span>•</span>
-                          <span>{new Date(project.updatedAt).toLocaleString('id-ID')}</span>
+              {(() => {
+                const filteredProjects = savedProjects.filter(p => 
+                  (p.name || '').toLowerCase().includes(projectSearchQuery.toLowerCase()) ||
+                  (p.projectNumber || '').toLowerCase().includes(projectSearchQuery.toLowerCase())
+                );
+
+                if (savedProjects.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-slate-500">
+                      <Database className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                      <p>No saved projects found in SQL database.</p>
+                    </div>
+                  );
+                }
+
+                if (filteredProjects.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-slate-500">
+                      <Search className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                      <p>Tidak ada project yang cocok dengan pencarian.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {filteredProjects.map((project) => (
+                      <div key={project.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group">
+                        <div>
+                          <h4 className="font-bold text-slate-900">{project.name || 'Untitled Project'}</h4>
+                          {project.projectNumber && (
+                            <div className="text-xs font-semibold text-indigo-600 mt-0.5">No: {project.projectNumber}</div>
+                          )}
+                          <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                            <span>{project.items.length} items</span>
+                            <span>•</span>
+                            <span>{new Date(project.updatedAt).toLocaleString('id-ID')}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleOpenProject(project)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                          >
+                            Open
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleOpenProject(project)}
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
-                        >
-                          Open
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProject(project.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete Project"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
