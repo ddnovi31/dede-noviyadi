@@ -3094,16 +3094,11 @@ export default function CableDesigner() {
                         <td className="border border-slate-400 p-2 text-center"></td>
                         <td className="border border-slate-400 p-2 pl-4">- Max. Short Circuit Rating of Conductor</td>
                         <td className="border border-slate-400 p-2 text-center">kA / sec</td>
-                        {items.map((item, idx) => {
-                          const isXLPE = p.insulationMaterial === 'XLPE' || p.insulationMaterial === 'EPR';
-                          const isCu = p.conductorMaterial === 'Cu';
-                          let k = 115;
-                          if (isCu) k = isXLPE ? 143 : 115;
-                          else k = isXLPE ? 94 : 76;
-                          
-                          const sc = (k * item.params.size) / 1000;
-                          return <td key={idx} className="border border-slate-400 p-2 text-center">{sc.toFixed(2)}</td>;
-                        })}
+                        {items.map((item, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            {item.result.electrical.shortCircuitCapacity.toFixed(2)}
+                          </td>
+                        ))}
                       </tr>
                     )}
                   </tbody>
@@ -5631,6 +5626,7 @@ export default function CableDesigner() {
                 
                 <div className="space-y-3">
                   <SpecRow label="Max DC Resistance @ 20°C" value={result.electrical.maxDcResistance} unit="Ω/km" precision={4} />
+                  <SpecRow label="Short Circuit Capacity (1s)" value={result.electrical.shortCircuitCapacity} unit="kA" precision={2} />
                   <div className="flex justify-between items-center py-1 text-sm text-slate-600">
                     <span>Test Voltage (5 min)</span>
                     <span className="font-mono text-slate-900">{result.electrical.testVoltage}</span>

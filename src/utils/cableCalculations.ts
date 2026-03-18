@@ -547,6 +547,7 @@ export interface CalculationResult {
     currentCapacityGround: number;
     voltageRating: string;
     testVoltage: string;
+    shortCircuitCapacity: number;
   };
   general: {
     maxOperatingTemp: number;
@@ -558,21 +559,26 @@ export interface CalculationResult {
 }
 
 const RESISTANCE_CU: Record<number, number> = {
-  0.5: 36.0, 0.75: 24.5, 1: 18.1, 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 
+  0.5: 36, 0.75: 24.5, 1: 18.1, 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 
   70: 0.268, 95: 0.193, 120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601, 
-  400: 0.0470, 500: 0.0366, 630: 0.0283
+  400: 0.047, 500: 0.0366, 630: 0.0283, 800: 0.0221, 1000: 0.0176
 };
 
 const RESISTANCE_TCU: Record<number, number> = {
-  0.5: 36.7, 0.75: 24.8, 1: 18.2, 1.5: 12.2, 2.5: 7.56, 4: 4.70, 6: 3.11, 10: 1.84, 16: 1.16, 25: 0.734, 35: 0.529, 50: 0.391, 
-  70: 0.270, 95: 0.195, 120: 0.154, 150: 0.126, 185: 0.100, 240: 0.0762, 300: 0.0607, 
-  400: 0.0475, 500: 0.0369, 630: 0.0286
+  0.5: 36.70, 0.75: 24.80, 1: 18.20, 1.5: 12.20, 2.5: 7.56, 4: 4.70, 6: 3.11, 10: 1.84, 16: 1.16, 25: 0.73, 35: 0.53, 50: 0.39, 
+  70: 0.27, 95: 0.20, 120: 0.15, 150: 0.13, 185: 0.10, 240: 0.08, 300: 0.06, 
+  400: 0.05, 500: 0.04, 630: 0.03
 };
 
 const RESISTANCE_CU_CLASS5: Record<number, number> = {
-  0.5: 39.0, 0.75: 26.0, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.30, 10: 1.91, 16: 1.21, 
-  25: 0.780, 35: 0.554, 50: 0.386, 70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 
-  185: 0.106, 240: 0.0801, 300: 0.0641, 400: 0.0486, 500: 0.0384, 630: 0.0287
+  0.5: 39, 0.75: 26, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.3, 10: 1.91, 16: 1.21, 25: 0.78, 35: 0.554, 50: 0.386, 
+  70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 185: 0.106, 240: 0.0801, 300: 0.0641, 
+  400: 0.0486, 500: 0.0384, 630: 0.0287
+};
+
+const RESISTANCE_AL: Record<number, number> = {
+  4: 7.41, 6: 4.61, 10: 3.08, 16: 1.91, 25: 1.2, 35: 0.868, 50: 0.641, 70: 0.443, 95: 0.32, 120: 0.253, 150: 0.206, 185: 0.164, 
+  240: 0.125, 300: 0.1, 400: 0.0778, 500: 0.0605, 630: 0.0469
 };
 
 const RESISTANCE_TCU_CLASS5: Record<number, number> = {
@@ -823,6 +829,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else {
       maxDcResistance = RESISTANCE_TCU[effectiveParams.size] || 0;
     }
+  } else if (effectiveParams.conductorMaterial === 'Al') {
+    maxDcResistance = RESISTANCE_AL[effectiveParams.size] || (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   } else {
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
@@ -1911,6 +1919,25 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     testVoltage = effectiveParams.voltage.includes('300/500') ? '2 kV' : '1.5 kV';
   }
 
+  // Short Circuit Calculation
+  let shortCircuitCapacity = 0;
+  const isCopper = effectiveParams.conductorMaterial === 'Cu' || effectiveParams.conductorMaterial === 'TCu';
+  const resistivity = isCopper ? 17.241 : 28.264;
+  let k = 0;
+
+  if (effectiveParams.insulationMaterial === 'XLPE') {
+    k = isCopper ? 142 : 96;
+  } else { // PVC
+    k = 115;
+  }
+
+  // Formula: K * (Resistivity / (maxDcResistance / 1.003) * 1.01) / 1000
+  // Based on Excel: k * (resistivity / (maxDcResistance / 1.003) * 1.01) / 1000 / sqrt(time)
+  // time = 1s
+  if (maxDcResistance > 0) {
+    shortCircuitCapacity = k * (resistivity / (maxDcResistance / 1.003) * 1.01) / 1000;
+  }
+
   // General
   const maxOperatingTemp = effectiveParams.insulationMaterial === 'XLPE' ? 90 : 70;
   const shortCircuitTemp = effectiveParams.insulationMaterial === 'XLPE' ? 250 : 160;
@@ -2023,6 +2050,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       currentCapacityGround: Number(currentCapacityGround.toFixed(0)),
       voltageRating: displayVoltage,
       testVoltage: testVoltage,
+      shortCircuitCapacity: Number(shortCircuitCapacity.toFixed(2)),
     },
     general: {
       maxOperatingTemp,
