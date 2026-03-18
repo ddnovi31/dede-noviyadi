@@ -986,6 +986,15 @@ export default function CableDesigner() {
   };
 
   const handleCreateLocalDB = async () => {
+    // Check if we are in an iframe or if showSaveFilePicker is not supported
+    const isIframe = window.self !== window.top;
+    const supportsPicker = 'showSaveFilePicker' in window;
+
+    if (isIframe || !supportsPicker) {
+      alert('Fitur ini memerlukan akses sistem file yang tidak tersedia di dalam iframe. Silakan buka aplikasi di tab baru untuk menggunakan database lokal, atau gunakan database SQL.');
+      return;
+    }
+
     try {
       const handle = await (window as any).showSaveFilePicker({
         suggestedName: 'cabledesign.db',
@@ -1010,7 +1019,58 @@ export default function CableDesigner() {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const createDbInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownloadLocalDB = () => {
+    if (savedProjects.length === 0) {
+      alert('Tidak ada data untuk diunduh.');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(savedProjects)], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cabledesign.db';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleOpenLocalDBFallback = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const contents = event.target?.result as string;
+      try {
+        const data = JSON.parse(contents);
+        if (Array.isArray(data)) {
+          setSavedProjects(data.sort((a: any, b: any) => b.updatedAt - a.updatedAt));
+          setShowProjectsModal(true);
+          alert('Database loaded (Read-only mode). To save changes, use the Download button.');
+        } else {
+          alert('Format file database tidak valid.');
+        }
+      } catch (e) {
+        alert('File database rusak atau tidak valid.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleOpenLocalDB = async () => {
+    // Check if we are in an iframe or if showOpenFilePicker is not supported
+    const isIframe = window.self !== window.top;
+    const supportsPicker = 'showOpenFilePicker' in window;
+
+    if (isIframe || !supportsPicker) {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+      return;
+    }
+
     try {
       const [handle] = await (window as any).showOpenFilePicker({
         types: [{
@@ -3158,6 +3218,14 @@ export default function CableDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      {/* Hidden file input for Local DB Fallback */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".db" 
+        onChange={handleOpenLocalDBFallback} 
+      />
       {/* SQL Connection Modal */}
       {showSqlModal && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -5214,7 +5282,9 @@ export default function CableDesigner() {
                         <p className="text-xs text-slate-500 mb-4">
                           {dbFileHandle 
                             ? `Terkoneksi dengan: ${dbFileHandle.name}. Setiap kali Anda menyimpan proyek, data akan otomatis disimpan ke file ini.`
-                            : 'Buat atau buka file cabledesign.db untuk menyimpan proyek secara lokal di komputer Anda.'}
+                            : (window.self !== window.top)
+                              ? 'Di dalam preview, gunakan "Buka Database" untuk memuat file .db dan "Download Database" untuk menyimpan perubahan Anda.'
+                              : 'Buat atau buka file cabledesign.db untuk menyimpan proyek secara lokal di komputer Anda.'}
                         </p>
                         <div className="flex flex-col gap-2">
                           <button
@@ -5230,6 +5300,13 @@ export default function CableDesigner() {
                           >
                             <FolderOpen className="w-4 h-4 text-emerald-600" />
                             Buka Database (.db)
+                          </button>
+                          <button
+                            onClick={handleDownloadLocalDB}
+                            className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <Download className="w-4 h-4 text-indigo-600" />
+                            Download Database (.db)
                           </button>
                         </div>
                       </div>
