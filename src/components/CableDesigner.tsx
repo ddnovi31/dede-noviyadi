@@ -1712,9 +1712,6 @@ export default function CableDesigner() {
     const armor = p.armorType === 'Unarmored' ? '' : `/${p.armorType}`;
     
     let sizeDesignation = `${p.cores} x ${p.size}`;
-    if (p.cores === 1 && p.layout) {
-      sizeDesignation += ` (${p.layout})`;
-    }
     if (p.hasEarthing && p.earthingCores && p.earthingCores > 0 && p.earthingSize && p.earthingSize > 0) {
       if (p.earthingCores === 1) {
         sizeDesignation += ` + ${p.earthingSize}`;
@@ -2533,6 +2530,7 @@ export default function CableDesigner() {
                         <td key={idx} className="border border-slate-400 p-2 text-center">
                           {p.conductorType === 're' ? 'Round Solid' : 
                            p.conductorType === 'rm' ? 'Round Stranded' : 
+                           p.conductorType === 'cm' ? 'Compacted Stranded' : 
                            p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} ({p.conductorType})
                         </td>
                       ))}
@@ -2640,6 +2638,7 @@ export default function CableDesigner() {
                             <td key={idx} className="border border-slate-400 p-2 text-center">
                               {p.conductorType === 're' ? 'Round Solid' : 
                                p.conductorType === 'rm' ? 'Round Stranded' : 
+                               p.conductorType === 'cm' ? 'Compacted Stranded' : 
                                p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} ({p.conductorType})
                             </td>
                           ))}
@@ -3055,7 +3054,7 @@ export default function CableDesigner() {
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
-                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity at 30°C</td>
+                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity{p.standard === 'IEC 60502-1' ? ' at 30°C' : ''}</td>
                         <td className="border border-slate-400 p-2 text-center"></td>
                         {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                       </tr>
@@ -3063,14 +3062,18 @@ export default function CableDesigner() {
                     {p.standard !== 'BS EN 50288-7' && (
                       <>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-8">In Ground</td>
+                          <td className="border border-slate-400 p-2 pl-8">
+                            {p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`}
+                          </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
                             <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
                           ))}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-8">In Air</td>
+                          <td className="border border-slate-400 p-2 pl-8">
+                            {p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : ''}`}
+                          </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
                             <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
@@ -3691,26 +3694,6 @@ export default function CableDesigner() {
                             className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100"
                           />
                         </div>
-                        {params.cores === 1 && (
-                          <div className="mt-4">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Layout</label>
-                            <div className="flex gap-2">
-                              {(['Trefoil', 'Flat Touching'] as const).map((l) => (
-                                <button
-                                  key={l}
-                                  onClick={() => handleParamChange('layout', l)}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    params.layout === l 
-                                      ? 'bg-indigo-600 text-white shadow-sm' 
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  {l}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                         {params.standard === 'BS EN 50288-7' && (
                           <p className="text-[10px] text-indigo-600 mt-1 font-medium italic">
                             {params.formationType === 'Pair' ? `(Equals ${params.cores / 2} Pairs)` : params.formationType === 'Triad' ? `(Equals ${Math.floor(params.cores / 3)} Triads)` : ''}
@@ -3993,7 +3976,7 @@ export default function CableDesigner() {
                                     ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                 }`}
-                                title={type === 're' ? 'Solid Circular' : type === 'rm' ? 'Stranded Circular' : type === 'cm' ? 'Compacted Stranded' : type === 'sm' ? 'Sector Stranded' : 'Flexible Class 5'}
+                                title={type === 're' ? 'Solid Circular' : type === 'rm' ? 'Stranded Circular' : type === 'cm' ? 'Compacted Stranded (cm)' : type === 'sm' ? 'Sector Stranded' : 'Flexible Class 5'}
                               >
                                 {type === 're' ? 're' : type === 'rm' ? 'rm' : type === 'cm' ? 'cm' : type === 'sm' ? 'sm' : 'f'}
                               </button>
@@ -5647,16 +5630,31 @@ export default function CableDesigner() {
                   {params.standard !== 'BS EN 50288-7' && (
                     <>
                       <SpecRow 
-                        label={params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)' ? "Current Carrying Capacity (KHA)" : "Current Capacity (In Air)"} 
+                        label={
+                          params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)' 
+                            ? "Current Carrying Capacity (KHA)" 
+                            : (params.standard === 'IEC 60502-1' && params.cores === 1)
+                              ? "Flat Touching"
+                              : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
+                        } 
                         value={result.electrical.currentCapacityAir} 
                         unit="A" 
                         precision={0} 
                       />
                       {!(params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)') && (
-                        <SpecRow label="Current Capacity (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                        <SpecRow 
+                          label={
+                            (params.standard === 'IEC 60502-1' && params.cores === 1)
+                              ? "Trefoil"
+                              : `Current Capacity (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`
+                          } 
+                          value={result.electrical.currentCapacityGround} 
+                          unit="A" 
+                          precision={0} 
+                        />
                       )}
                       {params.standard === 'SPLN 43-4 (NYCY)' && (
-                        <SpecRow label="KHA (In Ground)" value={result.electrical.currentCapacityGround} unit="A" precision={0} />
+                        <SpecRow label={`KHA (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`} value={result.electrical.currentCapacityGround} unit="A" precision={0} />
                       )}
                     </>
                   )}

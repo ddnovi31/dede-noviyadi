@@ -1,5 +1,6 @@
 import { evaluate } from 'mathjs';
 import { KHA_DATA, KHA_CORRECTION_FACTORS } from './khaData';
+import { MV_KHA_DATA } from './mvKhaData';
 
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
@@ -880,6 +881,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     return (khaEntry as any)[key] || 0;
   };
 
+  // Helper function to find MV KHA
+  const getMvKhaValue = (cores: number, size: number, material: string, armorType: string, installation: 'air' | 'ground') => {
+    const isArmoured = armorType !== 'Unarmored';
+    const type = `${cores} Core ${isArmoured ? 'Armoured' : 'Unarmoured'}`;
+    const khaEntry = MV_KHA_DATA.find(entry => entry.type === type && entry.size === size);
+    if (!khaEntry) return 0;
+
+    const key = `${installation}${material === 'Cu' ? 'Cu' : 'Al'}` as keyof typeof khaEntry;
+    return (khaEntry as any)[key] || 0;
+  };
+
   // Helper function to find correction factor
   const getCorrectionFactor = (cores: number, installation: 'air' | 'ground') => {
     const factorEntry = KHA_CORRECTION_FACTORS.find(entry => entry.cores === cores);
@@ -891,14 +903,19 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let currentCapacityGround = 0;
 
   // Try to get KHA from new data
-  const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
-  const baseKhaGround = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'ground');
-  
-  const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
-  const correctionGround = getCorrectionFactor(effectiveParams.cores, 'ground');
+  if (effectiveParams.standard === 'IEC 60502-2') {
+    currentCapacityAir = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'air');
+    currentCapacityGround = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'ground');
+  } else {
+    const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
+    const baseKhaGround = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'ground');
+    
+    const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+    const correctionGround = getCorrectionFactor(effectiveParams.cores, 'ground');
 
-  currentCapacityAir = baseKhaAir * correctionAir;
-  currentCapacityGround = baseKhaGround * correctionGround;
+    currentCapacityAir = baseKhaAir * correctionAir;
+    currentCapacityGround = baseKhaGround * correctionGround;
+  }
 
   // ABC Specific Data Overrides
   const abcKey = `${effectiveParams.cores}x${effectiveParams.size}`;
