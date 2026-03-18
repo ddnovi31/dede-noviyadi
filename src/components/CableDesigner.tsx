@@ -2860,7 +2860,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Outer Sheath */}
-                    {hasOuterSheath && (
+                    {hasOuterSheath && !(p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
@@ -3054,7 +3054,7 @@ export default function CableDesigner() {
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
-                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity{p.standard === 'IEC 60502-1' ? ' at 30°C' : ''}</td>
+                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity{(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}</td>
                         <td className="border border-slate-400 p-2 text-center"></td>
                         {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                       </tr>
@@ -3063,7 +3063,7 @@ export default function CableDesigner() {
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`}
+                            {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`)}
                           </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
@@ -5643,7 +5643,9 @@ export default function CableDesigner() {
                             ? "Current Carrying Capacity (KHA)" 
                             : (params.standard === 'IEC 60502-1' && params.cores === 1)
                               ? "Flat Touching"
-                              : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
+                              : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
+                                ? "Current Capacity (In Air)"
+                                : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
                         } 
                         value={result.electrical.currentCapacityAir} 
                         unit="A" 
@@ -5654,7 +5656,9 @@ export default function CableDesigner() {
                           label={
                             (params.standard === 'IEC 60502-1' && params.cores === 1)
                               ? "Trefoil"
-                              : `Current Capacity (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`
+                              : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
+                                ? "Current Capacity (In Pipe)"
+                                : `Current Capacity (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`
                           } 
                           value={result.electrical.currentCapacityGround} 
                           unit="A" 
