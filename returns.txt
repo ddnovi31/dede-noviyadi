@@ -1,0 +1,117 @@
+157:      return {
+163:    return DEFAULT_PARAMS;
+169:      return window.innerWidth >= 1024;
+171:    return false;
+190:      return saved ? JSON.parse(saved) : null;
+192:    return null;
+221:      return;
+266:      return;
+285:            return;
+309:        return;
+318:      return;
+338:        return;
+347:      return;
+362:      return;
+399:      return [
+424:      return acc;
+451:      return d[material] || 1.44;
+576:          return colName;
+584:          return getColName(colIdx++);
+965:      return colWidths;
+1051:    if (!confirm('Are you sure you want to delete this project?')) return;
+1071:        return;
+1113:    if (isABC) return 'Black';
+1114:    if (isMV) return 'Standard';
+1118:        return pairs > 1 ? 'Black-White with numbering mark' : 'Black-White';
+1122:        return triads > 1 ? 'Black, White, Red with numbering mark' : 'Black, White, Red';
+1125:        return cores > 1 ? 'Black with numbering mark' : 'Black';
+1128:    if (cores === 1) return 'Black';
+1129:    if (cores === 2) return 'Blue, Black';
+1130:    if (cores === 3) return 'Brown, Black, Grey';
+1131:    if (cores === 4) return 'Blue, Brown, Black, Grey';
+1133:      if (hasEarthing) return 'Black with Numbering';
+1134:      return 'Blue, Brown, Black, Grey, Y/G';
+1136:    if (cores > 5) return 'Black with Numbering';
+1137:    return 'Standard (IEC)';
+1142:    return saved ? JSON.parse(saved) : INITIAL_DRUM_DATA;
+1151:    return saved ? JSON.parse(saved) : {
+1173:    return prices;
+1185:    return densities;
+1197:    return scrap;
+1202:    return saved ? JSON.parse(saved) : {};
+1244:    if (!newMaterialName.trim()) return;
+1254:      return;
+1337:      return;
+1343:      return;
+1671:      return newParams;
+1676:    if (!r) return '';
+1686:      return `${p.standard} ${construction} ${sizeStr} ${p.voltage}`;
+1690:      return `NFA2X-T ${p.cores} x ${p.size} + ${p.earthingSize} mm² ${r.electrical.voltageRating}`;
+1693:      return `NFA2X ${p.cores} x ${p.size} mm² ${r.electrical.voltageRating}`;
+1697:      return `${p.conductorMaterial}/${p.insulationMaterial} ${p.cores} x ${p.size} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
+1715:    return `${p.conductorMaterial}${fg}/${p.insulationMaterial}${mvScreen}${overallScreen}${separator}${armor}/${p.sheathMaterial} ${sizeDesignation} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
+1719:    return [
+1743:    if (!result) return;
+1771:    if (!result) return;
+1777:          return;
+1842:    return breakdown;
+1858:      return volA - volB;
+1887:    return {
+1905:    return hppWithPacking * overheadFactor;
+1911:    return Math.round(price / 10) * 10;
+1920:      return acc + calculateSellingPrice(hpp, item.params.margin);
+1927:      return acc;
+1940:    return (
+2124:                    return (
+2142:                            return (
+2233:                  return acc;
+2264:                  return acc;
+2290:                  return acc;
+2306:                  return acc + calculateSellingPrice(hpp, item.params.margin);
+2311:                return (
+2379:            return (
+2438:                          return (
+2474:                        return (
+2588:                          return (
+2783:                            return (
+2881:                            return (
+2941:                        return (
+2973:                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.standardLength}</td>;
+2982:                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.diameterWithCover}</td>;
+2991:                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.innerWidth}</td>;
+3000:                        return (
+3019:                        return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(cableWeight + packing.selectedDrum.weight)}</td>;
+3083:                          return <td key={idx} className="border border-slate-400 p-2 text-center">{sc.toFixed(2)}</td>;
+3104:  if (!result) return null;
+3110:  return (
+3530:                              return (
+3669:                            return cores.map((c) => (
+3703:                              return s >= 0.5 && s <= 2.5;
+3706:                              return s >= 25;
+3709:                              return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+3712:                              return [0.75, 1, 1.5, 2.5].includes(s);
+3715:                              return [1.5, 2.5, 4, 6, 10, 16].includes(s);
+3718:                              if (params.cores === 2) return [35, 50, 70].includes(s);
+3719:                              if (params.cores === 3) return [35, 50, 70, 95, 120].includes(s);
+3720:                              return false;
+3723:                              if (params.cores === 2) return [10, 16].includes(s);
+3724:                              if (params.cores === 4) return [10, 16, 25, 35].includes(s);
+3725:                              return false;
+3728:                              return s >= 10;
+3730:                            return params.cores <= 5 || s <= 10;
+3874:                            return availableConductors.map((mat) => {
+3878:                              return (
+3923:                            return (
+4020:                            return availableCompounds.map((mat) => {
+4026:                              return (
+4207:                                  return availableCompounds.map(mat => (
+4358:                                return availableCompounds.map(mat => (
+4521:                              return (
+4936:                          if (categoryMaterials.length === 0) return null;
+4937:                          return (
+5413:                  return (
+5678:                        return (
+5836:  if (!detail || (detail.weight === 0 && !customFormulas?.[formulaKey])) return null;
+5852:  return (
+5898:  return (
+5927:  return (

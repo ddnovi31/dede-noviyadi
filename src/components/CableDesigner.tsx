@@ -18,6 +18,7 @@ import {
   NYCY_DATA,
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
+import { safeLocalStorage } from '../utils/safeLocalStorage';
 import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle } from '../lib/db';
 import * as XLSX from 'xlsx-js-style';
 
@@ -152,8 +153,8 @@ const DEFAULT_PARAMS: CableDesignParams = {
 export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>(() => {
     if (typeof window !== 'undefined') {
-      const savedMargin = localStorage.getItem('cable_default_margin');
-      const savedOverhead = localStorage.getItem('cable_default_overhead');
+      const savedMargin = safeLocalStorage.getItem('cable_default_margin');
+      const savedOverhead = safeLocalStorage.getItem('cable_default_overhead');
       return {
         ...DEFAULT_PARAMS,
         margin: savedMargin ? parseFloat(savedMargin) : DEFAULT_PARAMS.margin,
@@ -186,7 +187,7 @@ export default function CableDesigner() {
   const [dbFileHandle, setDbFileHandle] = useState<any>(null);
   const [sqlConfig, setSqlConfig] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cable_sql_config');
+      const saved = safeLocalStorage.getItem('cable_sql_config');
       return saved ? JSON.parse(saved) : null;
     }
     return null;
@@ -201,7 +202,7 @@ export default function CableDesigner() {
     setTimeout(async () => {
       setIsConnecting(false);
       setSqlConfig(sqlForm);
-      localStorage.setItem('cable_sql_config', JSON.stringify(sqlForm));
+      safeLocalStorage.setItem('cable_sql_config', JSON.stringify(sqlForm));
       setShowSqlModal(false);
       
       // Automatically create database (simulate by calling initDB)
@@ -1138,16 +1139,16 @@ export default function CableDesigner() {
   };
 
   const [drumData, setDrumData] = useState<DrumData[]>(() => {
-    const saved = localStorage.getItem('cable_drum_data');
+    const saved = safeLocalStorage.getItem('cable_drum_data');
     return saved ? JSON.parse(saved) : INITIAL_DRUM_DATA;
   });
 
   useEffect(() => {
-    localStorage.setItem('cable_drum_data', JSON.stringify(drumData));
+    safeLocalStorage.setItem('cable_drum_data', JSON.stringify(drumData));
   }, [drumData]);
 
   const [lmeParams, setLmeParams] = useState(() => {
-    const saved = localStorage.getItem('cable_lme_params');
+    const saved = safeLocalStorage.getItem('cable_lme_params');
     return saved ? JSON.parse(saved) : {
       lmeCu: 0,
       premiumCu: 0,
@@ -1158,11 +1159,11 @@ export default function CableDesigner() {
   });
 
   useEffect(() => {
-    localStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
+    safeLocalStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
   }, [lmeParams]);
 
   const [materialPrices, setMaterialPrices] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('cable_material_prices');
+    const saved = safeLocalStorage.getItem('cable_material_prices');
     const prices = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_PRICES };
     // Merge with defaults to ensure new materials are added
     Object.keys(DEFAULT_MATERIAL_PRICES).forEach(key => {
@@ -1174,7 +1175,7 @@ export default function CableDesigner() {
   });
 
   const [materialDensities, setMaterialDensities] = useState<MaterialDensities>(() => {
-    const saved = localStorage.getItem('cable_material_densities');
+    const saved = safeLocalStorage.getItem('cable_material_densities');
     const densities = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_DENSITIES };
     // Merge with defaults to ensure new materials are added
     Object.keys(DEFAULT_MATERIAL_DENSITIES).forEach(key => {
@@ -1186,7 +1187,7 @@ export default function CableDesigner() {
   });
 
   const [materialScrap, setMaterialScrap] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('cable_material_scrap');
+    const saved = safeLocalStorage.getItem('cable_material_scrap');
     const scrap = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_SCRAP };
     // Merge with defaults to ensure new materials are added
     Object.keys(DEFAULT_MATERIAL_SCRAP).forEach(key => {
@@ -1198,7 +1199,7 @@ export default function CableDesigner() {
   });
 
   const [materialCategories, setMaterialCategories] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem('cable_material_categories');
+    const saved = safeLocalStorage.getItem('cable_material_categories');
     return saved ? JSON.parse(saved) : {};
   });
 
@@ -1219,13 +1220,13 @@ export default function CableDesigner() {
   };
 
   const saveMaterialSettings = () => {
-    localStorage.setItem('cable_material_prices', JSON.stringify(materialPrices));
-    localStorage.setItem('cable_material_densities', JSON.stringify(materialDensities));
-    localStorage.setItem('cable_material_scrap', JSON.stringify(materialScrap));
-    localStorage.setItem('cable_material_categories', JSON.stringify(materialCategories));
-    localStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
-    localStorage.setItem('cable_default_margin', params.margin?.toString() || '0');
-    localStorage.setItem('cable_default_overhead', params.overhead?.toString() || '0');
+    safeLocalStorage.setItem('cable_material_prices', JSON.stringify(materialPrices));
+    safeLocalStorage.setItem('cable_material_densities', JSON.stringify(materialDensities));
+    safeLocalStorage.setItem('cable_material_scrap', JSON.stringify(materialScrap));
+    safeLocalStorage.setItem('cable_material_categories', JSON.stringify(materialCategories));
+    safeLocalStorage.setItem('cable_lme_params', JSON.stringify(lmeParams));
+    safeLocalStorage.setItem('cable_default_margin', params.margin?.toString() || '0');
+    safeLocalStorage.setItem('cable_default_overhead', params.overhead?.toString() || '0');
     
     // Simple feedback
     const btn = document.activeElement as HTMLButtonElement;
@@ -1292,13 +1293,13 @@ export default function CableDesigner() {
         setMaterialCategories({});
         setLmeParams({ lmeCu: 0, premiumCu: 0, lmeAl: 0, premiumAl: 0, kurs: 16000 });
         
-        localStorage.removeItem('cable_material_prices');
-        localStorage.removeItem('cable_material_densities');
-        localStorage.removeItem('cable_material_scrap');
-        localStorage.removeItem('cable_material_categories');
-        localStorage.removeItem('cable_lme_params');
-        localStorage.removeItem('cable_default_margin');
-        localStorage.removeItem('cable_default_overhead');
+        safeLocalStorage.removeItem('cable_material_prices');
+        safeLocalStorage.removeItem('cable_material_densities');
+        safeLocalStorage.removeItem('cable_material_scrap');
+        safeLocalStorage.removeItem('cable_material_categories');
+        safeLocalStorage.removeItem('cable_lme_params');
+        safeLocalStorage.removeItem('cable_default_margin');
+        safeLocalStorage.removeItem('cable_default_overhead');
         
         setConfirmModal(prev => ({ ...prev, show: false }));
       },
@@ -1308,10 +1309,17 @@ export default function CableDesigner() {
 
   const isInstrumentationPairTriad = params.standard === 'BS EN 50288-7' && (params.formationType === 'Pair' || params.formationType === 'Triad');
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [calcError, setCalcError] = useState<string | null>(null);
 
   useEffect(() => {
-    const res = calculateCable(params, materialDensities, materialScrap);
-    setResult(res);
+    try {
+      const res = calculateCable(params, materialDensities, materialScrap);
+      setResult(res);
+      setCalcError(null);
+    } catch (e) {
+      console.error("Error calculating cable:", e);
+      setCalcError(e instanceof Error ? e.message : String(e));
+    }
   }, [params, materialDensities, materialScrap]);
 
   const handleLmeChange = (field: keyof typeof lmeParams, value: number) => {
@@ -3101,7 +3109,37 @@ export default function CableDesigner() {
     );
   }
 
-  if (!result) return null;
+  if (calcError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Calculation Error</h2>
+          <p className="text-red-600 bg-red-50 p-4 rounded-xl text-sm break-words">{calcError}</p>
+          <button 
+            onClick={() => handleResetToDefault()}
+            className="mt-6 px-6 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors"
+          >
+            Reset to Defaults
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-bold text-slate-900">Calculating Cable Design...</h2>
+          <p className="text-slate-500 mt-2">Please wait or check console for errors.</p>
+        </div>
+      </div>
+    );
+  }
 
   const isIEC60502_1 = params.standard === 'IEC 60502-1';
   const isNYCY = params.standard === 'SPLN 43-4 (NYCY)';
