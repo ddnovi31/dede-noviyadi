@@ -167,3 +167,21 @@ export const KHA_CORRECTION_FACTORS = [
   { cores: 99, ground: 0.25, air: 0.3 },
   { cores: 100, ground: 0.25, air: 0.3 }
 ];
+
+export const NYM_KHA_DATA = [
+  { size: 1.5, cores2_30: 19, cores2_40: 16, cores3_30: 19, cores3_40: 16, cores4_30: 19, cores4_40: 16 },
+  { size: 2.5, cores2_30: 25, cores2_40: 22, cores3_30: 25, cores3_40: 22, cores4_30: 25, cores4_40: 22 },
+  { size: 4, cores2_30: 34, cores2_40: 30, cores3_30: 34, cores3_40: 30, cores4_30: 34, cores4_40: 30 },
+  { size: 6, cores2_30: 44, cores2_40: 39, cores3_30: 44, cores3_40: 39, cores4_30: 44, cores4_40: 39 },
+  { size: 10, cores2_30: 61, cores2_40: 53, cores3_30: 61, cores3_40: 53, cores4_30: 61, cores4_40: 53 },
+  { size: 16, cores2_30: 82, cores2_40: 71, cores3_30: 82, cores3_40: 71, cores4_30: 82, cores4_40: 71 },
+  { size: 25, cores2_30: 108, cores2_40: 94, cores3_30: 108, cores3_40: 94, cores4_30: 108, cores4_40: 94 },
+  { size: 35, cores2_30: 134, cores2_40: 117, cores3_30: 134, cores3_40: 117, cores4_30: 134, cores4_40: 117 }
+];
+
+export const NYMHY_KHA_DATA = [
+  { size: 0.75, cores2_30: 12, cores2_40: 10, cores3_30: 12, cores3_40: 10, cores4_30: 12, cores4_40: 10, cores5_30: 12, cores5_40: 10 },
+  { size: 1, cores2_30: 15, cores2_40: 13, cores3_30: 15, cores3_40: 13, cores4_30: 15, cores4_40: 13, cores5_30: 15, cores5_40: 13 },
+  { size: 1.5, cores2_30: 18, cores2_40: 15, cores3_30: 18, cores3_40: 15, cores4_30: 18, cores4_40: 15, cores5_30: 18, cores5_40: 15 },
+  { size: 2.5, cores2_30: 26, cores2_40: 22, cores3_30: 26, cores3_40: 22, cores4_30: 26, cores4_40: 22, cores5_30: 26, cores5_40: 22 }
+];

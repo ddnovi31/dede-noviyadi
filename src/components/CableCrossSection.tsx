@@ -142,8 +142,9 @@ export default function CableCrossSection({
   let outerSheathColor = '#1e293b'; // Default dark
   if (isMV) outerSheathColor = '#ef4444'; // Red for MV
   if (hasMgt) outerSheathColor = '#f97316'; // Orange for Fireguard
+  if (standard.includes('(NYM)')) outerSheathColor = '#f8fafc'; // White for NYM
   
-  const sheathGradientStart = isMV ? '#ff6b6b' : (hasMgt ? '#fb923c' : '#334155');
+  const sheathGradientStart = isMV ? '#ff6b6b' : (hasMgt ? '#fb923c' : (standard.includes('(NYM)') ? '#ffffff' : '#334155'));
 
   return (
     <div className="flex justify-center items-center">

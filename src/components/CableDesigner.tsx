@@ -1597,17 +1597,21 @@ export default function CableDesigner() {
           if (newParams.standard.includes('(NYM)')) {
             newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
-            if (newParams.cores > 5) newParams.cores = 5;
+            if (newParams.cores > 4) newParams.cores = 4;
             if (newParams.size < 1.5) newParams.size = 1.5;
-            if (newParams.size > 16) newParams.size = 16;
+            if (newParams.size > 35) newParams.size = 35;
             newParams.voltage = '300/500 V';
             newParams.sheathMaterial = 'PVC';
             newParams.innerSheathMaterial = 'PVC';
             newParams.hasInnerSheath = true;
             
-            // Conductor type based on table
-            if (newParams.size >= 16) {
-              newParams.conductorType = 'rm';
+            // Conductor type based on table - only auto-switch if size or standard changes
+            if (key === 'size' || key === 'standard') {
+              if (newParams.size <= 10) {
+                newParams.conductorType = 're';
+              } else {
+                newParams.conductorType = 'rm';
+              }
             }
           } else if (newParams.standard.includes('(NYAF)')) {
             newParams.hasEarthing = false;
@@ -2755,14 +2759,12 @@ export default function CableDesigner() {
                               <td className="border border-slate-400 p-2 text-center"></td>
                               <td className="border border-slate-400 p-2 pl-4">Individual Screen (IS)</td>
                               <td className="border border-slate-400 p-2 text-center">-</td>
-                              {items.map((_, idx) => (
-                                <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
-                                  Helically Overlapped Polyester Tape<br/>
-                                  Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
-                                  Helically overlapped single coated aluminium tape contacted with drain wire<br/>
-                                  Helically Overlapped Polyester Tape
-                                </td>
-                              ))}
+                              <td colSpan={items.length} className="border border-slate-400 p-2 text-center text-[10px]">
+                                Helically Overlapped Polyester Tape<br/>
+                                Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
+                                Helically overlapped single coated aluminium tape contacted with drain wire<br/>
+                                Helically Overlapped Polyester Tape
+                              </td>
                             </tr>
 
                           </>
@@ -2772,14 +2774,12 @@ export default function CableDesigner() {
                             <td className="border border-slate-400 p-2 text-center"></td>
                             <td className="border border-slate-400 p-2 pl-4">Overall Screen (OS)</td>
                             <td className="border border-slate-400 p-2 text-center">-</td>
-                            {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center text-[10px]">
-                                Helically Overlapped Polyester Tape<br/>
-                                Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
-                                Helically overlapped single coated aluminium tape contacted with drain wire<br/>
-                                Helically Overlapped Polyester Tape
-                              </td>
-                            ))}
+                            <td colSpan={items.length} className="border border-slate-400 p-2 text-center text-[10px]">
+                              Helically Overlapped Polyester Tape<br/>
+                              Tinned annealed copper wire 0.5 mm² (17/0.2)<br/>
+                              Helically overlapped single coated aluminium tape contacted with drain wire<br/>
+                              Helically Overlapped Polyester Tape
+                            </td>
                           </tr>
                         )}
                       </>
@@ -2948,7 +2948,7 @@ export default function CableDesigner() {
                           <td className="border border-slate-400 p-2 pl-4">- Colour of Outer Sheath</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           {items.map((_, idx) => {
-                            const defaultColor = p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black';
+                            const defaultColor = p.standard.includes('(NYM)') ? 'White' : p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black';
                             const editKey = `${groupKey}-outer-sheath-color-${idx}`;
                             return (
                               <td key={idx} className="border border-slate-400 p-2 text-center">
@@ -2977,50 +2977,51 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 text-center"></td>
                       <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
                       <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((item, idx) => {
-                        const editKey = `${groupKey}-marking-${idx}`;
-                        let stds = p.standard;
-                        if (p.fireguard) stds += ' IEC 60331';
-                        if (p.sheathMaterial.includes('PVC-FR')) {
-                          if (p.sheathMaterial.includes('CAT.A')) stds += ' IEC 60332-3-22';
-                          else if (p.sheathMaterial.includes('CAT.B')) stds += ' IEC 60332-3-23';
-                          else if (p.sheathMaterial.includes('CAT.C')) stds += ' IEC 60332-3-24';
-                          else stds += ' IEC 60332-1';
-                        }
-                        const construction = constructionName;
-                        
-                        let itemSizeDesignation = '';
-                        if (item.params.formationType === 'Pair') {
-                            const pairs = item.params.cores / 2;
-                            itemSizeDesignation = `${pairs} x 2 x ${item.params.size}`;
-                        } else if (item.params.formationType === 'Triad') {
-                            const triads = item.params.cores / 3;
-                            itemSizeDesignation = `${triads} x 3 x ${item.params.size}`;
-                        } else {
-                            itemSizeDesignation = `${item.params.cores} x ${item.params.size}`;
-                        }
-
-                        if (item.params.hasEarthing && item.params.earthingCores && item.params.earthingCores > 0 && item.params.earthingSize && item.params.earthingSize > 0) {
-                          if (item.params.earthingCores === 1) {
-                            itemSizeDesignation += ` + ${item.params.earthingSize}`;
-                          } else {
-                            itemSizeDesignation += ` + ${item.params.earthingCores} x ${item.params.earthingSize}`;
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
+                        {(() => {
+                          const firstItem = items[0];
+                          let stds = p.standard;
+                          if (p.fireguard) stds += ' IEC 60331';
+                          if (p.sheathMaterial.includes('PVC-FR')) {
+                            if (p.sheathMaterial.includes('CAT.A')) stds += ' IEC 60332-3-22';
+                            else if (p.sheathMaterial.includes('CAT.B')) stds += ' IEC 60332-3-23';
+                            else if (p.sheathMaterial.includes('CAT.C')) stds += ' IEC 60332-3-24';
+                            else stds += ' IEC 60332-1';
                           }
-                        }
-                        
-                        const defaultMarking = `${p.standard} MULTI KABEL ${construction} ${itemSizeDesignation} mm² ${p.voltage} MADE IN INDONESIA`;
-                        
-                        return (
-                          <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+                          const construction = constructionName;
+                          
+                          let itemSizeDesignation = '';
+                          if (firstItem.params.formationType === 'Pair') {
+                              const pairs = firstItem.params.cores / 2;
+                              itemSizeDesignation = `${pairs} x 2 x ${firstItem.params.size}`;
+                          } else if (firstItem.params.formationType === 'Triad') {
+                              const triads = firstItem.params.cores / 3;
+                              itemSizeDesignation = `${triads} x 3 x ${firstItem.params.size}`;
+                          } else {
+                              itemSizeDesignation = `${firstItem.params.cores} x ${firstItem.params.size}`;
+                          }
+
+                          if (firstItem.params.hasEarthing && firstItem.params.earthingCores && firstItem.params.earthingCores > 0 && firstItem.params.earthingSize && firstItem.params.earthingSize > 0) {
+                            if (firstItem.params.earthingCores === 1) {
+                              itemSizeDesignation += ` + ${firstItem.params.earthingSize}`;
+                            } else {
+                              itemSizeDesignation += ` + ${firstItem.params.earthingCores} x ${firstItem.params.earthingSize}`;
+                            }
+                          }
+                          
+                          const defaultMarking = `${p.standard} MULTI KABEL ${construction} ${items.length > 1 ? '[Size]' : itemSizeDesignation} mm² ${p.voltage} MADE IN INDONESIA`;
+                          const editKey = `${groupKey}-marking-group`;
+                          
+                          return (
                             <input
                               type="text"
                               value={specEdits[editKey] ?? defaultMarking}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                               className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
                             />
-                          </td>
-                        );
-                      })}
+                          );
+                        })()}
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
@@ -3125,7 +3126,7 @@ export default function CableDesigner() {
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`)}
+                            {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard.includes('(NYM)') ? 'In Air at 40°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`))}
                           </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
@@ -3134,7 +3135,7 @@ export default function CableDesigner() {
                         </tr>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : ''}`}
+                            {p.standard.includes('(NYM)') ? 'In Air at 30°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : ''}`)}
                           </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
@@ -3625,6 +3626,38 @@ export default function CableDesigner() {
                       </select>
                     </div>
 
+                    {/* Ambient Temperature for NYMHY */}
+                    {params.standard.includes('(NYMHY)') && (
+                      <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                        <label className="block text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">Ambient Temperature</label>
+                        <div className="flex bg-white p-1 rounded-xl border border-amber-100 shadow-sm">
+                          <button
+                            onClick={() => handleParamChange('ambientTemperature', 30)}
+                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                              (params.ambientTemperature || 30) === 30
+                                ? 'bg-amber-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                          >
+                            30°C (Standard)
+                          </button>
+                          <button
+                            onClick={() => handleParamChange('ambientTemperature', 40)}
+                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                              params.ambientTemperature === 40
+                                ? 'bg-amber-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                          >
+                            40°C
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-amber-600 mt-2 italic">
+                          * KHA will be adjusted based on selected ambient temperature.
+                        </p>
+                      </div>
+                    )}
+
                     {params.standard === 'BS EN 50288-7' && (
                       <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-4">
                         <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Instrumentation Options</label>
@@ -3791,8 +3824,8 @@ export default function CableDesigner() {
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : params.standard === 'SPLN 43-4 (NYCY)' ? 1 : 1}
-                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)') ? 5 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
+                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard.includes('(NYMHY)') ? 2 : params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : params.standard === 'SPLN 43-4 (NYCY)' ? 1 : 1}
+                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') ? 5 : params.standard.includes('(NYM)') ? 4 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
                             value={params.cores}
                             onChange={(e) => handleParamChange('cores', Number(e.target.value))}
                             disabled={isInstrumentationPairTriad}
@@ -3809,7 +3842,8 @@ export default function CableDesigner() {
                             let cores = [1, 2, 3, 4, 5];
                             if (params.standard === 'IEC 60502-2') cores = [1, 3];
                             else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
-                            else if (params.standard.includes('(NYMHY)') || params.standard.includes('(NYM)')) cores = [2, 3, 4, 5];
+                            else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
+                            else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
                             else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
                             else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
                             else if (params.standard.includes('NFA2X')) cores = [2, 4];
@@ -3861,7 +3895,7 @@ export default function CableDesigner() {
                               return [0.75, 1, 1.5, 2.5].includes(s);
                             }
                             if (params.standard.includes('(NYM)')) {
-                              return [1.5, 2.5, 4, 6, 10, 16].includes(s);
+                              return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
                             }
                             if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') {
                               if (params.cores === 2) return [35, 50, 70].includes(s);
@@ -5750,9 +5784,11 @@ export default function CableDesigner() {
                             ? "Current Carrying Capacity (KHA)" 
                             : (params.standard === 'IEC 60502-1' && params.cores === 1)
                               ? "Flat Touching"
-                              : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
-                                ? "Current Capacity (In Air)"
-                                : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
+                              : params.standard.includes('(NYM)')
+                                ? "In Air at 30°C"
+                                : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
+                                  ? "Current Capacity (In Air)"
+                                  : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
                         } 
                         value={result.electrical.currentCapacityAir} 
                         unit="A" 
@@ -5763,9 +5799,11 @@ export default function CableDesigner() {
                           label={
                             (params.standard === 'IEC 60502-1' && params.cores === 1)
                               ? "Trefoil"
-                              : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
-                                ? "Current Capacity (In Pipe)"
-                                : `Current Capacity (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`
+                              : params.standard.includes('(NYM)')
+                                ? "In Air at 40°C"
+                                : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
+                                  ? "Current Capacity (In Pipe)"
+                                  : `Current Capacity (In Ground${params.standard === 'IEC 60502-2' ? ' at 20°C' : ''})`
                           } 
                           value={result.electrical.currentCapacityGround} 
                           unit="A" 

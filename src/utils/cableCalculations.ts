@@ -1,5 +1,5 @@
 import { evaluate } from 'mathjs';
-import { KHA_DATA, KHA_CORRECTION_FACTORS } from './khaData';
+import { KHA_DATA, KHA_CORRECTION_FACTORS, NYM_KHA_DATA, NYMHY_KHA_DATA } from './khaData';
 import { MV_KHA_DATA } from './mvKhaData';
 
 export type ConductorMaterial = string;
@@ -48,6 +48,7 @@ export interface CableDesignParams {
   earthingSize?: number;
   cablingModel?: 'Auto' | 'Single Circle' | 'Groove';
   orderLength?: number; // In meters
+  ambientTemperature?: number; // In degrees Celsius
   
   // Instrumentation specific
   formationType?: FormationType;
@@ -871,6 +872,32 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard === 'IEC 60502-2') {
     currentCapacityAir = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'air');
     currentCapacityGround = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'ground');
+  } else if (effectiveParams.standard.includes('SNI 04-6629.4 (NYM)')) {
+    const nymEntry = NYM_KHA_DATA.find(e => e.size === effectiveParams.size);
+    if (nymEntry) {
+      const key30 = `cores${effectiveParams.cores}_30` as keyof typeof nymEntry;
+      const key40 = `cores${effectiveParams.cores}_40` as keyof typeof nymEntry;
+      currentCapacityAir = (nymEntry as any)[key30] || 0;
+      currentCapacityGround = (nymEntry as any)[key40] || 0;
+    } else {
+      const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
+      const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+      currentCapacityAir = baseKhaAir * correctionAir;
+      currentCapacityGround = baseKhaAir * correctionAir * 0.82; // Approx for 40°C
+    }
+  } else if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
+    const nymhyEntry = NYMHY_KHA_DATA.find(e => e.size === effectiveParams.size);
+    if (nymhyEntry) {
+      const temp = effectiveParams.ambientTemperature === 40 ? 40 : 30;
+      const key = `cores${effectiveParams.cores}_${temp}` as keyof typeof nymhyEntry;
+      currentCapacityAir = (nymhyEntry as any)[key] || 0;
+      currentCapacityGround = 0;
+    } else {
+      const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
+      const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+      currentCapacityAir = baseKhaAir * correctionAir;
+      currentCapacityGround = 0;
+    }
   } else {
     const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
     const baseKhaGround = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'ground');
