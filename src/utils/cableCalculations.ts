@@ -24,6 +24,7 @@ export interface CableDesignParams {
   conductorType: ConductorType;
   insulationMaterial: InsulationMaterial;
   armorType: ArmorType;
+  staOverlap?: number;
   sheathMaterial: SheathMaterial;
   innerSheathMaterial?: SheathMaterial;
   voltage: string;
@@ -65,6 +66,13 @@ export interface CableDesignParams {
   manualSheathThickness?: number;
   manualConductorDiameter?: number;
   manualArmorThickness?: number;
+  manualArmorWireDiameter?: number;
+  manualArmorTapeThickness?: number;
+  manualArmorFlatThickness?: number;
+  manualBraidWireDiameter?: number;
+  manualGswbCarriers?: number;
+  manualGswbWiresPerCarrier?: number;
+  manualGswbLayPitch?: number;
   manualConductorScreenThickness?: number;
   manualInsulationScreenThickness?: number;
   manualMgtThickness?: number;
@@ -476,6 +484,7 @@ export interface CalculationResult {
     armorWireDiameter?: number;
     armorTapeThickness?: number;
     armorFlatThickness?: number;
+    staOverlap?: number;
     gswbCarriers?: number;
     gswbWiresPerCarrier?: number;
     gswbLayPitch?: number;
@@ -1391,8 +1400,43 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       formationWeight += (pWeight + aWeight + drainWireWeight);
     }
 
-    const factor = getLayingUpFactor(isMultiplier);
-    laidUpDiameter = effectiveParams.manualLaidUpDiameter || (isMultiplier === 1 ? formationDiameter : formationDiameter * factor);
+    let factor = getLayingUpFactor(isMultiplier);
+    
+    // Industrial formulation for instrument cable laying up
+    const INSTRUMENT_FACTORS: Record<number, number> = {
+      1: 1.0, 2: 2.0, 3: 2.15, 4: 2.41, 5: 2.7, 6: 3.0, 7: 3.0, 
+      8: 3.45, 10: 3.8, 12: 4.15, 16: 4.7, 20: 5.33, 24: 5.77, 30: 6.41, 36: 7.0
+    };
+    
+    if (INSTRUMENT_FACTORS[isMultiplier]) {
+      factor = INSTRUMENT_FACTORS[isMultiplier];
+    } else if (isMultiplier > 1) {
+      const sorted = Object.keys(INSTRUMENT_FACTORS).map(Number).sort((a, b) => a - b);
+      for (let i = 0; i < sorted.length - 1; i++) {
+        if (isMultiplier > sorted[i] && isMultiplier < sorted[i+1]) {
+          const c1 = sorted[i];
+          const c2 = sorted[i+1];
+          const f1 = INSTRUMENT_FACTORS[c1];
+          const f2 = INSTRUMENT_FACTORS[c2];
+          factor = f1 + ((isMultiplier - c1) / (c2 - c1)) * (f2 - f1);
+          break;
+        }
+      }
+    }
+
+    if (!effectiveParams.manualLaidUpDiameter) {
+      if (isMultiplier === 1) {
+        laidUpDiameter = formationDiameter + 0.1; // Add 0.1mm for binder tape
+      } else if (isMultiplier === 2 && formationType === 'Pair' && !effectiveParams.hasIndividualScreen) {
+        // 2 pairs without individual screen are typically laid up as a star quad
+        laidUpDiameter = (coreDiameter * 2.41 * 1.03) + 0.1;
+      } else {
+        // Add 3% clearance factor for non-perfect nesting of pairs/triads + 0.1mm for binder tape
+        laidUpDiameter = (formationDiameter * factor * 1.03) + 0.1;
+      }
+    } else {
+      laidUpDiameter = effectiveParams.manualLaidUpDiameter;
+    }
 
     // Overall Screen (OS)
     if (effectiveParams.hasOverallScreen) {
@@ -1435,6 +1479,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       if (effectiveParams.standard === 'IEC 60092-353') {
         // Marine cable bedding formula: 0.04 * d + 0.8
         innerCoveringThickness = Math.round((0.04 * laidUpDiameter + 0.8) * 10) / 10;
+      } else if (effectiveParams.standard === 'BS EN 50288-7') {
+        innerCoveringThickness = Math.max(0.8, Math.round((0.04 * laidUpDiameter + 0.7) * 10) / 10);
       } else {
         if (laidUpDiameter <= 25) innerCoveringThickness = 1.0;
         else if (laidUpDiameter <= 35) innerCoveringThickness = 1.2;
@@ -1469,7 +1515,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
     
     // Filler Factor: Industrial cables often use 70-90% filling for extruded bedding
-    const fillerFactor = 0.85; 
+    const fillerFactor = effectiveParams.standard === 'BS EN 50288-7' ? 0 : 0.85; 
     const totalInnerSheathArea = ringArea + (intersticeArea * fillerFactor);
     
     innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC);
@@ -1568,13 +1614,22 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     diameterOverArmor = effectiveParams.manualDiameterOverArmor || diameterUnderArmor;
   } else if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
     if (!effectiveParams.manualArmorThickness) {
-      // SWA Wire diameters according to IEC 60502-1
-      if (diameterUnderArmor <= 10) armorThickness = 0.8;
-      else if (diameterUnderArmor <= 15) armorThickness = 1.25;
-      else if (diameterUnderArmor <= 25) armorThickness = 1.6;
-      else if (diameterUnderArmor <= 35) armorThickness = 2.0;
-      else if (diameterUnderArmor <= 60) armorThickness = 2.5;
-      else armorThickness = 3.15;
+      if (effectiveParams.standard === 'BS EN 50288-7') {
+        if (diameterUnderArmor <= 15) armorThickness = 0.9;
+        else if (diameterUnderArmor <= 25) armorThickness = 1.25;
+        else if (diameterUnderArmor <= 35) armorThickness = 1.6;
+        else if (diameterUnderArmor <= 45) armorThickness = 2.0;
+        else if (diameterUnderArmor <= 60) armorThickness = 2.5;
+        else armorThickness = 3.15;
+      } else {
+        // SWA Wire diameters according to IEC 60502-1
+        if (diameterUnderArmor <= 10) armorThickness = 0.8;
+        else if (diameterUnderArmor <= 15) armorThickness = 1.25;
+        else if (diameterUnderArmor <= 25) armorThickness = 1.6;
+        else if (diameterUnderArmor <= 35) armorThickness = 2.0;
+        else if (diameterUnderArmor <= 60) armorThickness = 2.5;
+        else armorThickness = 3.15;
+      }
     }
 
     if (!effectiveParams.manualDiameterOverArmor) {
@@ -1598,13 +1653,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
 
     armorTapeThickness = armorThickness;
+    const overlap = effectiveParams.staOverlap ?? 25;
     // 2 layers of tape, approx 25% overlap -> effective thickness ~ 2 * thickness
     if (!effectiveParams.manualDiameterOverArmor) {
       diameterOverArmor = diameterUnderArmor + 4 * armorThickness;
     }
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
-    // Area of tape approx = pi * D * 2 * t
-    const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness;
+    // Area of tape approx = pi * D * 2 * t * (1 + overlap/100)
+    const overlapMultiplier = 1 + (overlap / 100);
+    const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
     armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
     armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
@@ -1669,7 +1726,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // Formula based on standard industry practices (e.g., Belden, Alpha Wire)
     
     let wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness / 2 : 0.3;
-    if (!effectiveParams.manualArmorThickness) {
+    if (effectiveParams.manualBraidWireDiameter) {
+      wireDia = effectiveParams.manualBraidWireDiameter;
+    } else if (!effectiveParams.manualArmorThickness) {
       if (diameterUnderArmor <= 15) wireDia = 0.2;
       else if (diameterUnderArmor <= 30) wireDia = 0.3;
       else wireDia = 0.4;
@@ -1679,42 +1738,60 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     // 1. Number of carriers (m) - typical industrial braiding machine spindles
     let carriers = 24;
-    if (diameterUnderArmor <= 10) carriers = 16;
-    else if (diameterUnderArmor <= 20) carriers = 24;
-    else if (diameterUnderArmor <= 35) carriers = 32;
-    else if (diameterUnderArmor <= 50) carriers = 48;
-    else carriers = 64;
+    if (effectiveParams.manualGswbCarriers) {
+      carriers = effectiveParams.manualGswbCarriers;
+    } else {
+      if (diameterUnderArmor <= 10) carriers = 16;
+      else if (diameterUnderArmor <= 20) carriers = 24;
+      else if (diameterUnderArmor <= 35) carriers = 32;
+      else if (diameterUnderArmor <= 50) carriers = 48;
+      else carriers = 64;
+    }
 
     gswbCarriers = carriers;
 
     // 2. Braid angle (alpha) - typically 45 degrees is the design target for optimal flexibility and coverage
-    const braidAngleDeg = 45; 
-    const alphaRad = braidAngleDeg * Math.PI / 180;
+    const meanBraidDiameter = diameterUnderArmor + wireDia;
+    let alphaRad;
+    let gswbLayPitchVal;
+    
+    if (effectiveParams.manualGswbLayPitch) {
+      gswbLayPitchVal = effectiveParams.manualGswbLayPitch;
+      // L = (PI * D) / tan(alpha) => tan(alpha) = (PI * D) / L
+      alphaRad = Math.atan((Math.PI * meanBraidDiameter) / gswbLayPitchVal);
+    } else {
+      const braidAngleDeg = 45; 
+      alphaRad = braidAngleDeg * Math.PI / 180;
+      gswbLayPitchVal = (Math.PI * meanBraidDiameter) / Math.tan(alphaRad);
+    }
+    
+    gswbLayPitch = gswbLayPitchVal;
+    
     const cosAlpha = Math.cos(alphaRad);
     const sinAlpha = Math.sin(alphaRad);
     
     // 3. Lay Factor (Take-up factor) - accounts for the extra length of wire due to helical path
     const layFactor = 1 / cosAlpha;
     
-    const meanBraidDiameter = diameterUnderArmor + wireDia;
-    const coverageTarget = (effectiveParams.braidCoverage || 90) / 100;
-    
-    // 4. Filling Factor (p)
-    // Standard formula: Coverage K = (2p - p^2)
-    // Solving for p: p = 1 - sqrt(1 - K)
-    const fillingFactor = 1 - Math.sqrt(1 - coverageTarget);
-    
-    // 5. Number of wires per carrier (n)
-    // p = (n * m * d) / (2 * PI * D * cos(alpha))
-    // n = (p * 2 * PI * D * cos(alpha)) / (m * d)
-    const exactN = (fillingFactor * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
-    const n = Math.ceil(exactN); // Must be an integer
+    let n;
+    if (effectiveParams.manualGswbWiresPerCarrier) {
+      n = effectiveParams.manualGswbWiresPerCarrier;
+    } else {
+      const coverageTarget = (effectiveParams.braidCoverage || 90) / 100;
+      
+      // 4. Filling Factor (p)
+      // Standard formula: Coverage K = (2p - p^2)
+      // Solving for p: p = 1 - sqrt(1 - K)
+      const fillingFactor = 1 - Math.sqrt(1 - coverageTarget);
+      
+      // 5. Number of wires per carrier (n)
+      // p = (n * m * d) / (2 * PI * D * cos(alpha))
+      // n = (p * 2 * PI * D * cos(alpha)) / (m * d)
+      const exactN = (fillingFactor * 2 * Math.PI * meanBraidDiameter * cosAlpha) / (carriers * wireDia);
+      n = Math.ceil(exactN); // Must be an integer
+    }
     
     gswbWiresPerCarrier = n;
-    
-    // 6. Braid Pitch (L)
-    // L = (PI * D) / tan(alpha)
-    gswbLayPitch = (Math.PI * meanBraidDiameter) / Math.tan(alphaRad);
     
     // 7. Actual Coverage (K)
     // Re-calculate p based on integer n
@@ -1741,18 +1818,26 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard.includes('NFA2X')) {
     sheathThickness = 0;
   } else if (sheathThickness === undefined) {
-    sheathThickness = Math.max(1.4, Math.round((0.035 * fictitiousDiameter + 1.0) * 10) / 10);
-    
-    // IEC 60092-353 Outer Sheath: 0.025 * d + 0.6
-    if (effectiveParams.standard === 'IEC 60092-353') {
-      sheathThickness = Math.round((0.025 * fictitiousDiameter + 0.6) * 10) / 10;
-    }
-    
-    // Minimums for unarmored
-    if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores === 1) {
-      sheathThickness = Math.max(1.4, sheathThickness);
-    } else if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores > 1) {
-      sheathThickness = Math.max(1.8, sheathThickness);
+    if (effectiveParams.standard === 'BS EN 50288-7') {
+      if (effectiveParams.armorType === 'Unarmored') {
+        sheathThickness = Math.max(1.8, Math.round((0.04 * fictitiousDiameter + 0.7) * 10) / 10);
+      } else {
+        sheathThickness = Math.max(1.3, Math.round((0.028 * fictitiousDiameter + 1.1) * 10) / 10);
+      }
+    } else {
+      sheathThickness = Math.max(1.4, Math.round((0.035 * fictitiousDiameter + 1.0) * 10) / 10);
+      
+      // IEC 60092-353 Outer Sheath: 0.025 * d + 0.6
+      if (effectiveParams.standard === 'IEC 60092-353') {
+        sheathThickness = Math.round((0.025 * fictitiousDiameter + 0.6) * 10) / 10;
+      }
+      
+      // Minimums for unarmored
+      if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores === 1) {
+        sheathThickness = Math.max(1.4, sheathThickness);
+      } else if (effectiveParams.armorType === 'Unarmored' && effectiveParams.cores > 1) {
+        sheathThickness = Math.max(1.8, sheathThickness);
+      }
     }
 
     // NYAF and NYA have no sheath
@@ -1868,6 +1953,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
       const layFactor = (1 / Math.cos(45 * Math.PI / 180)).toFixed(3);
       defaultFormula = `(n=${gswbWiresPerCarrier} * m=${gswbCarriers}) * π * (d=${armorWireDiameter}/2)² * density * LayFactor(${layFactor})`;
+    } else if (effectiveParams.armorType === 'STA') {
+      const overlap = effectiveParams.staOverlap ?? 25;
+      defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${densities.STA || densities.Steel} * (1 + ${overlap}/100)`;
     } else {
       defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`;
     }
@@ -2033,6 +2121,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       armorWireDiameter,
       armorTapeThickness,
       armorFlatThickness,
+      staOverlap: effectiveParams.armorType === 'STA' ? (effectiveParams.staOverlap ?? 25) : undefined,
       gswbCarriers,
       gswbWiresPerCarrier,
       gswbLayPitch,

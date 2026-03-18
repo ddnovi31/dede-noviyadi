@@ -520,15 +520,15 @@ export default function CableDesigner() {
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasArmor) {
         if (sampleItem.params.armorType === 'STA') {
-          addGroup('Armor (STA)', hArm, ['Tape Thk (mm)', 'OD (mm)', 'Tape Wt (kg/km)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup('Armor (STA)', hArm, ['Steel Tape Thk (mm)', 'Tape Overlap (%)', 'OD (mm)', 'Tape Wt (kg/km)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'SWA' || sampleItem.params.armorType === 'AWA') {
-          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Wire Dia (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Armor Wire Dia (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'SFA') {
-          addGroup('Armor (SFA)', hArm, ['Flat Thk (mm)', 'Tape Thk (mm)', 'OD (mm)', 'Flat Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup('Armor (SFA)', hArm, ['Steel Flat Thk (mm)', 'Steel Tape Thk (mm)', 'OD (mm)', 'Flat Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'RGB') {
-          addGroup('Armor (RGB)', hArm, ['Wire Dia (mm)', 'Tape Thk (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup('Armor (RGB)', hArm, ['Armor Wire Dia (mm)', 'Armor Tape Thk (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'GSWB' || sampleItem.params.armorType === 'TCWB') {
-          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Wire Dia (mm)', 'Carriers', 'Wires/Carrier', 'Lay Pitch (mm)', 'Coverage (%)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Braid Wire Dia (mm)', 'No. of Carriers', 'Wires/Carrier', 'Lay Pitch (mm)', 'Braid Coverage (%)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else {
           addGroup('Armor', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
         }
@@ -797,9 +797,10 @@ export default function CableDesigner() {
         if (hasArmor) {
           if (item.params.armorType === 'STA') {
             armThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
+            const overlapCol = pushCol(item.result.spec.staOverlap || 25, fmtNum);
             currentDiaFormula = `(${currentDiaFormula}+4*${armThkCol}${r})`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
-            armWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${armThkCol}${r})*2*${armThkCol}${r}*${getDensity('Steel')}*1.02*(1+${materialScrap['Steel'] || 0}/100)`);
+            armWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${armThkCol}${r})*2*${armThkCol}${r}*${getDensity('Steel')}*1.02*(1+${overlapCol}${r}/100)*(1+${materialScrap['Steel'] || 0}/100)`);
             const armPrcCol = pushCol(armorTapePrice, fmtRp);
             armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           } else if (item.params.armorType === 'SWA' || item.params.armorType === 'AWA') {
@@ -838,11 +839,15 @@ export default function CableDesigner() {
             // Braid Pitch Formula: L = (PI * D) / tan(alpha)
             const diaUnderArmorFormula = currentDiaFormula;
             const meanDiaFormula = `(${diaUnderArmorFormula}+${wireDiaCol}${r})`;
-            const alphaDeg = 45;
-            const alphaRad = alphaDeg * Math.PI / 180;
-            const tanAlpha = Math.tan(alphaRad).toFixed(3);
-            const cosAlpha = Math.cos(alphaRad).toFixed(3);
-            const layFactor = (1 / Math.cos(alphaRad)).toFixed(3);
+            
+            // Calculate actual alphaRad used in the design
+            const meanDia = item.result.spec.diameterUnderArmor + (item.result.spec.armorWireDiameter || 0);
+            const layPitch = item.result.spec.gswbLayPitch || ((Math.PI * meanDia) / Math.tan(45 * Math.PI / 180));
+            const alphaRad = Math.atan((Math.PI * meanDia) / layPitch);
+            
+            const tanAlpha = Math.tan(alphaRad).toFixed(4);
+            const cosAlpha = Math.cos(alphaRad).toFixed(4);
+            const layFactor = (1 / Math.cos(alphaRad)).toFixed(4);
 
             pushCol(null, fmtNum, `PI()*${meanDiaFormula}/${tanAlpha}`); // Lay Pitch
             
@@ -1416,7 +1421,7 @@ export default function CableDesigner() {
     setParams((prev) => {
       let processedValue = value;
       
-      // Round manual overrides to 1 decimal place
+      // Round manual overrides to 2 decimal places
       if (typeof value === 'number' && [
         'manualInsulationThickness', 
         'manualInnerSheathThickness', 
@@ -1440,7 +1445,7 @@ export default function CableDesigner() {
         'manualScreenWireDiameter',
         'manualMvScreenWireDiameter'
       ].includes(key)) {
-        processedValue = Math.round(value * 10) / 10;
+        processedValue = Math.round(value * 100) / 100;
       }
 
       const newParams = { ...prev, [key]: processedValue };
@@ -4614,26 +4619,137 @@ export default function CableDesigner() {
                               min="70"
                               max="95"
                               step="1"
-                              value={params.braidCoverage || 90}
-                              onChange={(e) => handleParamChange('braidCoverage', Number(e.target.value))}
+                              value={result.spec.gswbCoverage ? Math.round(result.spec.gswbCoverage) : (params.braidCoverage || 90)}
+                              onChange={(e) => {
+                                handleParamChange('braidCoverage', Number(e.target.value));
+                                // Clear manual wires per carrier if user explicitly changes coverage
+                                if (params.manualGswbWiresPerCarrier) {
+                                  handleParamChange('manualGswbWiresPerCarrier', undefined);
+                                }
+                              }}
                               className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                             />
-                            <span className="text-sm font-mono font-bold text-indigo-600 w-10 text-right">{params.braidCoverage || 90}%</span>
+                            <span className="text-sm font-mono font-bold text-indigo-600 w-12 text-right">
+                              {result.spec.gswbCoverage ? result.spec.gswbCoverage.toFixed(1) : (params.braidCoverage || 90)}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* STA Overlap Input */}
+                      {params.mode === 'advance' && params.armorType === 'STA' && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Tape Overlap (%)</label>
+                          <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="5"
+                              value={params.staOverlap ?? 25}
+                              onChange={(e) => handleParamChange('staOverlap', Number(e.target.value))}
+                              className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                            <span className="text-sm font-mono font-bold text-indigo-600 w-10 text-right">{params.staOverlap ?? 25}%</span>
                           </div>
                         </div>
                       )}
 
                       {params.mode === 'advance' && params.armorType !== 'Unarmored' && (
-                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Armour Thickness (mm)</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={params.manualArmorThickness || ''}
-                            placeholder={result.spec.armorThickness.toFixed(1)}
-                            onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? Number(e.target.value) : undefined)}
-                            className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
-                          />
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          {(params.armorType === 'SWA' || params.armorType === 'AWA' || params.armorType === 'RGB') && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Armor Wire Diameter (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={params.manualArmorWireDiameter || ''}
+                                placeholder={result.spec.armorWireDiameter?.toFixed(2) || ''}
+                                onChange={(e) => handleParamChange('manualArmorWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          )}
+
+                          {(params.armorType === 'STA' || params.armorType === 'SFA' || params.armorType === 'RGB') && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Armor Tape Thickness (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={params.manualArmorTapeThickness || ''}
+                                placeholder={result.spec.armorTapeThickness?.toFixed(2) || ''}
+                                onChange={(e) => handleParamChange('manualArmorTapeThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          )}
+
+                          {params.armorType === 'SFA' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Steel Flat Thickness (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={params.manualArmorFlatThickness || ''}
+                                placeholder={result.spec.armorFlatThickness?.toFixed(2) || ''}
+                                onChange={(e) => handleParamChange('manualArmorFlatThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                              />
+                            </div>
+                          )}
+
+                          {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
+                            <>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Braid Wire Diameter (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={params.manualBraidWireDiameter || ''}
+                                  placeholder={result.spec.braidWireDiameter?.toFixed(2) || result.spec.armorWireDiameter?.toFixed(2) || ''}
+                                  onChange={(e) => handleParamChange('manualBraidWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Carriers</label>
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={params.manualGswbCarriers || ''}
+                                    placeholder={result.spec.gswbCarriers?.toString() || ''}
+                                    onChange={(e) => handleParamChange('manualGswbCarriers', e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wires/Carrier</label>
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={params.manualGswbWiresPerCarrier || ''}
+                                    placeholder={result.spec.gswbWiresPerCarrier?.toString() || ''}
+                                    onChange={(e) => handleParamChange('manualGswbWiresPerCarrier', e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Lay Pitch (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={params.manualGswbLayPitch || ''}
+                                  placeholder={result.spec.gswbLayPitch?.toFixed(1) || ''}
+                                  onChange={(e) => handleParamChange('manualGswbLayPitch', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                            </>
+                          )}
+
                           <div className="mt-2 p-2 bg-white/50 rounded-lg border border-indigo-100">
                             <p className="text-[10px] font-bold text-indigo-600 mb-1">Calculation Formula:</p>
                             <p className="text-[11px] font-mono text-slate-600">
@@ -4865,7 +4981,7 @@ export default function CableDesigner() {
                                 type="number"
                                 step="0.1"
                                 placeholder={result.spec.armorThickness.toFixed(1)}
-                                value={params.manualArmorThickness !== undefined ? params.manualArmorThickness.toFixed(1) : ''}
+                                value={params.manualArmorThickness !== undefined ? params.manualArmorThickness : ''}
                                 onChange={(e) => handleParamChange('manualArmorThickness', e.target.value ? parseFloat(e.target.value) : undefined)}
                                 className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                               />
@@ -5534,36 +5650,47 @@ export default function CableDesigner() {
                       <>
                         <SpecRow label="Diameter Under Armor" value={result.spec.diameterUnderArmor} unit="mm" />
                         
-                        {params.armorType === 'RGB' && (
+                        {params.mode === 'advance' && (
                           <>
-                            <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter} unit="mm" />
-                            <SpecRow label="Armor Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
+                            {params.armorType === 'RGB' && (
+                              <>
+                                <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter} unit="mm" />
+                                <SpecRow label="Armor Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
+                              </>
+                            )}
+                            
+                            {params.armorType === 'SFA' && (
+                              <>
+                                <SpecRow label="Steel Flat Armor Thickness" value={result.spec.armorFlatThickness} unit="mm" />
+                                <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
+                              </>
+                            )}
+                            
+                            {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
+                              <>
+                                <SpecRow label="Braid Wire Diameter" value={result.spec.armorWireDiameter || result.spec.braidWireDiameter} unit="mm" />
+                                <SpecRow label="Number of Carriers" value={result.spec.gswbCarriers} unit="" precision={0} />
+                                <SpecRow label="Wires per Carrier" value={result.spec.gswbWiresPerCarrier} unit="" precision={0} />
+                                <SpecRow label="Lay Pitch" value={result.spec.gswbLayPitch} unit="mm" />
+                                <SpecRow label="Braid Coverage" value={result.spec.gswbCoverage || result.spec.braidCoverage} unit="%" precision={1} />
+                              </>
+                            )}
+                            
+                            {params.armorType === 'STA' && (
+                              <>
+                                <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness || result.spec.armorThickness} unit="mm" />
+                                <SpecRow label="Tape Overlap" value={result.spec.staOverlap} unit="%" precision={0} />
+                              </>
+                            )}
+                            
+                            {(params.armorType === 'SWA' || params.armorType === 'AWA') && (
+                              <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter || result.spec.armorThickness} unit="mm" />
+                            )}
                           </>
                         )}
-                        
-                        {params.armorType === 'SFA' && (
-                          <>
-                            <SpecRow label="Steel Flat Armor Thickness" value={result.spec.armorFlatThickness} unit="mm" />
-                            <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness} unit="mm" />
-                          </>
-                        )}
-                        
-                        {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
-                          <>
-                            <SpecRow label="Braid Wire Diameter" value={result.spec.armorWireDiameter || result.spec.braidWireDiameter} unit="mm" />
-                            <SpecRow label="Number of Carriers" value={result.spec.gswbCarriers} unit="" precision={0} />
-                            <SpecRow label="Wires per Carrier" value={result.spec.gswbWiresPerCarrier} unit="" precision={0} />
-                            <SpecRow label="Lay Pitch" value={result.spec.gswbLayPitch} unit="mm" />
-                            <SpecRow label="Braid Coverage" value={result.spec.gswbCoverage || result.spec.braidCoverage} unit="%" precision={1} />
-                          </>
-                        )}
-                        
-                        {params.armorType === 'STA' && (
-                          <SpecRow label="Steel Tape Thickness" value={result.spec.armorTapeThickness || result.spec.armorThickness} unit="mm" />
-                        )}
-                        
-                        {(params.armorType === 'SWA' || params.armorType === 'AWA') && (
-                          <SpecRow label="Armor Wire Diameter" value={result.spec.armorWireDiameter || result.spec.armorThickness} unit="mm" />
+
+                        {params.mode !== 'advance' && (
+                          <SpecRow label="Armor Thickness" value={result.spec.armorThickness} unit="mm" />
                         )}
 
                         <SpecRow label="Diameter Over Armor" value={result.spec.diameterOverArmor} unit="mm" />
@@ -6110,12 +6237,12 @@ function WeightFormulaRow({
   );
 }
 
-function SpecRow({ label, value, unit, isBold = false, precision = 1 }: { label: string; value: number | string; unit: string; isBold?: boolean; precision?: number }) {
+function SpecRow({ label, value, unit, isBold = false, precision = 2 }: { label: string; value: number | string; unit: string; isBold?: boolean; precision?: number }) {
   return (
     <div className={`flex justify-between items-center py-1 ${isBold ? 'font-bold text-slate-900' : 'text-sm text-slate-600'}`}>
       <span>{label}</span>
       <span className="font-mono text-slate-900">
-        {typeof value === 'number' ? value.toFixed(precision) : value} <span className="text-slate-400 text-xs ml-1">{unit}</span>
+        {typeof value === 'number' ? Number(value.toFixed(precision)) : value} <span className="text-slate-400 text-xs ml-1">{unit}</span>
       </span>
     </div>
   );
