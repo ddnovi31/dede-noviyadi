@@ -1,4 +1,5 @@
 import { evaluate } from 'mathjs';
+import { KHA_DATA, KHA_CORRECTION_FACTORS } from './khaData';
 
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
@@ -867,13 +868,37 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else {
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
-  let currentCapacityAir = effectiveParams.conductorMaterial === 'Cu' 
-    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_CU[effectiveParams.size]) || 0 
-    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_AIR_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_AIR_AL[effectiveParams.size]) || 0;
-  let currentCapacityGround = effectiveParams.conductorMaterial === 'Cu' 
-    ? (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_CU_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_CU[effectiveParams.size]) || 0 
-    : (effectiveParams.standard === 'IEC 60502-2' ? CURRENT_CAPACITY_GROUND_AL_MV[effectiveParams.size] : CURRENT_CAPACITY_GROUND_AL[effectiveParams.size]) || 0;
   let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial];
+
+  // Helper function to find KHA
+  const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
+    const type = `${cores} Core`;
+    const khaEntry = KHA_DATA.find(entry => entry.type === type && entry.size === size);
+    if (!khaEntry) return 0;
+
+    const key = `${insulation.toLowerCase()}In${installation.charAt(0).toUpperCase() + installation.slice(1)}${material.charAt(0).toUpperCase() + material.slice(1)}`;
+    return (khaEntry as any)[key] || 0;
+  };
+
+  // Helper function to find correction factor
+  const getCorrectionFactor = (cores: number, installation: 'air' | 'ground') => {
+    const factorEntry = KHA_CORRECTION_FACTORS.find(entry => entry.cores === cores);
+    if (!factorEntry) return 1;
+    return installation === 'air' ? factorEntry.air : factorEntry.ground;
+  };
+
+  let currentCapacityAir = 0;
+  let currentCapacityGround = 0;
+
+  // Try to get KHA from new data
+  const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
+  const baseKhaGround = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'ground');
+  
+  const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+  const correctionGround = getCorrectionFactor(effectiveParams.cores, 'ground');
+
+  currentCapacityAir = baseKhaAir * correctionAir;
+  currentCapacityGround = baseKhaGround * correctionGround;
 
   // ABC Specific Data Overrides
   const abcKey = `${effectiveParams.cores}x${effectiveParams.size}`;
