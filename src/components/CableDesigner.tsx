@@ -3081,6 +3081,14 @@ export default function CableDesigner() {
                         </tr>
                       </>
                     )}
+                    {p.standard === 'IEC 60502-2' && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 pl-4">- Max. Partial Discharge</td>
+                        <td className="border border-slate-400 p-2 text-center">pC</td>
+                        {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">5</td>)}
+                      </tr>
+                    )}
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center"></td>
