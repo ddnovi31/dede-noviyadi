@@ -718,19 +718,24 @@ export default function CableDesigner() {
           let isDiaFormula = `(${coreDiaFormula}*${pairTriadFactor})`;
 
           pushCol(isMultiplier, fmtNum); // Al Foil Qty
-          const isAlThkCol = pushCol(item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
+          const isAlThkCol = pushCol(item.params.manualIsAluminiumThickness || item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
           isDiaFormula = `(${isDiaFormula}+2*${isAlThkCol}${r})`;
           pushCol(null, fmtNum, isDiaFormula); // OD
-          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*1.1*${isMultiplier}*(1+${materialScrap['Al'] || 0}/100)`);
+          const isAlOverlap = item.params.manualIsAluminiumOverlap !== undefined ? item.params.manualIsAluminiumOverlap : 25;
+          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*(1+${materialScrap['Al'] || 0}/100)`);
           const isAlPrcCol = pushCol(materialPrices.Al, fmtRp);
-          pushCol(isMultiplier, fmtNum); // Drain Wire Qty
-          const drainSizeCol = pushCol(item.result.spec.drainWireSize || 0.5, fmtNum); // Drain Size (mm2)
-          isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*1*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
+          const isDrainCount = item.params.manualIsDrainWireCount || 17;
+          pushCol(isDrainCount * isMultiplier, fmtNum); // Drain Wire Qty
+          const isDrainDia = item.params.manualIsDrainWireDiameter || 0.2;
+          const defaultDrainSize = Math.PI * Math.pow(isDrainDia / 2, 2);
+          const drainSizeCol = pushCol(item.params.manualIsDrainWireSize || item.result.spec.drainWireSize || defaultDrainSize, fmtNum); // Drain Size (mm2)
+          isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${isDrainCount}*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
           const isDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
           pushCol(isMultiplier, fmtNum); // PET Tape Qty
-          const isPetThkCol = pushCol(item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
+          const isPetThkCol = pushCol(item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           isDiaFormula = `(${isDiaFormula}+2*${isPetThkCol}${r})`;
-          isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*1.1*${isMultiplier}*(1+${materialScrap['PE'] || 0}/100)`);
+          const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
+          isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['PE'] || 0}/100)`);
           const isPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
@@ -739,19 +744,24 @@ export default function CableDesigner() {
         let osCstCol, osAlWtCol, osDrainWtCol, osPetWtCol;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) {
           pushCol(1, fmtNum); // Al Foil Qty
-          const osAlThkCol = pushCol(item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
+          const osAlThkCol = pushCol(item.params.manualOsAluminiumThickness || item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
           currentDiaFormula = `(${currentDiaFormula}+2*${osAlThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*1.1*(1+${materialScrap['Al'] || 0}/100)`);
+          const osAlOverlap = item.params.manualOsAluminiumOverlap !== undefined ? item.params.manualOsAluminiumOverlap : 25;
+          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*(1+${materialScrap['Al'] || 0}/100)`);
           const osAlPrcCol = pushCol(materialPrices.Al, fmtRp);
-          pushCol(1, fmtNum); // Drain Wire Qty
-          const drainSizeCol = pushCol(item.result.spec.drainWireSize || 0.5, fmtNum); // Drain Size (mm2)
-          osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*1*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
+          const osDrainCount = item.params.manualOsDrainWireCount || 17;
+          pushCol(osDrainCount, fmtNum); // Drain Wire Qty
+          const osDrainDia = item.params.manualOsDrainWireDiameter || 0.2;
+          const defaultOsDrainSize = Math.PI * Math.pow(osDrainDia / 2, 2);
+          const drainSizeCol = pushCol(item.params.manualOsDrainWireSize || item.result.spec.drainWireSize || defaultOsDrainSize, fmtNum); // Drain Size (mm2)
+          osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${osDrainCount}*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
           const osDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
           pushCol(1, fmtNum); // PET Tape Qty
-          const osPetThkCol = pushCol(item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
+          const osPetThkCol = pushCol(item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           currentDiaFormula = `(${currentDiaFormula}+2*${osPetThkCol}${r})`;
-          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*1.1*(1+${materialScrap['PE'] || 0}/100)`);
+          const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
+          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['PE'] || 0}/100)`);
           const osPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
@@ -1443,12 +1453,42 @@ export default function CableDesigner() {
         'manualScreenThickness',
         'manualSeparatorThickness',
         'manualScreenWireDiameter',
-        'manualMvScreenWireDiameter'
+        'manualMvScreenWireDiameter',
+        'manualIsAluminiumThickness',
+        'manualIsAluminiumOverlap',
+        'manualIsDrainWireCount',
+        'manualIsDrainWireDiameter',
+        'manualIsDrainWireSize',
+        'manualIsPolyesterThickness',
+        'manualIsPolyesterOverlap',
+        'manualOsAluminiumThickness',
+        'manualOsAluminiumOverlap',
+        'manualOsDrainWireCount',
+        'manualOsDrainWireDiameter',
+        'manualOsDrainWireSize',
+        'manualOsPolyesterThickness',
+        'manualOsPolyesterOverlap'
       ].includes(key)) {
         processedValue = Math.round(value * 100) / 100;
       }
 
       const newParams = { ...prev, [key]: processedValue };
+
+      // Auto-calculate Drain Wire Size
+      if (key === 'manualIsDrainWireCount' || key === 'manualIsDrainWireDiameter') {
+        const count = key === 'manualIsDrainWireCount' ? (processedValue as number) : (prev.manualIsDrainWireCount || 17);
+        const dia = key === 'manualIsDrainWireDiameter' ? (processedValue as number) : (prev.manualIsDrainWireDiameter || 0.2);
+        if (count !== undefined && dia !== undefined) {
+          newParams.manualIsDrainWireSize = Math.round((count * Math.PI * Math.pow(dia / 2, 2)) * 100) / 100;
+        }
+      }
+      if (key === 'manualOsDrainWireCount' || key === 'manualOsDrainWireDiameter') {
+        const count = key === 'manualOsDrainWireCount' ? (processedValue as number) : (prev.manualOsDrainWireCount || 17);
+        const dia = key === 'manualOsDrainWireDiameter' ? (processedValue as number) : (prev.manualOsDrainWireDiameter || 0.2);
+        if (count !== undefined && dia !== undefined) {
+          newParams.manualOsDrainWireSize = Math.round((count * Math.PI * Math.pow(dia / 2, 2)) * 100) / 100;
+        }
+      }
 
       // Advance Mode Defaults
       if (key === 'mode' && value === 'advance') {
@@ -3737,6 +3777,173 @@ export default function CableDesigner() {
                               <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Overall Screen (OS)</span>
                             </label>
                           </div>
+
+                          {params.mode === 'advance' && (params.hasIndividualScreen || params.hasOverallScreen) && (
+                            <div className="space-y-4 pt-4 border-t border-slate-200">
+                              {params.hasIndividualScreen && (
+                                <div className="space-y-3">
+                                  <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced IS Parameters</label>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Al Thickness (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualIsAluminiumThickness || ''}
+                                        placeholder="0.05"
+                                        onChange={(e) => handleParamChange('manualIsAluminiumThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Al Overlap (%)</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualIsAluminiumOverlap || ''}
+                                        placeholder="25"
+                                        onChange={(e) => handleParamChange('manualIsAluminiumOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">PET Thickness (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualIsPolyesterThickness || ''}
+                                        placeholder="0.05"
+                                        onChange={(e) => handleParamChange('manualIsPolyesterThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">PET Overlap (%)</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualIsPolyesterOverlap || ''}
+                                        placeholder="25"
+                                        onChange={(e) => handleParamChange('manualIsPolyesterOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Numb of wire</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualIsDrainWireCount || ''}
+                                        placeholder="17"
+                                        onChange={(e) => handleParamChange('manualIsDrainWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Drain Wire Size (mm²)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualIsDrainWireSize || ''}
+                                        placeholder="0.53"
+                                        readOnly
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-slate-50 text-slate-500 cursor-not-allowed"
+                                      />
+                                    </div>
+                                    <div className="col-span-2">
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Dia of wire (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualIsDrainWireDiameter || ''}
+                                        placeholder="0.2"
+                                        onChange={(e) => handleParamChange('manualIsDrainWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {params.hasOverallScreen && (
+                                <div className="space-y-3">
+                                  <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced OS Parameters</label>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Al Thickness (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualOsAluminiumThickness || ''}
+                                        placeholder="0.05"
+                                        onChange={(e) => handleParamChange('manualOsAluminiumThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Al Overlap (%)</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualOsAluminiumOverlap || ''}
+                                        placeholder="25"
+                                        onChange={(e) => handleParamChange('manualOsAluminiumOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">PET Thickness (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualOsPolyesterThickness || ''}
+                                        placeholder="0.05"
+                                        onChange={(e) => handleParamChange('manualOsPolyesterThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">PET Overlap (%)</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualOsPolyesterOverlap || ''}
+                                        placeholder="25"
+                                        onChange={(e) => handleParamChange('manualOsPolyesterOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Numb of wire</label>
+                                      <input
+                                        type="number"
+                                        value={params.manualOsDrainWireCount || ''}
+                                        placeholder="17"
+                                        onChange={(e) => handleParamChange('manualOsDrainWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Drain Wire Size (mm²)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualOsDrainWireSize || ''}
+                                        placeholder="0.53"
+                                        readOnly
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-slate-50 text-slate-500 cursor-not-allowed"
+                                      />
+                                    </div>
+                                    <div className="col-span-2">
+                                      <label className="block text-[10px] text-slate-400 uppercase mb-1">Dia of wire (mm)</label>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={params.manualOsDrainWireDiameter || ''}
+                                        placeholder="0.2"
+                                        onChange={(e) => handleParamChange('manualOsDrainWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full rounded-lg border-slate-200 text-xs p-2 border bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

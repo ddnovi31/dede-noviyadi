@@ -86,6 +86,23 @@ export interface CableDesignParams {
   manualMvScreenWireCount?: number;
   manualMvScreenWireDiameter?: number;
   
+  // IS/OS Overrides
+  manualIsAluminiumThickness?: number;
+  manualIsAluminiumOverlap?: number;
+  manualIsDrainWireCount?: number;
+  manualIsDrainWireDiameter?: number;
+  manualIsDrainWireSize?: number;
+  manualIsPolyesterThickness?: number;
+  manualIsPolyesterOverlap?: number;
+  
+  manualOsAluminiumThickness?: number;
+  manualOsAluminiumOverlap?: number;
+  manualOsDrainWireCount?: number;
+  manualOsDrainWireDiameter?: number;
+  manualOsDrainWireSize?: number;
+  manualOsPolyesterThickness?: number;
+  manualOsPolyesterOverlap?: number;
+  
   // Earthing Overrides
   manualEarthingWireCount?: number;
   manualEarthingWireDiameter?: number;
@@ -1380,17 +1397,26 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // Individual Screen (IS)
     if (effectiveParams.hasIndividualScreen && formationType !== 'Core') {
       // Construction: PET Tape + Drain Wire + Al Tape + PET Tape
-      const isThk = 0.15; // Estimated thickness contribution
+      const petThk = effectiveParams.manualIsPolyesterThickness || 0.05;
+      const petOverlap = effectiveParams.manualIsPolyesterOverlap || 25;
+      const alThk = effectiveParams.manualIsAluminiumThickness || 0.05;
+      const alOverlap = effectiveParams.manualIsAluminiumOverlap || 25;
+      
+      const drainWireCount = effectiveParams.manualIsDrainWireCount || 17;
+      const drainWireDia = effectiveParams.manualIsDrainWireDiameter || 0.2;
+      const drainWireSize = effectiveParams.manualIsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+      
+      const isThk = (2 * petThk) + alThk; // Estimated thickness contribution
       const diaBeforeIS = formationDiameter;
       formationDiameter += 2 * isThk;
       
       const petDensity = 1.38;
       const alDensity = 2.7;
-      const drainWireArea = 0.5; // 0.5 mm2
-      const drainWireWeight = drainWireArea * densities.Cu * 1.02; // kg/km
       
-      const pWeight = Math.PI * (Math.pow((diaBeforeIS + 0.1)/2, 2) - Math.pow(diaBeforeIS/2, 2)) * petDensity * 2; // 2 layers
-      const aWeight = Math.PI * (Math.pow((diaBeforeIS + 0.15)/2, 2) - Math.pow((diaBeforeIS + 0.1)/2, 2)) * alDensity;
+      // Weight per formation
+      const pWeight = Math.PI * (diaBeforeIS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2; // 2 layers
+      const aWeight = Math.PI * (diaBeforeIS + 2 * petThk + alThk) * alThk * alDensity * (1 + alOverlap/100);
+      const drainWireWeight = drainWireSize * densities.Cu * 1.02; // kg/km
       
       isAlWeight = aWeight * isMultiplier;
       isDrainWeight = drainWireWeight * isMultiplier;
@@ -1440,17 +1466,25 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     // Overall Screen (OS)
     if (effectiveParams.hasOverallScreen) {
-      const osThk = 0.2; // Estimated thickness contribution
+      const petThk = effectiveParams.manualOsPolyesterThickness || 0.05;
+      const petOverlap = effectiveParams.manualOsPolyesterOverlap || 25;
+      const alThk = effectiveParams.manualOsAluminiumThickness || 0.05;
+      const alOverlap = effectiveParams.manualOsAluminiumOverlap || 25;
+      
+      const drainWireCount = effectiveParams.manualOsDrainWireCount || 17;
+      const drainWireDia = effectiveParams.manualOsDrainWireDiameter || 0.2;
+      const drainWireSize = effectiveParams.manualOsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+
+      const osThk = (2 * petThk) + alThk; // Estimated thickness contribution
       const diaBeforeOS = laidUpDiameter;
       laidUpDiameter += 2 * osThk;
 
       const petDensity = 1.38;
       const alDensity = 2.7;
-      const drainWireArea = 0.5; // 0.5 mm2
-      const drainWireWeight = drainWireArea * densities.Cu * 1.02; // kg/km
       
-      const pWeight = Math.PI * (Math.pow((diaBeforeOS + 0.1)/2, 2) - Math.pow(diaBeforeOS/2, 2)) * petDensity * 2;
-      const aWeight = Math.PI * (Math.pow((diaBeforeOS + 0.15)/2, 2) - Math.pow((diaBeforeOS + 0.1)/2, 2)) * alDensity;
+      const pWeight = Math.PI * (diaBeforeOS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2;
+      const aWeight = Math.PI * (diaBeforeOS + 2 * petThk + alThk) * alThk * alDensity * (1 + alOverlap/100);
+      const drainWireWeight = drainWireSize * densities.Cu * 1.02; // kg/km
       
       osAlWeight = aWeight;
       osDrainWeight = drainWireWeight;
