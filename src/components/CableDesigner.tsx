@@ -16,6 +16,7 @@ import {
   MaterialDensities,
   FlameRetardantCategory,
   NYCY_DATA,
+  NFA2XT_DATA,
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { safeLocalStorage } from '../utils/safeLocalStorage';
@@ -1604,13 +1605,6 @@ export default function CableDesigner() {
 
       if (key === 'size') {
         newParams.earthingSize = value as number;
-        if (newParams.standard.includes('NFA2X-T')) {
-          if (newParams.size === 35) newParams.earthingSize = 35;
-          else if (newParams.size === 50) newParams.earthingSize = 50;
-          else if (newParams.size === 70) newParams.earthingSize = 70;
-          else if (newParams.size === 95) newParams.earthingSize = 95;
-          else if (newParams.size === 120) newParams.earthingSize = 95;
-        }
       }
 
       if (newParams.size < 25 && newParams.conductorType === 'sm') {
@@ -1700,12 +1694,6 @@ export default function CableDesigner() {
             newParams.earthingCores = 1;
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 3) newParams.cores = 3;
-            // Auto-set messenger size
-            if (newParams.size === 35) newParams.earthingSize = 35;
-            else if (newParams.size === 50) newParams.earthingSize = 50;
-            else if (newParams.size === 70) newParams.earthingSize = 70;
-            else if (newParams.size === 95) newParams.earthingSize = 95;
-            else if (newParams.size === 120) newParams.earthingSize = 95;
           } else {
             newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
@@ -2759,6 +2747,352 @@ export default function CableDesigner() {
                         </tr>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center">13</td>
+                          <td className="border border-slate-400 p-2 font-medium">Packaging</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Wooden Drum</td>
+                        </tr>
+                      </>
+                    ) : p.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)' ? (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">1</td>
+                          <td className="border border-slate-400 p-2 font-medium">Manufactured</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">2</td>
+                          <td className="border border-slate-400 p-2 font-medium">Reference Standard</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            {(() => {
+                              const editKey = `${groupKey}-ref-standard-t`;
+                              const defaultVal = "SPLN D3.010-1 : 2014\nADENDUM SPLN D3.010-1:2015";
+                              return (
+                                <textarea
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
+                                  rows={2}
+                                />
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">3</td>
+                          <td className="border border-slate-400 p-2 font-medium">Type</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">NFA2X-T</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">4</td>
+                          <td className="border border-slate-400 p-2 font-medium">Size</td>
+                          <td className="border border-slate-400 p-2 text-center">mm²</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold">{item.params.cores}x{item.params.size}+{item.params.earthingSize}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">5</td>
+                          <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
+                          <td className="border border-slate-400 p-2 text-center">kV</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">0,6/1 (1,2)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">6</td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold">Constructional Data :</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Conductor Phase</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Aluminium EC Grade</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Shape</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Round Stranded (rm)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Number / Diameter of Wires (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">pcs/mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? `${abcTData.phase.wireCount} / ${abcTData.phase.wireDiameter.toFixed(2).replace('.', ',')}` : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.phase.condDiameter.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Conductor Neutral</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Aluminium EC Grade & Galvanized Steel Wire</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Shape</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Round Stranded (rm)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Number / Diameter of Wires (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">pcs/mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? `${abcTData.messenger.alWireCount} / ${abcTData.messenger.alWireDiameter.toFixed(2).replace('.', ',')} (Al EC Grade) | ${abcTData.messenger.steelWireCount} / ${abcTData.messenger.steelWireDiameter.toFixed(2).replace('.', ',')} (Galv. Steel)` : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.messenger.condDiameter.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Insulation Phase</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Extruded Black XLPE</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Thickness</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.phase.insulationThickness.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.phase.coreDiameter.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Insulation Neutral</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Extruded Black XLPE</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Thickness</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.messenger.insulationThickness.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.messenger.coreDiameter.toFixed(2).replace('.', ',') : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Overall Diameter</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.overallDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Marking (On neutral surface)</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            {(() => {
+                              const firstItem = items[0];
+                              const defaultMarking = `SPLN D3.010-1 : 2014 MULTI KABEL NFA2X-T ${firstItem.params.cores}x${firstItem.params.size}+${firstItem.params.earthingSize} mm² 0.6/1 (1.2) kV <>LMK<>`;
+                              const editKey = `${groupKey}-marking-group-t`;
+                              return (
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultMarking}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
+                                />
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">9</td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-medium">Mechanical Test</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">- Calculated Breaking Load</td>
+                          <td className="border border-slate-400 p-2 text-center">kN</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData?.messenger.breakingLoad?.toFixed(2).replace('.', ',') || '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">- Tensile Strength (Min.)</td>
+                          <td className="border border-slate-400 p-2 text-center">MPa</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">1290</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">10</td>
+                          <td className="border border-slate-400 p-2 font-medium">AC Voltage Test at 35°C (Max.)</td>
+                          <td className="border border-slate-400 p-2 text-center">kV/5Mins</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">3,5 / 5</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">11</td>
+                          <td className="border border-slate-400 p-2 font-medium">DC Condutor Resistance 20°C (Max.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? `${abcTData.phase.resistance.toFixed(3).replace('.', ',')} (Phase) | ${abcTData.messenger.resistance.toFixed(3).replace('.', ',')} (Neutral)` : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">12</td>
+                          <td className="border border-slate-400 p-2 font-medium">Current Carrying Capacity in Air</td>
+                          <td className="border border-slate-400 p-2 text-center">A</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{abcTData ? abcTData.phase.ampacity : '-'}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">13</td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-medium">Max. Short Circuit at :</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">- 0,1 Sec</td>
+                          <td className="border border-slate-400 p-2 text-center">kA</td>
+                          {items.map((item, idx) => {
+                            const area = item.params.size;
+                            const Isc1s = (94 * area) / 1000;
+                            const Isc01s = Isc1s / Math.sqrt(0.1);
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Isc01s.toFixed(2).replace('.', ',')}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">- 0,3 Sec</td>
+                          <td className="border border-slate-400 p-2 text-center">kA</td>
+                          {items.map((item, idx) => {
+                            const area = item.params.size;
+                            const Isc1s = (94 * area) / 1000;
+                            const Isc03s = Isc1s / Math.sqrt(0.3);
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Isc03s.toFixed(2).replace('.', ',')}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">- 1,0 Sec</td>
+                          <td className="border border-slate-400 p-2 text-center">kA</td>
+                          {items.map((item, idx) => {
+                            const area = item.params.size;
+                            const Isc1s = (94 * area) / 1000;
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Isc1s.toFixed(2).replace('.', ',')}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">14</td>
+                          <td className="border border-slate-400 p-2 font-medium">Cable Weight (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg/km</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            const cableWeight = abcTData ? abcTData.netWeight : item.result.bom.totalWeight;
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(cableWeight)}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">15</td>
+                          <td className="border border-slate-400 p-2 font-medium">Net Weight per Haspel (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            const cableWeight = abcTData ? abcTData.netWeight : item.result.bom.totalWeight;
+                            const packing = calculatePacking(item.result.spec.overallDiameter, cableWeight);
+                            const netWeightHaspel = (cableWeight * packing.standardLength) / 1000;
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(netWeightHaspel)}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">16</td>
+                          <td className="border border-slate-400 p-2 font-medium">Gross Weight per Haspel (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            const cableWeight = abcTData ? abcTData.netWeight : item.result.bom.totalWeight;
+                            const packing = calculatePacking(item.result.spec.overallDiameter, cableWeight);
+                            const netWeightHaspel = (cableWeight * packing.standardLength) / 1000;
+                            const grossWeightHaspel = netWeightHaspel + packing.selectedDrum.weight;
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(grossWeightHaspel)}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">17</td>
+                          <td className="border border-slate-400 p-2 font-medium">Standard Length Per Haspel</td>
+                          <td className="border border-slate-400 p-2 text-center">Meter</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            const cableWeight = abcTData ? abcTData.netWeight : item.result.bom.totalWeight;
+                            const packing = calculatePacking(item.result.spec.overallDiameter, cableWeight);
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.standardLength}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">18</td>
+                          <td className="border border-slate-400 p-2 font-medium">Dimension of Haspel</td>
+                          <td className="border border-slate-400 p-2 text-center">mm x mm</td>
+                          {items.map((item, idx) => {
+                            const abcTKey = `${item.params.cores}x${item.params.size}+${item.params.earthingSize}`;
+                            const abcTData = NFA2XT_DATA[abcTKey];
+                            const cableWeight = abcTData ? abcTData.netWeight : item.result.bom.totalWeight;
+                            const packing = calculatePacking(item.result.spec.overallDiameter, cableWeight);
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.type.replace('C-', '')}0 x {packing.selectedDrum.outerWidth}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">19</td>
                           <td className="border border-slate-400 p-2 font-medium">Packaging</td>
                           <td className="border border-slate-400 p-2 text-center">-</td>
                           <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Wooden Drum</td>
@@ -4428,12 +4762,11 @@ export default function CableDesigner() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Size (mm²)</label>
                                 <select
                                   value={params.earthingSize || 0}
-                                  disabled={params.standard.includes('NFA2X-T')}
                                   onChange={(e) => handleParamChange('earthingSize', Number(e.target.value))}
                                   className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
                                 >
                                   <option value={0}>None</option>
-                                  {CABLE_SIZES.map((s) => (
+                                  {CABLE_SIZES.filter(s => !params.standard.includes('NFA2X-T') || s <= params.size).map((s) => (
                                     <option key={s} value={s}>{s} mm²</option>
                                   ))}
                                 </select>
@@ -4454,14 +4787,18 @@ export default function CableDesigner() {
                           </div>
                         )}
 
-                        {/* Advanced Earthing Parameters */}
+                        {/* Advanced Messenger/Earthing Parameters */}
                         {params.mode === 'advance' && params.hasEarthing && (
                           <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Advanced Earthing Parameters</label>
+                            <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                              {params.standard.includes('NFA2X-T') ? 'Advanced Messenger Parameters' : 'Advanced Earthing Parameters'}
+                            </label>
                             
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Count</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                                  {params.standard.includes('NFA2X-T') ? 'Al Wire Count' : 'Wire Count'}
+                                </label>
                                 <input
                                   type="number"
                                   value={params.manualEarthingWireCount || ''}
@@ -4471,7 +4808,9 @@ export default function CableDesigner() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Wire Dia (mm)</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                                  {params.standard.includes('NFA2X-T') ? 'Al Wire Dia (mm)' : 'Wire Dia (mm)'}
+                                </label>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -4482,6 +4821,32 @@ export default function CableDesigner() {
                                 />
                               </div>
                             </div>
+
+                            {params.standard.includes('NFA2X-T') && (
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Steel Wire Count</label>
+                                  <input
+                                    type="number"
+                                    value={params.manualEarthingSteelWireCount || ''}
+                                    placeholder="1"
+                                    onChange={(e) => handleParamChange('manualEarthingSteelWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Steel Wire Dia (mm)</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={params.manualEarthingSteelWireDiameter || ''}
+                                    placeholder="Auto"
+                                    onChange={(e) => handleParamChange('manualEarthingSteelWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                  />
+                                </div>
+                              </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-4">
                               <div>
@@ -4507,7 +4872,7 @@ export default function CableDesigner() {
                                 />
                               </div>
                             </div>
-                            <p className="text-[9px] text-indigo-400 mt-1 italic text-center">Formulas: Standard Earthing Calculations</p>
+                            <p className="text-[9px] text-indigo-400 mt-1 italic text-center">Formulas: Standard Calculations</p>
                           </div>
                         )}
                       </div>
