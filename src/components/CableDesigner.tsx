@@ -3161,13 +3161,13 @@ export default function CableDesigner() {
                     </tr>
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
-                        <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
+                        <td className="border border-slate-400 p-2 text-center" rowSpan={p.standard.includes('(NYMHY)') ? 2 : 3}></td>
                         <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity{(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}</td>
                         <td className="border border-slate-400 p-2 text-center"></td>
                         {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                       </tr>
                     )}
-                    {p.standard !== 'BS EN 50288-7' && (
+                    {p.standard !== 'BS EN 50288-7' && !p.standard.includes('(NYMHY)') && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
@@ -3188,6 +3188,17 @@ export default function CableDesigner() {
                           ))}
                         </tr>
                       </>
+                    )}
+                    {p.standard.includes('(NYMHY)') && (
+                      <tr>
+                        <td className="border border-slate-400 p-2 pl-8">
+                          Current Carrying Capacity In Air at 30° (A)
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">A</td>
+                        {items.map((item, idx) => (
+                          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
+                        ))}
+                      </tr>
                     )}
                     {p.standard === 'IEC 60502-2' && (
                       <tr>
@@ -3671,8 +3682,8 @@ export default function CableDesigner() {
                       </select>
                     </div>
 
-                    {/* Ambient Temperature for NYMHY */}
-                    {params.standard.includes('(NYMHY)') && (
+                    {/* Ambient Temperature for NYMHY - Hidden as per request */}
+                    {false && params.standard.includes('(NYMHY)') && (
                       <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
                         <label className="block text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">Ambient Temperature</label>
                         <div className="flex bg-white p-1 rounded-xl border border-amber-100 shadow-sm">
@@ -6120,15 +6131,17 @@ export default function CableDesigner() {
                               ? "Flat Touching"
                               : params.standard.includes('(NYM)')
                                 ? "In Air at 30°C"
-                                : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
-                                  ? "Current Capacity (In Air)"
-                                  : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
+                                : params.standard.includes('(NYMHY)')
+                                  ? "Current Carrying Capacity In Air at 30° (A)"
+                                  : (params.standard.includes('(NYA)') || params.standard.includes('(NYAF)'))
+                                    ? "Current Capacity (In Air)"
+                                    : `Current Capacity (In Air${params.standard === 'IEC 60502-2' ? ' at 30°C' : ''})`
                         } 
                         value={result.electrical.currentCapacityAir} 
                         unit="A" 
                         precision={0} 
                       />
-                      {!(params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)') && (
+                      {!(params.standard.includes('NFA2X') || params.standard === 'SPLN 43-4 (NYCY)') && !params.standard.includes('(NYMHY)') && (
                         <SpecRow 
                           label={
                             (params.standard === 'IEC 60502-1' && params.cores === 1)

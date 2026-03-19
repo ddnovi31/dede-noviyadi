@@ -179,9 +179,21 @@ export const NYM_KHA_DATA = [
   { size: 35, cores2_30: 134, cores2_40: 117, cores3_30: 134, cores3_40: 117, cores4_30: 134, cores4_40: 117 }
 ];
 
-export const NYMHY_KHA_DATA = [
-  { size: 0.75, cores2_30: 12, cores2_40: 10, cores3_30: 12, cores3_40: 10, cores4_30: 12, cores4_40: 10, cores5_30: 12, cores5_40: 10 },
-  { size: 1, cores2_30: 15, cores2_40: 13, cores3_30: 15, cores3_40: 13, cores4_30: 15, cores4_40: 13, cores5_30: 15, cores5_40: 13 },
-  { size: 1.5, cores2_30: 18, cores2_40: 15, cores3_30: 18, cores3_40: 15, cores4_30: 18, cores4_40: 15, cores5_30: 18, cores5_40: 15 },
-  { size: 2.5, cores2_30: 26, cores2_40: 22, cores3_30: 26, cores3_40: 22, cores4_30: 26, cores4_40: 22, cores5_30: 26, cores5_40: 22 }
+export const NYMHY_DATA = [
+  { cores: 2, size: 0.75, ins: 0.6, sheath: 0.8, od: 6.9, weight: 60, kha: 9 },
+  { cores: 2, size: 1, ins: 0.6, sheath: 0.8, od: 7.3, weight: 70, kha: 12 },
+  { cores: 2, size: 1.5, ins: 0.7, sheath: 0.8, od: 8.1, weight: 90, kha: 19 },
+  { cores: 2, size: 2.5, ins: 0.8, sheath: 1, od: 9.9, weight: 140, kha: 25 },
+  { cores: 3, size: 0.75, ins: 0.6, sheath: 0.8, od: 7.3, weight: 71, kha: 4 },
+  { cores: 3, size: 1, ins: 0.6, sheath: 0.8, od: 7.7, weight: 83, kha: 10 },
+  { cores: 3, size: 1.5, ins: 0.7, sheath: 0.9, od: 8.8, weight: 113, kha: 17 },
+  { cores: 3, size: 2.5, ins: 0.8, sheath: 1.1, od: 10.7, weight: 175, kha: 22 },
+  { cores: 4, size: 0.75, ins: 0.6, sheath: 0.8, od: 7.9, weight: 87, kha: 4 },
+  { cores: 4, size: 1, ins: 0.6, sheath: 0.9, od: 8.6, weight: 107, kha: 10 },
+  { cores: 4, size: 1.5, ins: 0.7, sheath: 1, od: 9.8, weight: 145, kha: 17 },
+  { cores: 4, size: 2.5, ins: 0.8, sheath: 1.1, od: 11.7, weight: 218, kha: 22 },
+  { cores: 5, size: 0.75, ins: 0.6, sheath: 0.9, od: 8.8, weight: 106, kha: 4 },
+  { cores: 5, size: 1, ins: 0.6, sheath: 0.9, od: 9.3, weight: 125, kha: 10 },
+  { cores: 5, size: 1.5, ins: 0.7, sheath: 1.1, od: 10.8, weight: 176, kha: 17 },
+  { cores: 5, size: 2.5, ins: 0.8, sheath: 1.2, od: 12.9, weight: 264, kha: 22 }
 ];

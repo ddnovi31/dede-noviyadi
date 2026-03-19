@@ -1,5 +1,5 @@
 import { evaluate } from 'mathjs';
-import { KHA_DATA, KHA_CORRECTION_FACTORS, NYM_KHA_DATA, NYMHY_KHA_DATA } from './khaData';
+import { KHA_DATA, KHA_CORRECTION_FACTORS, NYM_KHA_DATA, NYMHY_DATA } from './khaData';
 import { MV_KHA_DATA } from './mvKhaData';
 
 export type ConductorMaterial = string;
@@ -114,6 +114,7 @@ export interface CableDesignParams {
   manualDiameterUnderArmor?: number;
   manualDiameterOverArmor?: number;
   manualOverallDiameter?: number;
+  manualTotalWeight?: number;
 
   // Custom Formulas for Material Weights
   customFormulas?: Record<string, string>;
@@ -912,11 +913,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       currentCapacityGround = baseKhaAir * correctionAir * 0.82; // Approx for 40°C
     }
   } else if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
-    const nymhyEntry = NYMHY_KHA_DATA.find(e => e.size === effectiveParams.size);
+    const nymhyEntry = NYMHY_DATA.find(e => e.size === effectiveParams.size && e.cores === effectiveParams.cores);
     if (nymhyEntry) {
-      const temp = effectiveParams.ambientTemperature === 40 ? 40 : 30;
-      const key = `cores${effectiveParams.cores}_${temp}` as keyof typeof nymhyEntry;
-      currentCapacityAir = (nymhyEntry as any)[key] || 0;
+      currentCapacityAir = nymhyEntry.kha;
       currentCapacityGround = 0;
     } else {
       const baseKhaAir = getKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
@@ -1165,12 +1164,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
     const size = effectiveParams.size;
     const cores = effectiveParams.cores;
+    const nymhyEntry = NYMHY_DATA.find(e => e.size === size && e.cores === cores);
     
     // Insulation Thickness
     if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
-      if (size <= 1.0) insulationThickness = 0.6;
-      else if (size === 1.5) insulationThickness = 0.7;
-      else if (size === 2.5) insulationThickness = 0.8;
+      if (nymhyEntry) {
+        insulationThickness = nymhyEntry.ins;
+      } else {
+        if (size <= 1.0) insulationThickness = 0.6;
+        else if (size === 1.5) insulationThickness = 0.7;
+        else if (size === 2.5) insulationThickness = 0.8;
+      }
     }
 
     // NYMHY has no inner sheath
@@ -1180,22 +1184,26 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     // Outer Sheath Thickness
     if (sheathThickness === undefined || !effectiveParams.manualSheathThickness) {
-      if (cores === 2) {
-        if (size <= 1.5) sheathThickness = 0.8;
-        else if (size === 2.5) sheathThickness = 1.0;
-      } else if (cores === 3) {
-        if (size <= 1.0) sheathThickness = 0.8;
-        else if (size === 1.5) sheathThickness = 0.9;
-        else if (size === 2.5) sheathThickness = 1.1;
-      } else if (cores === 4) {
-        if (size === 0.75) sheathThickness = 0.8;
-        else if (size === 1.0) sheathThickness = 0.9;
-        else if (size === 1.5) sheathThickness = 1.0;
-        else if (size === 2.5) sheathThickness = 1.1;
-      } else if (cores === 5) {
-        if (size <= 1.0) sheathThickness = 0.9;
-        else if (size === 1.5) sheathThickness = 1.1;
-        else if (size === 2.5) sheathThickness = 1.2;
+      if (nymhyEntry) {
+        sheathThickness = nymhyEntry.sheath;
+      } else {
+        if (cores === 2) {
+          if (size <= 1.5) sheathThickness = 0.8;
+          else if (size === 2.5) sheathThickness = 1.0;
+        } else if (cores === 3) {
+          if (size <= 1.0) sheathThickness = 0.8;
+          else if (size === 1.5) sheathThickness = 0.9;
+          else if (size === 2.5) sheathThickness = 1.1;
+        } else if (cores === 4) {
+          if (size === 0.75) sheathThickness = 0.8;
+          else if (size === 1.0) sheathThickness = 0.9;
+          else if (size === 1.5) sheathThickness = 1.0;
+          else if (size === 2.5) sheathThickness = 1.1;
+        } else if (cores === 5) {
+          if (size <= 1.0) sheathThickness = 0.9;
+          else if (size === 1.5) sheathThickness = 1.1;
+          else if (size === 2.5) sheathThickness = 1.2;
+        }
       }
     }
   }
@@ -1881,7 +1889,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   const finalSheathThickness = sheathThickness || 0;
-  const overallDiameter = effectiveParams.manualOverallDiameter || (diameterOverArmor + 2 * finalSheathThickness);
+  let overallDiameter = effectiveParams.manualOverallDiameter || (diameterOverArmor + 2 * finalSheathThickness);
+
+  // SNI 04-6629.5 (NYMHY) specific overrides for OD
+  if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
+    const nymhyEntry = NYMHY_DATA.find(e => e.size === effectiveParams.size && e.cores === effectiveParams.cores);
+    if (nymhyEntry && !effectiveParams.manualOverallDiameter) {
+      overallDiameter = nymhyEntry.od;
+    }
+  }
   const rOverArmor = diameterOverArmor / 2;
   const rOverall = overallDiameter / 2;
   const sheathArea = Math.PI * (rOverall * rOverall - rOverArmor * rOverArmor);
@@ -2020,6 +2036,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
                        (weightDetails.earthing?.weight || 0) +
                        (weightDetails.isWeight?.weight || 0) +
                        (weightDetails.osWeight?.weight || 0);
+  }
+
+  // SNI 04-6629.5 (NYMHY) specific overrides for Weight
+  if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
+    const nymhyEntry = NYMHY_DATA.find(e => e.size === effectiveParams.size && e.cores === effectiveParams.cores);
+    if (nymhyEntry && !effectiveParams.manualTotalWeight) {
+      finalTotalWeight = nymhyEntry.weight;
+    }
   }
 
   // NYMHY Standard Limits (Batas bawah / Batas atas)
