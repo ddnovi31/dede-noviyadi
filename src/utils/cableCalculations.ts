@@ -1,6 +1,7 @@
 import { evaluate } from 'mathjs';
 import { KHA_DATA, KHA_CORRECTION_FACTORS, NYM_KHA_DATA, NYMHY_DATA } from './khaData';
 import { MV_KHA_DATA } from './mvKhaData';
+import { MARINE_KHA_DATA } from './marineKhaData';
 
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
@@ -245,6 +246,7 @@ interface ABCData {
   resistance: number;
   ampacity: number;
   netWeight: number;
+  breakingLoad?: number;
 }
 
 interface ABCMessengerData extends ABCData {
@@ -255,12 +257,12 @@ interface ABCMessengerData extends ABCData {
 }
 
 const NFA2X_DATA: Record<string, ABCData> = {
-  '2x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 100.4 },
-  '2x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 144.2 },
-  '4x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 200.8 },
-  '4x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 288.4 },
-  '4x25': { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.20, ampacity: 102, netWeight: 437.8 },
-  '4x35': { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 603.7 },
+  '2x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 100.4, breakingLoad: 3.22 },
+  '2x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 144.2, breakingLoad: 5.15 },
+  '4x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 200.8, breakingLoad: 6.44 },
+  '4x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 288.4, breakingLoad: 10.30 },
+  '4x25': { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.20, ampacity: 102, netWeight: 437.8, breakingLoad: 16.10 },
+  '4x35': { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 603.7, breakingLoad: 22.54 },
 };
 
 const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMessengerData, netWeight: number }> = {
@@ -527,6 +529,7 @@ export interface CalculationResult {
     polyesterTapeThickness?: number;
     diameterAfterIS?: number;
     diameterAfterOS?: number;
+    breakingLoad?: number;
   };
   bom: {
     conductorWeight: number;
@@ -892,6 +895,22 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     return installation === 'air' ? factorEntry.air : factorEntry.ground;
   };
 
+  // Helper function to find Marine KHA
+  const getMarineKhaValue = (cores: number, size: number, conductorType: 'class2' | 'class5') => {
+    const data = conductorType === 'class2' ? MARINE_KHA_DATA.class2 : MARINE_KHA_DATA.class5;
+    const entry = data.find(e => e.size === size);
+    if (!entry) return 0;
+
+    const key = `n${cores}` as keyof typeof entry;
+    if (key in entry) {
+      return entry[key] as number;
+    }
+
+    // Calculation if core is not in table
+    const n1 = entry.n1;
+    return n1 / Math.pow(cores, 1 / 3);
+  };
+
   let currentCapacityAir = 0;
   let currentCapacityGround = 0;
 
@@ -899,6 +918,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard === 'IEC 60502-2') {
     currentCapacityAir = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'air');
     currentCapacityGround = getMvKhaValue(effectiveParams.cores, effectiveParams.size, effectiveParams.conductorMaterial, effectiveParams.armorType, 'ground');
+  } else if (effectiveParams.standard === 'IEC 60092-353') {
+    const conductorType = effectiveParams.conductorType === 'f' ? 'class5' : 'class2';
+    currentCapacityAir = getMarineKhaValue(effectiveParams.cores, effectiveParams.size, conductorType);
+    currentCapacityGround = 0; // Marine cables are typically rated for air
   } else if (effectiveParams.standard.includes('SNI 04-6629.4 (NYM)')) {
     const nymEntry = NYM_KHA_DATA.find(e => e.size === effectiveParams.size);
     if (nymEntry) {
@@ -2188,6 +2211,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       drainWireSize: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.5 : undefined,
       polyesterTapeThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
       pairTriadDiameter: formationDiameter,
+      breakingLoad: abcData?.breakingLoad,
     },
     bom: {
       conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight, effectiveParams.conductorMaterial).toFixed(1)),

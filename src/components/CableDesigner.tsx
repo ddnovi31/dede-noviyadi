@@ -2531,7 +2531,242 @@ export default function CableDesigner() {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* 1. General Info */}
+                    {p.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' ? (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">1</td>
+                          <td className="border border-slate-400 p-2 font-medium">Manufactured</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">2</td>
+                          <td className="border border-slate-400 p-2 font-medium">Reference Standard</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            {(() => {
+                              const editKey = `${groupKey}-ref-standard`;
+                              const defaultVal = "SPLN D3.010-1:2014\nADDENDUM SPLN D3.010-1:2015";
+                              return (
+                                <textarea
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
+                                  rows={2}
+                                />
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">3</td>
+                          <td className="border border-slate-400 p-2 font-medium">Type</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">NFA2X</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">4</td>
+                          <td className="border border-slate-400 p-2 font-medium">Size</td>
+                          <td className="border border-slate-400 p-2 text-center">mm²</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold">{item.params.cores}x{item.params.size}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">5</td>
+                          <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
+                          <td className="border border-slate-400 p-2 text-center">kV</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">0,6/1 (1,2)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">6</td>
+                          <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold">Constructional Data :</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Conductor Phase</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Aluminium EC Grade</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Shape</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Round Stranded (rm)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Number / Diameter of Wires (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">dia/pcs</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.wireCount} / {item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Conductor Neutral</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Aluminium EC Grade</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Shape</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Round Stranded (rm)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Number / Diameter of Wires (Nom.)</td>
+                          <td className="border border-slate-400 p-2 text-center">dia/pcs</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.wireCount} / {item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter of Conductor</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Insulation Phase</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Extruded Black XLPE</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Thickness</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.coreDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4 font-medium">- Insulation Neutral</td>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Extruded Black XLPE</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Thickness</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Diameter Insulation</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.coreDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Overall Diameter</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.overallDiameter.toFixed(2).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-8">Marking on netral surface</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            {(() => {
+                              const firstItem = items[0];
+                              const defaultMarking = `SPLN D3.010-1:2014  MULTI KABEL  NFA2X  ${firstItem.params.cores}x${firstItem.params.size} mm²  0.6/1 (1.2) kV   <>LMK<>`;
+                              const editKey = `${groupKey}-marking-group`;
+                              return (
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultMarking}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
+                                />
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">7</td>
+                          <td className="border border-slate-400 p-2 font-medium">Calculated Breaking Load</td>
+                          <td className="border border-slate-400 p-2 text-center">kN</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.breakingLoad?.toFixed(2).replace('.', ',') || '-'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">8</td>
+                          <td className="border border-slate-400 p-2 font-medium">AC Test Voltage</td>
+                          <td className="border border-slate-400 p-2 text-center">kV/5Mins</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">3,5</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">9</td>
+                          <td className="border border-slate-400 p-2 font-medium">DC Condutor Resistance 20°C (Max.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.maxDcResistance?.toFixed(2).replace('.', ',') || '-'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">10</td>
+                          <td className="border border-slate-400 p-2 font-medium">Current Carrying Capacity in Air</td>
+                          <td className="border border-slate-400 p-2 text-center">A</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.currentCapacityAir || '-'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">11</td>
+                          <td className="border border-slate-400 p-2 font-medium">Net Weight (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg/Km</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.bom.totalWeight.toFixed(1).replace('.', ',')}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">12</td>
+                          <td className="border border-slate-400 p-2 font-medium">Standard Length Per Haspel</td>
+                          <td className="border border-slate-400 p-2 text-center">Meter</td>
+                          {items.map((item, idx) => {
+                            const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                            return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.standardLength}</td>;
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">13</td>
+                          <td className="border border-slate-400 p-2 font-medium">Packaging</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">Wooden Drum</td>
+                        </tr>
+                      </>
+                    ) : (
+                      <>
+                        {/* 1. General Info */}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center">1</td>
                       <td className="border border-slate-400 p-2 font-medium">Product Brand</td>
@@ -2957,10 +3192,16 @@ export default function CableDesigner() {
                           ))}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Diameter of Armour (Approx.)</td>
-                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            {p.standard === 'IEC 60092-353' ? '- Coverage' : '- Diameter of Armour (Approx.)'}
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            {p.standard === 'IEC 60092-353' ? '%' : 'mm'}
+                          </td>
                           {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType === 'Unarmored' ? '-' : item.result.spec.armorThickness.toFixed(2)}</td>
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              {p.armorType === 'Unarmored' ? '-' : (p.standard === 'IEC 60092-353' ? '90' : item.result.spec.armorThickness.toFixed(2))}
+                            </td>
                           ))}
                         </tr>
                       </>
@@ -3161,26 +3402,32 @@ export default function CableDesigner() {
                     </tr>
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
-                        <td className="border border-slate-400 p-2 text-center" rowSpan={p.standard.includes('(NYMHY)') ? 2 : 3}></td>
-                        <td className="border border-slate-400 p-2 pl-4 font-bold">- Max. Current Carrying Capacity{(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}</td>
+                        <td className="border border-slate-400 p-2 text-center" rowSpan={p.standard.includes('(NYMHY)') ? 2 : (p.standard === 'IEC 60092-353' ? 2 : 3)}></td>
+                        <td className="border border-slate-400 p-2 pl-4 font-bold">
+                          {p.standard === 'IEC 60092-353' 
+                            ? '- Max. Current Carrying Capacity at 45°C as per IEC 61892-4' 
+                            : `- Max. Current Carrying Capacity${(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}`}
+                        </td>
                         <td className="border border-slate-400 p-2 text-center"></td>
                         {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                       </tr>
                     )}
                     {p.standard !== 'BS EN 50288-7' && !p.standard.includes('(NYMHY)') && (
                       <>
+                        {p.standard !== 'IEC 60092-353' && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 pl-8">
+                              {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard.includes('(NYM)') ? 'In Air at 40°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`))}
+                            </td>
+                            <td className="border border-slate-400 p-2 text-center">A</td>
+                            {items.map((item, idx) => (
+                              <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
+                            ))}
+                          </tr>
+                        )}
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard.includes('(NYM)') ? 'In Air at 40°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`))}
-                          </td>
-                          <td className="border border-slate-400 p-2 text-center">A</td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
-                          ))}
-                        </tr>
-                        <tr>
-                          <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard.includes('(NYM)') ? 'In Air at 30°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : ''}`)}
+                            {p.standard.includes('(NYM)') ? 'In Air at 30°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : (p.standard === 'IEC 60092-353' ? ' at 45°C' : '')}`)}
                           </td>
                           <td className="border border-slate-400 p-2 text-center">A</td>
                           {items.map((item, idx) => (
@@ -3219,6 +3466,8 @@ export default function CableDesigner() {
                           </td>
                         ))}
                       </tr>
+                    )}
+                      </>
                     )}
                   </tbody>
                 </table>
