@@ -6,12 +6,12 @@ import { MARINE_KHA_DATA } from './marineKhaData';
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
 export type InsulationMaterial = string;
-export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB';
+export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB' | 'CWB';
 export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
 export type ScreenType = 'None' | 'CTS' | 'CWS';
-export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)';
+export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)' | 'LiYCY';
 export type FormationType = 'Core' | 'Pair' | 'Triad';
 export type DesignMode = 'standard' | 'advance';
 
@@ -944,6 +944,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (params.hasIndividualScreen) {
       effectiveParams.hasOverallScreen = true;
     }
+  } else if (params.standard === 'LiYCY') {
+    effectiveParams.voltage = '300/500 V';
+    effectiveParams.insulationMaterial = 'PVC';
+    effectiveParams.sheathMaterial = 'PVC';
+    effectiveParams.conductorType = 'f';
+    if (effectiveParams.armorType !== 'TCWB' && effectiveParams.armorType !== 'CWB') {
+      effectiveParams.armorType = 'TCWB'; // Default for LiYCY
+    }
+    effectiveParams.hasInnerSheath = false;
+    effectiveParams.hasSeparator = true;
+    effectiveParams.separatorMaterial = 'Polyester Tape';
   }
 
   // Aluminum size constraint: min 10mm2
@@ -1225,7 +1236,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let insulationScreenThickness = effectiveParams.manualInsulationScreenThickness || 0;
   let insulationThickness = effectiveParams.manualInsulationThickness;
 
-  if (params.standard === 'BS EN 50288-7') {
+  if (params.standard === 'LiYCY') {
+    if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
+      const size = effectiveParams.size;
+      if (size <= 1.50) insulationThickness = 0.40;
+      else if (size <= 4.00) insulationThickness = 0.50;
+      else insulationThickness = 0.60; // Default for larger
+    }
+  } else if (params.standard === 'BS EN 50288-7') {
     if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
       const is300V = effectiveParams.voltage === '300 V';
       const is300_500V = effectiveParams.voltage === '300/500 V';
@@ -1666,7 +1684,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let innerCoveringWeight = 0;
   let diameterUnderArmor = effectiveParams.manualDiameterUnderArmor || laidUpDiameter;
 
-  if (effectiveParams.standard.includes('NFA2X')) {
+  if (effectiveParams.standard.includes('NFA2X') || effectiveParams.standard === 'LiYCY') {
     innerCoveringThickness = 0;
     diameterUnderArmor = effectiveParams.manualDiameterUnderArmor || laidUpDiameter;
   } else if (effectiveParams.armorType !== 'Unarmored' || effectiveParams.hasInnerSheath || effectiveParams.manualInnerSheathThickness) {
@@ -1776,18 +1794,31 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Auto-separator logic: if cable has screen and armor
   const autoSeparator = isIEC60502_1 && effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
-  const needsSeparator = isIEC60502_1 && (effectiveParams.hasSeparator || autoSeparator);
+  const needsSeparator = (isIEC60502_1 && (effectiveParams.hasSeparator || autoSeparator)) || effectiveParams.standard === 'LiYCY';
 
   if (needsSeparator) {
-    if (!effectiveParams.manualSeparatorThickness) {
-      const calcThick = 0.02 * diameterOverOverallScreen + 0.6;
-      separatorThickness = calcThick < 1 ? 1.0 : Math.round(calcThick * 10) / 10;
+    if (effectiveParams.standard === 'LiYCY' || effectiveParams.separatorMaterial === 'Polyester Tape') {
+      // Polyester Tape is a wrapped tape, not extruded
+      if (!effectiveParams.manualSeparatorThickness) {
+        separatorThickness = 0.05; // Typical PET tape thickness
+      }
+      diameterOverSeparator = diameterOverOverallScreen + (2 * separatorThickness);
+      
+      const petDensity = 1.38; // Density for Polyester
+      const overlap = 25; // 25% overlap
+      // Weight = PI * (D + t) * t * density * (1 + overlap/100)
+      separatorWeight = Math.PI * (diameterOverOverallScreen + separatorThickness) * separatorThickness * petDensity * (1 + overlap/100);
+    } else {
+      if (!effectiveParams.manualSeparatorThickness) {
+        const calcThick = 0.02 * diameterOverOverallScreen + 0.6;
+        separatorThickness = calcThick < 1 ? 1.0 : Math.round(calcThick * 10) / 10;
+      }
+      diameterOverSeparator = diameterOverOverallScreen + (2 * separatorThickness);
+      const rUnder = diameterOverOverallScreen / 2;
+      const rOver = diameterOverSeparator / 2;
+      const area = Math.PI * (rOver * rOver - rUnder * rUnder);
+      separatorWeight = area * (densities[effectiveParams.separatorMaterial || 'PVC'] || densities.PVC);
     }
-    diameterOverSeparator = diameterOverOverallScreen + (2 * separatorThickness);
-    const rUnder = diameterOverOverallScreen / 2;
-    const rOver = diameterOverSeparator / 2;
-    const area = Math.PI * (rOver * rOver - rUnder * rUnder);
-    separatorWeight = area * (densities[effectiveParams.separatorMaterial || 'PVC'] || densities.PVC);
   }
 
   // Update diameter under armor to include screen and separator
@@ -1919,13 +1950,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel); // 5% lay factor for wire
     armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel); // 2% for tape
     armorWeight = armorWireWeight + armorTapeWeight;
-  } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
+  } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB' || effectiveParams.armorType === 'CWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
     // Formula based on standard industry practices (e.g., Belden, Alpha Wire)
     
     let wireDia = effectiveParams.manualArmorThickness ? effectiveParams.manualArmorThickness / 2 : 0.3;
     if (effectiveParams.manualBraidWireDiameter) {
       wireDia = effectiveParams.manualBraidWireDiameter;
+    } else if (effectiveParams.standard === 'LiYCY') {
+      wireDia = 0.18;
     } else if (!effectiveParams.manualArmorThickness) {
       if (diameterUnderArmor <= 15) wireDia = 0.2;
       else if (diameterUnderArmor <= 30) wireDia = 0.3;
@@ -1999,12 +2032,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // 8. Braiding Weight (W)
     // W = (n * m * PI * d^2 / 4) * density * layFactor
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
-    const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (densities.GSWB || densities.Steel);
+    const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (effectiveParams.armorType === 'CWB' ? densities.Cu : (densities.GSWB || densities.Steel));
     
     armorWireWeight = (n * carriers) * wireArea * armorDensity * layFactor;
     armorWeight = armorWireWeight;
     
-    armorThickness = wireDia * 2; // Double wire diameter for braid thickness
+    armorThickness = (effectiveParams.standard === 'LiYCY') ? wireDia : wireDia * 2; // For LiYCY, thickness is the wire diameter
     if (!effectiveParams.manualDiameterOverArmor) {
       diameterOverArmor = diameterUnderArmor + 2 * armorThickness;
     }
@@ -2016,7 +2049,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard.includes('NFA2X')) {
     sheathThickness = 0;
   } else if (sheathThickness === undefined) {
-    if (effectiveParams.standard === 'BS EN 50288-7') {
+    if (effectiveParams.standard === 'LiYCY') {
+      const nominalSheath = 0.08 * fictitiousDiameter + 0.8;
+      sheathThickness = Math.round((0.85 * nominalSheath - 0.1) * 10) / 10;
+    } else if (effectiveParams.standard === 'BS EN 50288-7') {
       if (effectiveParams.armorType === 'Unarmored') {
         sheathThickness = Math.max(1.8, Math.round((0.04 * fictitiousDiameter + 0.7) * 10) / 10);
       } else {

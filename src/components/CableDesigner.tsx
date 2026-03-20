@@ -1701,6 +1701,17 @@ export default function CableDesigner() {
             newParams.voltage = '300/500 V';
             newParams.hasInnerSheath = false;
           }
+        } else if (newParams.standard === 'LiYCY') {
+          newParams.voltage = '300/500 V';
+          newParams.insulationMaterial = 'PVC';
+          newParams.sheathMaterial = 'PVC';
+          newParams.conductorType = 'f';
+          newParams.armorType = 'TCWB';
+          newParams.hasInnerSheath = false;
+          newParams.hasSeparator = true;
+          newParams.separatorMaterial = 'Polyester Tape';
+          if (newParams.size > 2.5) newParams.size = 2.5;
+          if (newParams.size < 0.75) newParams.size = 0.75;
         } else if (newParams.standard === 'IEC 60092-353') {
           newParams.voltage = '0.6/1 kV';
           newParams.insulationMaterial = 'XLPE';
@@ -3036,6 +3047,7 @@ export default function CableDesigner() {
                                             <option value="PVC">PVC</option>
                                             <option value="PE">PE</option>
                                             <option value="LSZH">LSZH</option>
+                                            <option value="Polyester Tape">Polyester Tape</option>
                                           </select>
                                         </div>
                                       )}
@@ -5120,6 +5132,7 @@ export default function CableDesigner() {
                         <option value="SPLN D3. 010-1 : 2014 (NFA2X)">SPLN D3. 010-1 : 2014 (NFA2X)</option>
                         <option value="SPLN D3. 010-1 : 2015 (NFA2X-T)">SPLN D3. 010-1 : 2015 (NFA2X-T)</option>
                         <option value="BS EN 50288-7">BS EN 50288-7 (Instrumentation)</option>
+                        <option value="LiYCY">LiYCY (Flexible Screened)</option>
                       </select>
                     </div>
 
@@ -5752,7 +5765,8 @@ export default function CableDesigner() {
                             return availableConductors.map((mat) => {
                               const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || 
                                                (params.standard.includes('NFA2X') && mat !== 'Al') ||
-                                               (params.standard === 'BS EN 50288-7' && mat !== 'Cu' && mat !== 'TCu');
+                                               (params.standard === 'BS EN 50288-7' && mat !== 'Cu' && mat !== 'TCu') ||
+                                               (params.standard === 'LiYCY' && mat !== 'Cu' && mat !== 'TCu');
                               return (
                                 <button
                                   key={mat}
@@ -5795,6 +5809,7 @@ export default function CableDesigner() {
                               if (params.standard.includes('(NYAF)') || params.standard.includes('(NYMHY)')) isDisabled = isDisabled || type !== 'f';
                               if (params.standard.includes('(NYA)')) isDisabled = isDisabled || (type !== 're' && type !== 'rm');
                             }
+                            if (params.standard === 'LiYCY') isDisabled = isDisabled || type !== 'f';
                             if (params.standard === 'IEC 60502-2') isDisabled = isDisabled || type !== 'cm';
                             if (params.standard.includes('NFA2X')) isDisabled = isDisabled || !['cm', 'rm'].includes(type);
                             
@@ -5899,6 +5914,7 @@ export default function CableDesigner() {
                               let isDisabled = false;
                               if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
                               if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                              if (params.standard === 'LiYCY') isDisabled = mat !== 'PVC';
                               if (isNYCY) isDisabled = mat !== 'PVC';
                               
                               return (
@@ -6049,63 +6065,65 @@ export default function CableDesigner() {
                     )}
 
                     {/* Inner Sheath Section */}
-                    <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                          <label className={`flex items-center justify-between cursor-pointer group ${params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Inner Sheath</span>
-                            <div className="relative">
+                    {params.standard !== 'LiYCY' && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                            <label className={`flex items-center justify-between cursor-pointer group ${params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Inner Sheath</span>
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  disabled={params.armorType !== 'Unarmored'}
+                                  checked={params.hasInnerSheath !== false || params.armorType !== 'Unarmored'}
+                                  onChange={(e) => handleParamChange('hasInnerSheath', e.target.checked)}
+                                />
+                                <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                                <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'translate-x-4' : ''}`}></div>
+                              </div>
+                            </label>
+                            {(params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                              <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
+                                <select
+                                  value={params.innerSheathMaterial || 'PVC'}
+                                  onChange={(e) => handleParamChange('innerSheathMaterial', e.target.value as SheathMaterial)}
+                                  className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                                >
+                                  {(() => {
+                                    const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                    const customCompounds = Object.keys(materialPrices).filter(m => 
+                                      materialCategories[m] === 'Compound Filler' || 
+                                      materialCategories[m] === 'Compound Sheath' || 
+                                      materialCategories[m] === 'Compound (Filler/Sheath)'
+                                    );
+                                    const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
+                                    return availableCompounds.map(mat => (
+                                      <option key={mat} value={mat}>{mat}</option>
+                                    ));
+                                  })()}
+                                  <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {params.mode === 'advance' && (params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Inner Sheath Thickness (mm)</label>
                               <input
-                                type="checkbox"
-                                className="sr-only"
-                                disabled={params.armorType !== 'Unarmored'}
-                                checked={params.hasInnerSheath !== false || params.armorType !== 'Unarmored'}
-                                onChange={(e) => handleParamChange('hasInnerSheath', e.target.checked)}
+                                type="number"
+                                step="0.1"
+                                value={params.manualInnerSheathThickness || ''}
+                                placeholder={result.spec.innerCoveringThickness.toFixed(1)}
+                                onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
-                              <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'translate-x-4' : ''}`}></div>
-                            </div>
-                          </label>
-                          {(params.hasInnerSheath || params.armorType !== 'Unarmored') && (
-                            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
-                              <select
-                                value={params.innerSheathMaterial || 'PVC'}
-                                onChange={(e) => handleParamChange('innerSheathMaterial', e.target.value as SheathMaterial)}
-                                className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
-                              >
-                                {(() => {
-                                  const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                  const customCompounds = Object.keys(materialPrices).filter(m => 
-                                    materialCategories[m] === 'Compound Filler' || 
-                                    materialCategories[m] === 'Compound Sheath' || 
-                                    materialCategories[m] === 'Compound (Filler/Sheath)'
-                                  );
-                                  const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
-                                  return availableCompounds.map(mat => (
-                                    <option key={mat} value={mat}>{mat}</option>
-                                  ));
-                                })()}
-                                <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
-                              </select>
                             </div>
                           )}
                         </div>
-                        
-                        {params.mode === 'advance' && (params.hasInnerSheath || params.armorType !== 'Unarmored') && (
-                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Inner Sheath Thickness (mm)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={params.manualInnerSheathThickness || ''}
-                              placeholder={result.spec.innerCoveringThickness.toFixed(1)}
-                              onChange={(e) => handleParamChange('manualInnerSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
-                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
-                            />
-                          </div>
-                        )}
-                      </div>
+                    )}
 
                     {/* Screen Section */}
                     <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isLV ? 'opacity-50' : ''}`}>
@@ -6200,55 +6218,68 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Separator Section */}
-                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isIEC60502_1 ? 'opacity-50' : ''}`}>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.2 Separator Sheath {!isIEC60502_1 && '(IEC 60502-1 Only)'}</label>
+                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${(!isIEC60502_1 && params.standard !== 'LiYCY') ? 'opacity-50' : ''}`}>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        {params.standard === 'LiYCY' ? '4.2 Inner Tape (Polyester Tape)' : `4.2 Separator Sheath ${!isIEC60502_1 ? '(IEC 60502-1 Only)' : ''}`}
+                      </label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                        <label className={`flex items-center justify-between ${(!isIEC60502_1 || (params.hasScreen && params.armorType !== 'Unarmored')) ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
-                          <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Separator</span>
+                        <label className={`flex items-center justify-between ${((!isIEC60502_1 && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY') ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
+                          <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+                            {params.standard === 'LiYCY' ? 'Apply Inner Tape' : 'Apply Separator'}
+                          </span>
                           <div className="relative">
                             <input
                               type="checkbox"
                               className="sr-only"
-                              disabled={!isIEC60502_1 || (params.hasScreen && params.armorType !== 'Unarmored')}
-                              checked={isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))}
+                              disabled={(!isIEC60502_1 && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY'}
+                              checked={(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY'}
                               onChange={(e) => handleParamChange('hasSeparator', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored')) && (
+                        {((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
                             <select
-                              value={params.separatorMaterial || 'PVC'}
+                              value={params.standard === 'LiYCY' ? 'Polyester Tape' : (params.separatorMaterial || 'PVC')}
+                              disabled={params.standard === 'LiYCY'}
                               onChange={(e) => handleParamChange('separatorMaterial', e.target.value as SheathMaterial)}
-                              className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50"
+                              className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
                             >
-                              {(() => {
-                                const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                                const customCompounds = Object.keys(materialPrices).filter(m => 
-                                  materialCategories[m] === 'Compound Filler' || 
-                                  materialCategories[m] === 'Compound Sheath' || 
-                                  materialCategories[m] === 'Compound (Filler/Sheath)'
-                                );
-                                const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
-                                return availableCompounds.map(mat => (
-                                  <option key={mat} value={mat}>{mat}</option>
-                                ));
-                              })()}
-                              <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
+                              {params.standard === 'LiYCY' ? (
+                                <option value="Polyester Tape">Polyester Tape</option>
+                              ) : (
+                                <>
+                                  {(() => {
+                                    const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                    const customCompounds = Object.keys(materialPrices).filter(m => 
+                                      materialCategories[m] === 'Compound Filler' || 
+                                      materialCategories[m] === 'Compound Sheath' || 
+                                      materialCategories[m] === 'Compound (Filler/Sheath)'
+                                    );
+                                    const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
+                                    return availableCompounds.map(mat => (
+                                      <option key={mat} value={mat}>{mat}</option>
+                                    ));
+                                  })()}
+                                  <option value="ADD_NEW_COMPOUND" className="text-indigo-600 font-bold">+ Add New Material...</option>
+                                </>
+                              )}
                             </select>
                           </div>
                         )}
-                        {params.mode === 'advance' && (isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) && (
+                        {params.mode === 'advance' && ((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') && (
                           <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Separator Thickness (mm)</label>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                              {params.standard === 'LiYCY' ? 'Tape Thickness (mm)' : 'Separator Thickness (mm)'}
+                            </label>
                             <input
                               type="number"
                               step="0.1"
                               value={params.manualSeparatorThickness || ''}
-                              placeholder={(result.spec.separatorThickness || 0).toFixed(1)}
+                              placeholder={(result.spec.separatorThickness || 0).toFixed(2)}
                               onChange={(e) => handleParamChange('manualSeparatorThickness', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -6259,7 +6290,7 @@ export default function CableDesigner() {
 
                     {/* Armor Section */}
                     <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">5. Armour</label>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">{params.standard === 'LiYCY' ? '5. Braid Screen' : '5. Armour'}</label>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                         <select
@@ -6283,6 +6314,11 @@ export default function CableDesigner() {
                             <>
                               <option value="GSWB">GSWB (Steel Wire Braided)</option>
                               <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
+                            </>
+                          ) : params.standard === 'LiYCY' ? (
+                            <>
+                              <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
+                              <option value="CWB">CWB (Copper Wire Braided)</option>
                             </>
                           ) : params.cores === 1 ? (
                             <option value="AWA">AWA (Aluminum Wire)</option>
@@ -6666,7 +6702,7 @@ export default function CableDesigner() {
 
                           {params.armorType !== 'Unarmored' && (
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Armor (mm)</label>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">{params.standard === 'LiYCY' ? 'Braid Screen (mm)' : 'Armor (mm)'}</label>
                               <input
                                 type="number"
                                 step="0.1"
@@ -6680,7 +6716,7 @@ export default function CableDesigner() {
 
                           {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 mb-1">Outer Sheath (mm)</label>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">{params.standard === 'LiYCY' ? 'Min. Outer Sheath (mm)' : 'Outer Sheath (mm)'}</label>
                               <input
                                 type="number"
                                 step="0.1"
@@ -7334,7 +7370,7 @@ export default function CableDesigner() {
                       <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.spec.screenThickness} unit="mm" />
                     )}
                     {result.spec.separatorThickness && (
-                      <SpecRow label="Separator Sheath Thickness" value={result.spec.separatorThickness} unit="mm" />
+                      <SpecRow label={params.standard === 'LiYCY' ? "Inner Tape Thickness" : "Separator Sheath Thickness"} value={result.spec.separatorThickness} unit="mm" />
                     )}
                     {params.armorType !== 'Unarmored' && (
                       <>
@@ -7356,7 +7392,7 @@ export default function CableDesigner() {
                               </>
                             )}
                             
-                            {(params.armorType === 'GSWB' || params.armorType === 'TCWB') && (
+                            {(params.armorType === 'GSWB' || params.armorType === 'TCWB' || params.armorType === 'CWB') && (
                               <>
                                 <SpecRow label="Braid Wire Diameter" value={result.spec.armorWireDiameter || result.spec.braidWireDiameter} unit="mm" />
                                 <SpecRow label="Number of Carriers" value={result.spec.gswbCarriers} unit="" precision={0} />
@@ -7380,15 +7416,15 @@ export default function CableDesigner() {
                         )}
 
                         {params.mode !== 'advance' && (
-                          <SpecRow label="Armor Thickness" value={result.spec.armorThickness} unit="mm" />
+                          <SpecRow label={params.standard === 'LiYCY' ? "Braid Screen Thickness" : "Armor Thickness"} value={result.spec.armorThickness} unit="mm" />
                         )}
 
-                        <SpecRow label="Diameter Over Armor" value={result.spec.diameterOverArmor} unit="mm" />
+                        <SpecRow label={params.standard === 'LiYCY' ? "Diameter Over Screen" : "Diameter Over Armor"} value={result.spec.diameterOverArmor} unit="mm" />
                       </>
                     )}
                     
                     {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
-                      <SpecRow label="Outer Sheath Thickness" value={result.spec.sheathThickness} unit="mm" />
+                      <SpecRow label={params.standard === 'LiYCY' ? "Min. Outer Sheath Thickness" : "Outer Sheath Thickness"} value={result.spec.sheathThickness} unit="mm" />
                     )}
                     <div className="pt-2 mt-2 border-t border-slate-100">
                       <div className="flex justify-between items-start py-1">
@@ -7517,19 +7553,19 @@ export default function CableDesigner() {
                   )}
                   
                   {result.bom.separatorWeight > 0 && (
-                    <SpecRow label="Separator Sheath" value={result.bom.separatorWeight} unit="kg/km" />
+                    <SpecRow label={params.standard === 'LiYCY' ? "Inner Tape (Polyester)" : "Separator Sheath"} value={result.bom.separatorWeight} unit="kg/km" />
                   )}
                   
                   {params.armorType !== 'Unarmored' && (
                     <>
                       {result.bom.armorWireWeight !== undefined && result.bom.armorWireWeight > 0 ? (
-                        <SpecRow label={`Armor Wire/Flat (${params.armorType})`} value={result.bom.armorWireWeight} unit="kg/km" />
+                        <SpecRow label={params.standard === 'LiYCY' ? `Braid Screen (${params.armorType})` : `Armor Wire/Flat (${params.armorType})`} value={result.bom.armorWireWeight} unit="kg/km" />
                       ) : null}
                       {result.bom.armorTapeWeight !== undefined && result.bom.armorTapeWeight > 0 ? (
                         <SpecRow label={`Armor Tape (${params.armorType})`} value={result.bom.armorTapeWeight} unit="kg/km" />
                       ) : null}
                       {(!result.bom.armorWireWeight && !result.bom.armorTapeWeight) && (
-                        <SpecRow label={`Armor (${params.armorType})`} value={result.bom.armorWeight} unit="kg/km" />
+                        <SpecRow label={params.standard === 'LiYCY' ? `Braid Screen (${params.armorType})` : `Armor (${params.armorType})`} value={result.bom.armorWeight} unit="kg/km" />
                       )}
                     </>
                   )}
@@ -7564,7 +7600,7 @@ export default function CableDesigner() {
                     <WeightFormulaRow label="Metallic Screen" detail={result.weights.metallicScreen} formulaKey="metallicScreen" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                     <WeightFormulaRow label="Inner Sheath" detail={result.weights.innerSheath} formulaKey="innerSheath" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                     <WeightFormulaRow label="Armor" detail={result.weights.armor} formulaKey="armor" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
-                    <WeightFormulaRow label="Separator" detail={result.weights.separator} formulaKey="separator" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
+                    <WeightFormulaRow label={params.standard === 'LiYCY' ? "Inner Tape" : "Separator"} detail={result.weights.separator} formulaKey="separator" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                     <WeightFormulaRow label="Outer Sheath" detail={result.weights.outerSheath} formulaKey="outerSheath" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                     <WeightFormulaRow label="Earthing" detail={result.weights.earthing} formulaKey="earthing" customFormulas={params.customFormulas} onFormulaChange={(k, v) => handleParamChange('customFormulas', { ...params.customFormulas, [k]: v })} />
                   </div>
