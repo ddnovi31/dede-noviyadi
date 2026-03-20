@@ -185,6 +185,29 @@ export default function CableDesigner() {
   const [projectName, setProjectName] = useState('New Project');
   const [projectNumber, setProjectNumber] = useState('');
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
+  const updateProjectItemParam = (idx: number, key: string, value: any) => {
+    setProjectItems(prev => prev.map((item, i) => {
+      if (i === idx) {
+        const newParams = { ...item.params, [key]: value };
+        const newResult = calculateCable(newParams, materialDensities, materialScrap);
+        return { params: newParams, result: newResult };
+      }
+      return item;
+    }));
+  };
+
+  const updateProjectItemCustomPrice = (idx: number, material: string, price: number) => {
+    setProjectItems(prev => prev.map((item, i) => {
+      if (i === idx) {
+        const newCustomPrices = { ...(item.params.customMaterialPrices || {}), [material]: price };
+        const newParams = { ...item.params, customMaterialPrices: newCustomPrices };
+        return { params: newParams, result: item.result };
+      }
+      return item;
+    }));
+  };
 
   const [dbFileHandle, setDbFileHandle] = useState<any>(null);
   const [sqlConfig, setSqlConfig] = useState(() => {
@@ -544,27 +567,30 @@ export default function CableDesigner() {
       items.forEach(({ item, index }) => {
         const r = sheetsData[sheetName].length + 1;
         
-        const condPrice = (item.params.conductorMaterial === 'Cu' ? materialPrices.Cu : (item.params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
-        const insPrice = materialPrices[item.params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE;
-        const innerPrice = materialPrices[item.params.innerSheathMaterial || 'PVC'] || materialPrices.PVC;
+        const customPrices = item.params.customMaterialPrices || {};
+        const getPrice = (mat: string, fallback: number) => customPrices[mat] !== undefined ? customPrices[mat] : (materialPrices[mat] !== undefined ? materialPrices[mat] : fallback);
+
+        const condPrice = (item.params.conductorMaterial === 'Cu' ? getPrice('Cu', 0) : (item.params.conductorMaterial === 'Al' ? getPrice('Al', 0) : getPrice('TCu', 0)));
+        const insPrice = getPrice(item.params.insulationMaterial, getPrice('XLPE', 0));
+        const innerPrice = getPrice(item.params.innerSheathMaterial || 'PVC', getPrice('PVC', 0));
         
         const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : (item.params.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))));
         const armorWirePrice = (
-          item.params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
-          item.params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
-          item.params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.SteelWire) : 
-          item.params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.SteelWire) : 
-          item.params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.SteelWire) : 
-          item.params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
-          materialPrices.SteelWire || materialPrices.Steel
+          item.params.armorType === 'AWA' ? getPrice('AWA', getPrice('Al', 0)) : 
+          item.params.armorType === 'SWA' ? getPrice('SWA', getPrice('SteelWire', 0)) : 
+          item.params.armorType === 'SFA' ? getPrice('SFA', getPrice('SteelWire', 0)) : 
+          item.params.armorType === 'RGB' ? getPrice('RGB', getPrice('SteelWire', 0)) : 
+          item.params.armorType === 'GSWB' ? getPrice('GSWB', getPrice('SteelWire', 0)) : 
+          item.params.armorType === 'TCWB' ? getPrice('TCWB', getPrice('TCu', 0)) : 
+          getPrice('SteelWire', getPrice('Steel', 0))
         );
-        const armorTapePrice = materialPrices.STA || materialPrices.Steel;
+        const armorTapePrice = getPrice('STA', getPrice('Steel', 0));
 
-        const sheathPrice = materialPrices[item.params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC;
-        const semiPrice = materialPrices.SemiCond || 65000;
+        const sheathPrice = getPrice(item.params.sheathMaterial, getPrice('PVC', 0));
+        const semiPrice = getPrice('SemiCond', 65000);
         const metScreenMat = item.params.screenType === 'CTS' ? 'CTS' : (item.params.screenType === 'CWS' ? 'CWS' : 'Steel');
-        const metScreenPrice = item.params.screenType === 'CTS' ? (materialPrices.CTS || materialPrices.Cu) : materialPrices.Cu;
-        const separatorPrice = materialPrices[item.params.separatorMaterial || 'PVC'] || materialPrices.PVC;
+        const metScreenPrice = item.params.screenType === 'CTS' ? getPrice('CTS', getPrice('Cu', 0)) : getPrice('Cu', 0);
+        const separatorPrice = getPrice(item.params.separatorMaterial || 'PVC', getPrice('PVC', 0));
 
         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
         const packingCost = packing.packingCostPerMeter;
@@ -613,7 +639,7 @@ export default function CableDesigner() {
         if (item.params.fireguard) {
           const mgtThkCol = pushCol(item.result.spec.mgtThickness || 0.2, fmtNum);
           const mgtWtCol = pushCol(item.result.bom.mgtWeight || 0, fmtNum);
-          const mgtPrcCol = pushCol(materialPrices.MGT || 120000, fmtRp);
+          const mgtPrcCol = pushCol(getPrice('MGT', 120000), fmtRp);
           pushCol(null, fmtRp, `${mgtWtCol}${r}*${mgtPrcCol}${r}/1000`);
           currentDiaFormula = `(${currentDiaFormula}+2*${mgtThkCol}${r})`;
         }
@@ -694,7 +720,7 @@ export default function CableDesigner() {
             
             earthWtCol = pushCol(null, fmtNum, `(PI()*(${alDiaCol}${r}/2)^2*${alWiresCol}${r}*${getDensity('Al')}*(1+${materialScrap['Al'] || 0}/100) + PI()*(${stDiaCol}${r}/2)^2*${stWiresCol}${r}*${getDensity('SteelWire')}*(1+${materialScrap['SteelWire'] || 0}/100))`);
             if (item.result.bom.earthingAlWeight !== undefined && item.result.bom.earthingSteelWeight !== undefined) {
-              earthCstCol = pushCol(null, fmtRp, `(${item.result.bom.earthingAlWeight}*${materialPrices.Al}+${item.result.bom.earthingSteelWeight}*${materialPrices.SteelWire})/1000`);
+              earthCstCol = pushCol(null, fmtRp, `(${item.result.bom.earthingAlWeight}*${getPrice('Al', 0)}+${item.result.bom.earthingSteelWeight}*${getPrice('SteelWire', 0)})/1000`);
             } else {
               earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
             }
@@ -724,20 +750,20 @@ export default function CableDesigner() {
           pushCol(null, fmtNum, isDiaFormula); // OD
           const isAlOverlap = item.params.manualIsAluminiumOverlap !== undefined ? item.params.manualIsAluminiumOverlap : 25;
           isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*(1+${materialScrap['Al'] || 0}/100)`);
-          const isAlPrcCol = pushCol(materialPrices.Al, fmtRp);
+          const isAlPrcCol = pushCol(getPrice('Al', 0), fmtRp);
           const isDrainCount = item.params.manualIsDrainWireCount || 17;
           pushCol(isDrainCount * isMultiplier, fmtNum); // Drain Wire Qty
           const isDrainDia = item.params.manualIsDrainWireDiameter || 0.2;
           const defaultDrainSize = Math.PI * Math.pow(isDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualIsDrainWireSize || item.result.spec.drainWireSize || defaultDrainSize, fmtNum); // Drain Size (mm2)
           isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${isDrainCount}*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
-          const isDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
+          const isDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
           pushCol(isMultiplier, fmtNum); // PET Tape Qty
           const isPetThkCol = pushCol(item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           isDiaFormula = `(${isDiaFormula}+2*${isPetThkCol}${r})`;
           const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
           isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['PE'] || 0}/100)`);
-          const isPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
+          const isPetPrcCol = pushCol(getPrice('PE', 25000), fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
 
@@ -750,20 +776,20 @@ export default function CableDesigner() {
           pushCol(null, fmtNum, currentDiaFormula); // OD
           const osAlOverlap = item.params.manualOsAluminiumOverlap !== undefined ? item.params.manualOsAluminiumOverlap : 25;
           osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*(1+${materialScrap['Al'] || 0}/100)`);
-          const osAlPrcCol = pushCol(materialPrices.Al, fmtRp);
+          const osAlPrcCol = pushCol(getPrice('Al', 0), fmtRp);
           const osDrainCount = item.params.manualOsDrainWireCount || 17;
           pushCol(osDrainCount, fmtNum); // Drain Wire Qty
           const osDrainDia = item.params.manualOsDrainWireDiameter || 0.2;
           const defaultOsDrainSize = Math.PI * Math.pow(osDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualOsDrainWireSize || item.result.spec.drainWireSize || defaultOsDrainSize, fmtNum); // Drain Size (mm2)
           osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${osDrainCount}*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
-          const osDrainPrcCol = pushCol(materialPrices.TCu || materialPrices.Cu, fmtRp);
+          const osDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
           pushCol(1, fmtNum); // PET Tape Qty
           const osPetThkCol = pushCol(item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           currentDiaFormula = `(${currentDiaFormula}+2*${osPetThkCol}${r})`;
           const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
           osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['PE'] || 0}/100)`);
-          const osPetPrcCol = pushCol(materialPrices.PE || 25000, fmtRp);
+          const osPetPrcCol = pushCol(getPrice('PE', 25000), fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
 
@@ -1894,28 +1920,31 @@ export default function CableDesigner() {
   };
 
   const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams) => {
+    const prices = { ...materialPrices, ...(params.customMaterialPrices || {}) };
+    const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
+    
     const formationType = params.formationType || 'Pair';
     const multiplier = formationType === 'Pair' ? params.cores / 2 : (formationType === 'Triad' ? params.cores / 3 : params.cores);
-    const condPrice = (params.conductorMaterial === 'Cu' ? materialPrices.Cu : (params.conductorMaterial === 'Al' ? materialPrices.Al : materialPrices.TCu));
-    const insPrice = (materialPrices[params.insulationMaterial as keyof typeof materialPrices] || materialPrices.XLPE);
+    const condPrice = (params.conductorMaterial === 'Cu' ? getPrice('Cu', 0) : (params.conductorMaterial === 'Al' ? getPrice('Al', 0) : getPrice('TCu', 0)));
+    const insPrice = getPrice(params.insulationMaterial, getPrice('XLPE', 0));
     const armorWirePrice = (
-      params.armorType === 'AWA' ? (materialPrices.AWA || materialPrices.Al) : 
-      params.armorType === 'SWA' ? (materialPrices.SWA || materialPrices.SteelWire) : 
-      params.armorType === 'SFA' ? (materialPrices.SFA || materialPrices.SteelWire) : 
-      params.armorType === 'RGB' ? (materialPrices.RGB || materialPrices.SteelWire) : 
-      params.armorType === 'GSWB' ? (materialPrices.GSWB || materialPrices.SteelWire) : 
-      params.armorType === 'TCWB' ? (materialPrices.TCWB || materialPrices.TCu) : 
-      materialPrices.SteelWire || materialPrices.Steel
+      params.armorType === 'AWA' ? getPrice('AWA', getPrice('Al', 0)) : 
+      params.armorType === 'SWA' ? getPrice('SWA', getPrice('SteelWire', 0)) : 
+      params.armorType === 'SFA' ? getPrice('SFA', getPrice('SteelWire', 0)) : 
+      params.armorType === 'RGB' ? getPrice('RGB', getPrice('SteelWire', 0)) : 
+      params.armorType === 'GSWB' ? getPrice('GSWB', getPrice('SteelWire', 0)) : 
+      params.armorType === 'TCWB' ? getPrice('TCWB', getPrice('TCu', 0)) : 
+      getPrice('SteelWire', getPrice('Steel', 0))
     );
-    const armorTapePrice = materialPrices.STA || materialPrices.Steel;
-    const sheathPrice = (materialPrices[params.sheathMaterial as keyof typeof materialPrices] || materialPrices.PVC);
-    const innerPrice = (materialPrices[params.innerSheathMaterial || 'PVC'] || materialPrices.PVC);
-    const separatorPrice = (materialPrices[params.separatorMaterial || 'PVC'] || materialPrices.PVC);
-    const semiPrice = materialPrices.SemiCond;
-    const screenPrice = params.screenType === 'CTS' ? (materialPrices.CTS || materialPrices.Cu) : (params.screenType === 'CWS' ? (materialPrices.CWS || materialPrices.Cu) : materialPrices.Steel);
-    const mvScreenPrice = materialPrices.Cu;
-    const mgtPrice = materialPrices.MGT;
-    const steelWirePrice = materialPrices.SteelWire || 50000;
+    const armorTapePrice = getPrice('STA', getPrice('Steel', 0));
+    const sheathPrice = getPrice(params.sheathMaterial, getPrice('PVC', 0));
+    const innerPrice = getPrice(params.innerSheathMaterial || 'PVC', getPrice('PVC', 0));
+    const separatorPrice = getPrice(params.separatorMaterial || 'PVC', getPrice('PVC', 0));
+    const semiPrice = getPrice('SemiCond', 65000);
+    const screenPrice = params.screenType === 'CTS' ? getPrice('CTS', getPrice('Cu', 0)) : (params.screenType === 'CWS' ? getPrice('CWS', getPrice('Cu', 0)) : getPrice('Steel', 0));
+    const mvScreenPrice = getPrice('Cu', 0);
+    const mgtPrice = getPrice('MGT', 120000);
+    const steelWirePrice = getPrice('SteelWire', 50000);
 
     const breakdown: any = {
       conductor: ((bom.conductorWeight - bom.earthingConductorWeight) * condPrice) / 1000,
@@ -1929,16 +1958,16 @@ export default function CableDesigner() {
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
-      isAl: bom.isAlWeight ? (bom.isAlWeight * (materialPrices['Aluminium Foil'] || materialPrices.Al)) / 1000 : 0,
-      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * materialPrices.Cu) / 1000 : 0,
-      isPet: bom.isPetWeight ? (bom.isPetWeight * (materialPrices['Polyester Tape'] || materialPrices.PE)) / 1000 : 0,
-      osAl: bom.osAlWeight ? (bom.osAlWeight * materialPrices.Al) / 1000 : 0,
-      osDrain: bom.osDrainWeight ? (bom.osDrainWeight * materialPrices.Cu) / 1000 : 0,
-      osPet: bom.osPetWeight ? (bom.osPetWeight * materialPrices.PE) / 1000 : 0,
+      isAl: bom.isAlWeight ? (bom.isAlWeight * getPrice('Aluminium Foil', getPrice('Al', 0))) / 1000 : 0,
+      isDrain: bom.isDrainWeight ? (bom.isDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * getPrice('Polyester Tape', getPrice('PE', 25000))) / 1000 : 0,
+      osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
+      osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
+      osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('PE', 25000)) / 1000 : 0,
     };
 
     if (params.standard.includes('NFA2X-T') && bom.earthingAlWeight !== undefined && bom.earthingSteelWeight !== undefined) {
-      breakdown.earthingAl = (bom.earthingAlWeight * materialPrices.Al) / 1000;
+      breakdown.earthingAl = (bom.earthingAlWeight * getPrice('Al', 0)) / 1000;
       breakdown.earthingSteel = (bom.earthingSteelWeight * steelWirePrice) / 1000;
       breakdown.earthingInsulation = (bom.earthingInsulationWeight * insPrice) / 1000;
     } else {
@@ -2228,90 +2257,919 @@ export default function CableDesigner() {
                     const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
                     const breakdown = calculateCostBreakdown(item.result.bom, item.params);
                     const conductorPrice = breakdown.conductor + (breakdown.earthingConductor || 0) + (breakdown.earthingAl || 0) + (breakdown.earthingSteel || 0);
+                    const itemId = item.params.id || idx.toString();
+                    const isExpanded = expandedItemId === itemId;
+                    
+                    const isNY = item.params.standard.includes('(NYA)') || item.params.standard.includes('(NYAF)');
+                    const isNFA = item.params.standard.includes('NFA2X');
+                    const hasOuterSheath = !isNY && !isNFA;
+                    const hasAssembly = (item.params.cores > 1 && !isNFA) || item.params.hasInnerSheath || item.params.hasSeparator;
+                    const hasArmor = item.params.armorType !== 'Unarmored';
+                    const hasInstrumentation = item.params.formationType && item.params.formationType !== 'Core';
+                    
                     return (
-                      <tr key={item.params.id || idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-mono text-xs font-bold text-slate-900">
-                            {getCableDesignation(item.params, item.result)}
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-1">{item.params.standard}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-xs text-slate-600">OD: <span className="font-mono text-slate-900">{item.result.spec.overallDiameter.toFixed(2)} mm</span></div>
-                          <div className="text-[10px] text-slate-400">Core: {item.result.spec.coreDiameter.toFixed(2)} mm</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-xs text-slate-900 font-mono">{Math.round(item.result.bom.totalWeight).toLocaleString()} kg/km</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {(() => {
-                            const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
-                            return (
-                              <div className="text-[10px] text-slate-600">
-                                <div className="font-bold text-indigo-600">{packing.selectedDrum.type}</div>
-                                <div className="text-slate-400">{packing.standardLength} m</div>
+                      <React.Fragment key={itemId}>
+                        <tr className="hover:bg-slate-50/50 transition-colors">
+                          <td 
+                            className="px-6 py-4 cursor-pointer hover:bg-slate-100"
+                            onClick={() => setExpandedItemId(isExpanded ? null : itemId)}
+                          >
+                            <div className="font-mono text-xs font-bold text-slate-900 flex items-center gap-2">
+                              {isExpanded ? <Minimize2 className="w-3 h-3 text-slate-400" /> : <Maximize2 className="w-3 h-3 text-slate-400" />}
+                              {getCableDesignation(item.params, item.result)}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-1 ml-5">{item.params.standard}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-xs text-slate-600">OD: <span className="font-mono text-slate-900">{item.result.spec.overallDiameter.toFixed(2)} mm</span></div>
+                            <div className="text-[10px] text-slate-400">Core: {item.result.spec.coreDiameter.toFixed(2)} mm</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-xs text-slate-900 font-mono">{Math.round(item.result.bom.totalWeight).toLocaleString()} kg/km</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {(() => {
+                              const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
+                              return (
+                                <div className="text-[10px] text-slate-600">
+                                  <div className="font-bold text-indigo-600">{packing.selectedDrum.type}</div>
+                                  <div className="text-slate-400">{packing.standardLength} m</div>
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="text-xs font-bold text-slate-600 font-mono">Rp {Math.round(conductorPrice).toLocaleString('id-ID')}</div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input 
+                              type="number" 
+                              className="w-20 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                              value={item.params.orderLength || 1000}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                    (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, orderLength: val } } : pItem
+                                  ));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input 
+                              type="number" 
+                              className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                              value={item.params.overhead || 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                    (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, overhead: val } } : pItem
+                                  ));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input 
+                              type="number" 
+                              className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                              value={item.params.margin || 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                    (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, margin: val } } : pItem
+                                  ));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="text-xs font-bold text-slate-400 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="text-sm font-bold text-indigo-600 font-mono">Rp {sellingPrice.toLocaleString('id-ID')}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="text-sm font-bold text-emerald-600 font-mono">Rp {(sellingPrice * (item.params.orderLength || 1000)).toLocaleString('id-ID')}</div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50/80 border-b border-slate-200 print:hidden">
+                            <td colSpan={11} className="p-6">
+                              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                  <Settings className="w-4 h-4 text-indigo-500" />
+                                  Adjustments
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                  {/* 1. Conductor & Core */}
+                                  <div className="space-y-3">
+                                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Conductor & Core</h5>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Cond. Dia (mm)</label>
+                                        <input 
+                                          type="number" step="0.01"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                          value={item.params.manualConductorDiameter || ''}
+                                          placeholder="Auto"
+                                          onChange={e => updateProjectItemParam(idx, 'manualConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Wire Count</label>
+                                        <input 
+                                          type="number"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                          value={item.params.manualWireCount || ''}
+                                          placeholder="Auto"
+                                          onChange={e => updateProjectItemParam(idx, 'manualWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Wire Dia (mm)</label>
+                                        <input 
+                                          type="number" step="0.01"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                          value={item.params.manualWireDiameter || ''}
+                                          placeholder="Auto"
+                                          onChange={e => updateProjectItemParam(idx, 'manualWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                      </div>
+                                      {item.params.hasMicaTape && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">MGT Thick (mm)</label>
+                                          <input 
+                                            type="number" step="0.01"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.manualMgtThickness || ''}
+                                            placeholder="Auto"
+                                            onChange={e => updateProjectItemParam(idx, 'manualMgtThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* 2. Insulation & Screen */}
+                                  <div className="space-y-3">
+                                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Insulation & Screen</h5>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Insul. Thick (mm)</label>
+                                        <input 
+                                          type="number" step="0.01"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                          value={item.params.manualInsulationThickness || ''}
+                                          placeholder="Auto"
+                                          onChange={e => updateProjectItemParam(idx, 'manualInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                      </div>
+                                      {item.params.voltage >= 3.6 && (
+                                        <>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Cond Screen (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualConductorScreenThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualConductorScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Insul Screen (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualInsulationScreenThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualInsulationScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">MV Scr Thick (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualMvScreenThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualMvScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">MV Scr Wire Cnt</label>
+                                            <input 
+                                              type="number"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualMvScreenWireCount || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualMvScreenWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">MV Scr Wire Dia</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualMvScreenWireDiameter || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualMvScreenWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                        </>
+                                      )}
+                                      {item.params.hasScreen && (
+                                        <>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Screen Thick (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualScreenThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualScreenThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Scr Wire Count</label>
+                                            <input 
+                                              type="number"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualScreenWireCount || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualScreenWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Scr Wire Dia (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualScreenWireDiameter || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualScreenWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* 3. Assembly & Inner Sheath */}
+                                  {hasAssembly && (
+                                    <div className="space-y-3">
+                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Assembly & Inner</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Laid-up Dia (mm)</label>
+                                          <input 
+                                            type="number" step="0.01"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.manualLaidUpDiameter || ''}
+                                            placeholder="Auto"
+                                            onChange={e => updateProjectItemParam(idx, 'manualLaidUpDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                          />
+                                        </div>
+                                        {item.params.hasInnerSheath && (
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Inner Thick (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualInnerSheathThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualInnerSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                        )}
+                                        {item.params.hasSeparator && (
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Sep. Thick (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualSeparatorThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualSeparatorThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 4. Armor & Outer Sheath */}
+                                  {(hasArmor || hasOuterSheath) && (
+                                    <div className="space-y-3">
+                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Armor & Outer</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {hasArmor && (
+                                          <>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Dia Under Arm (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualDiameterUnderArmor || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualDiameterUnderArmor', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Armor Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualArmorThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualArmorThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            {['SWA', 'AWA', 'GSWB', 'TCWB'].includes(item.params.armorType) && (
+                                              <div>
+                                                <label className="block text-[10px] text-slate-500 mb-1">Arm Wire Dia (mm)</label>
+                                                <input 
+                                                  type="number" step="0.01"
+                                                  className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                  value={item.params.manualArmorWireDiameter || ''}
+                                                  placeholder="Auto"
+                                                  onChange={e => updateProjectItemParam(idx, 'manualArmorWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                                />
+                                              </div>
+                                            )}
+                                            {item.params.armorType === 'STA' && (
+                                              <>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">Arm Tape Thick (mm)</label>
+                                                  <input 
+                                                    type="number" step="0.01"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.manualArmorTapeThickness || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'manualArmorTapeThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">STA Overlap (%)</label>
+                                                  <input 
+                                                    type="number"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.staOverlap || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'staOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                              </>
+                                            )}
+                                            {item.params.armorType === 'RGB' && (
+                                              <div>
+                                                <label className="block text-[10px] text-slate-500 mb-1">Arm Flat Thick (mm)</label>
+                                                <input 
+                                                  type="number" step="0.01"
+                                                  className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                  value={item.params.manualArmorFlatThickness || ''}
+                                                  placeholder="Auto"
+                                                  onChange={e => updateProjectItemParam(idx, 'manualArmorFlatThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                                />
+                                              </div>
+                                            )}
+                                            {['GSWB', 'TCWB'].includes(item.params.armorType) && (
+                                              <>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">Braid Coverage (%)</label>
+                                                  <input 
+                                                    type="number"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.braidCoverage || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'braidCoverage', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">Braid Wire Dia (mm)</label>
+                                                  <input 
+                                                    type="number" step="0.01"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.manualBraidWireDiameter || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'manualBraidWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">GSWB Carriers</label>
+                                                  <input 
+                                                    type="number"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.manualGswbCarriers || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'manualGswbCarriers', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">GSWB Wires/Carr</label>
+                                                  <input 
+                                                    type="number"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.manualGswbWiresPerCarrier || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'manualGswbWiresPerCarrier', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] text-slate-500 mb-1">GSWB Lay Pitch (mm)</label>
+                                                  <input 
+                                                    type="number" step="0.01"
+                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                    value={item.params.manualGswbLayPitch || ''}
+                                                    placeholder="Auto"
+                                                    onChange={e => updateProjectItemParam(idx, 'manualGswbLayPitch', e.target.value ? Number(e.target.value) : undefined)}
+                                                  />
+                                                </div>
+                                              </>
+                                            )}
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Dia Over Arm (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualDiameterOverArmor || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualDiameterOverArmor', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+                                        {hasOuterSheath && (
+                                          <div>
+                                            <label className="block text-[10px] text-slate-500 mb-1">Sheath Thick (mm)</label>
+                                            <input 
+                                              type="number" step="0.01"
+                                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                              value={item.params.manualSheathThickness || ''}
+                                              placeholder="Auto"
+                                              onChange={e => updateProjectItemParam(idx, 'manualSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                            />
+                                          </div>
+                                        )}
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Overall Dia (mm)</label>
+                                          <input 
+                                            type="number" step="0.01"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.manualOverallDiameter || ''}
+                                            placeholder="Auto"
+                                            onChange={e => updateProjectItemParam(idx, 'manualOverallDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 5. Instrumentation (IS/OS) */}
+                                  {item.params.formationType && item.params.formationType !== 'Core' && (
+                                    <div className="space-y-3">
+                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Instrumentation</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {item.params.hasIndividualScreen && (
+                                          <>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Al Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsAluminiumThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsAluminiumThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Al Overlap (%)</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsAluminiumOverlap || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsAluminiumOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Drain Count</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsDrainWireCount || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsDrainWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Drain Size (mm²)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsDrainWireSize || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsDrainWireSize', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Drain Dia (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsDrainWireDiameter || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsDrainWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Poly Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsPolyesterThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsPolyesterThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">IS Poly Overlap (%)</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualIsPolyesterOverlap || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualIsPolyesterOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+                                        {item.params.hasOverallScreen && (
+                                          <>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Al Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsAluminiumThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsAluminiumThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Al Overlap (%)</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsAluminiumOverlap || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsAluminiumOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Drain Count</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsDrainWireCount || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsDrainWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Drain Size (mm²)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsDrainWireSize || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsDrainWireSize', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Drain Dia (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsDrainWireDiameter || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsDrainWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Poly Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsPolyesterThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsPolyesterThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">OS Poly Overlap (%)</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualOsPolyesterOverlap || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualOsPolyesterOverlap', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 6. Earthing / Messenger */}
+                                  {item.params.hasEarthing && (
+                                    <div className="space-y-3">
+                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Earthing / Messenger</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {item.params.standard.includes('NFA2X-T') ? (
+                                          <>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Msgr Al Wires</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingWireCount || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Msgr Al Dia (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingWireDiameter || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Msgr Steel Wires</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingSteelWireCount ?? ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingSteelWireCount', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Msgr Steel Dia (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingSteelWireDiameter || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingSteelWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Msgr Insul Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingInsulationThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Earth Cond Dia (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingConductorDiameter || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-slate-500 mb-1">Earth Insul Thick (mm)</label>
+                                              <input 
+                                                type="number" step="0.01"
+                                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                                value={item.params.manualEarthingInsulationThickness || ''}
+                                                placeholder="Auto"
+                                                onChange={e => updateProjectItemParam(idx, 'manualEarthingInsulationThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 7. Material Selection */}
+                                  <div className="space-y-3">
+                                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Material Selection</h5>
+                                    <div className="grid grid-cols-1 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Insulation</label>
+                                        <select 
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                          value={item.params.insulationMaterial}
+                                          onChange={e => updateProjectItemParam(idx, 'insulationMaterial', e.target.value)}
+                                        >
+                                          <option value="PVC">PVC</option>
+                                          <option value="XLPE">XLPE</option>
+                                          <option value="PE">PE</option>
+                                          <option value="LSZH">LSZH</option>
+                                          <option value="EPR">EPR</option>
+                                          <option value="HEPR">HEPR</option>
+                                        </select>
+                                      </div>
+                                      {hasAssembly && item.params.hasInnerSheath && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Inner Sheath</label>
+                                          <select 
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.innerSheathMaterial || 'PVC'}
+                                            onChange={e => updateProjectItemParam(idx, 'innerSheathMaterial', e.target.value)}
+                                          >
+                                            <option value="PVC">PVC</option>
+                                            <option value="PE">PE</option>
+                                            <option value="LSZH">LSZH</option>
+                                          </select>
+                                        </div>
+                                      )}
+                                      {hasOuterSheath && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Outer Sheath</label>
+                                          <select 
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.sheathMaterial}
+                                            onChange={e => updateProjectItemParam(idx, 'sheathMaterial', e.target.value)}
+                                          >
+                                            <option value="PVC">PVC</option>
+                                            <option value="PE">PE</option>
+                                            <option value="LSZH">LSZH</option>
+                                            <option value="PVC-FR">PVC-FR</option>
+                                            <option value="PVC-FR Cat.A">PVC-FR Cat.A</option>
+                                            <option value="PVC-FR Cat.B">PVC-FR Cat.B</option>
+                                            <option value="PVC-FR Cat.C">PVC-FR Cat.C</option>
+                                            <option value="SHF1">SHF1</option>
+                                            <option value="SHF2">SHF2</option>
+                                          </select>
+                                        </div>
+                                      )}
+                                      {hasAssembly && item.params.hasSeparator && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Separator</label>
+                                          <select 
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded"
+                                            value={item.params.separatorMaterial || 'PVC'}
+                                            onChange={e => updateProjectItemParam(idx, 'separatorMaterial', e.target.value)}
+                                          >
+                                            <option value="PVC">PVC</option>
+                                            <option value="PE">PE</option>
+                                            <option value="LSZH">LSZH</option>
+                                          </select>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* 8. Material Prices */}
+                                  <div className="space-y-3">
+                                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2">Material Prices (Rp/kg)</h5>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Conductor ({item.params.conductorMaterial})</label>
+                                        <input 
+                                          type="number"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                          value={item.params.customMaterialPrices?.[item.params.conductorMaterial] || materialPrices[item.params.conductorMaterial] || ''}
+                                          onChange={e => updateProjectItemCustomPrice(idx, item.params.conductorMaterial, Number(e.target.value))}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Insulation ({item.params.insulationMaterial})</label>
+                                        <input 
+                                          type="number"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                          value={item.params.customMaterialPrices?.[item.params.insulationMaterial] || materialPrices[item.params.insulationMaterial] || ''}
+                                          onChange={e => updateProjectItemCustomPrice(idx, item.params.insulationMaterial, Number(e.target.value))}
+                                        />
+                                      </div>
+                                      {hasAssembly && item.params.hasInnerSheath && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Inner Sheath ({item.params.innerSheathMaterial || 'PVC'})</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.innerSheathMaterial || 'PVC'] || materialPrices[item.params.innerSheathMaterial || 'PVC'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.innerSheathMaterial || 'PVC', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {hasOuterSheath && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Outer Sheath ({item.params.sheathMaterial})</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.sheathMaterial] || materialPrices[item.params.sheathMaterial] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.sheathMaterial, Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {hasArmor && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Armor ({item.params.armorType})</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.armorType] || materialPrices[item.params.armorType] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.armorType, Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {item.params.hasScreen && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Screen ({item.params.screenType || 'CTS'})</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.screenType || 'CTS'] || materialPrices[item.params.screenType || 'CTS'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.screenType || 'CTS', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {item.params.voltage >= 3.6 && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">MV Screen ({item.params.mvScreenType || 'CWS'})</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.mvScreenType || 'CWS'] || materialPrices[item.params.mvScreenType || 'CWS'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.mvScreenType || 'CWS', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {item.params.hasMgt && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Mica Tape (MGT)</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.['MGT'] || materialPrices['MGT'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, 'MGT', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {hasAssembly && item.params.hasSeparator && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Separator</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.[item.params.separatorMaterial || 'PVC'] || materialPrices[item.params.separatorMaterial || 'PVC'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, item.params.separatorMaterial || 'PVC', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      {item.params.hasEarthing && (
+                                        <div>
+                                          <label className="block text-[10px] text-slate-500 mb-1">Messenger/Earth</label>
+                                          <input 
+                                            type="number"
+                                            className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono"
+                                            value={item.params.customMaterialPrices?.['Messenger'] || materialPrices['Messenger'] || ''}
+                                            onChange={e => updateProjectItemCustomPrice(idx, 'Messenger', Number(e.target.value))}
+                                          />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Total Weight (kg/km)</label>
+                                        <input 
+                                          type="number"
+                                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded text-right font-mono bg-indigo-50"
+                                          value={item.params.manualTotalWeight || ''}
+                                          placeholder="Auto"
+                                          onChange={e => updateProjectItemParam(idx, 'manualTotalWeight', e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-xs font-bold text-slate-600 font-mono">Rp {Math.round(conductorPrice).toLocaleString('id-ID')}</div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <input 
-                            type="number" 
-                            className="w-20 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
-                            value={item.params.orderLength || 1000}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) {
-                                setProjectItems(prev => prev.map((pItem, pIdx) => 
-                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, orderLength: val } } : pItem
-                                ));
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <input 
-                            type="number" 
-                            className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
-                            value={item.params.overhead || 0}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) {
-                                setProjectItems(prev => prev.map((pItem, pIdx) => 
-                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, overhead: val } } : pItem
-                                ));
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <input 
-                            type="number" 
-                            className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
-                            value={item.params.margin || 0}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) {
-                                setProjectItems(prev => prev.map((pItem, pIdx) => 
-                                  (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, margin: val } } : pItem
-                                ));
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-xs font-bold text-slate-400 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-sm font-bold text-indigo-600 font-mono">Rp {sellingPrice.toLocaleString('id-ID')}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-sm font-bold text-emerald-600 font-mono">Rp {(sellingPrice * (item.params.orderLength || 1000)).toLocaleString('id-ID')}</div>
-                        </td>
-                      </tr>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
