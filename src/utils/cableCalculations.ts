@@ -261,6 +261,30 @@ interface ABCMessengerData extends ABCData {
   steelWireDiameter: number;
 }
 
+/**
+ * Returns the weight addition factor (PENAMBAHAN BERAT) based on n.
+ * n is wire count for insulation or core count for inner sheath.
+ */
+const getWeightAdditionFactor = (n: number): number => {
+  if (n <= 1) return 0;
+  if (n === 2) return 0.113;
+  if (n === 3) return 0.081;
+  if (n === 4) return 0.064;
+  if (n === 5) return 0.05;
+  if (n >= 6 && n <= 12) return 0.045;
+  if (n >= 13 && n <= 18) return 0.035;
+  if (n >= 19 && n <= 24) return 0.028;
+  if (n >= 25 && n <= 27) return 0.027;
+  if (n >= 28 && n <= 31) return 0.026;
+  if (n >= 32 && n <= 36) return 0.025;
+  if (n >= 37 && n <= 46) return 0.023;
+  if (n >= 47 && n <= 56) return 0.022;
+  if (n >= 57 && n <= 66) return 0.021;
+  if (n >= 67 && n <= 79) return 0.02;
+  if (n >= 80 && n <= 91) return 0.019;
+  return 0.019;
+};
+
 const NFA2X_DATA: Record<string, ABCData> = {
   '2x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 100.4, breakingLoad: 3.22 },
   '2x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 144.2, breakingLoad: 5.15 },
@@ -1457,7 +1481,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     const rEarthCond = earthingConductorDiameter / 2;
     const rEarthIns = earthingCoreDiameter / 2;
-    const earthingInsArea = Math.PI * (rEarthIns * rEarthIns - rEarthCond * rEarthCond);
+    let earthingInsArea = Math.PI * (rEarthIns * rEarthIns - rEarthCond * rEarthCond);
+    
+    // Add filling factor for stranded conductors without conductor screen
+    if (effectiveParams.conductorType !== 're') {
+      const factor = getWeightAdditionFactor(earthingWireCount);
+      earthingInsArea *= (1 + factor);
+    }
+    
     earthingInsulationWeightPerCore = earthingInsArea * densities[effectiveParams.insulationMaterial];
   }
 
@@ -1526,6 +1557,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else {
     const rIns = rCond + insulationThickness;
     insulationArea = Math.PI * (rIns * rIns - rCond * rCond);
+    
+    // Add filling factor for stranded conductors without conductor screen
+    if (effectiveParams.conductorType !== 're') {
+      const factor = getWeightAdditionFactor(wireCount);
+      insulationArea *= (1 + factor);
+    }
   }
 
   const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial]; // kg/km
@@ -1732,7 +1769,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     // Filler Factor: Industrial cables often use 70-90% filling for extruded bedding
     const fillerFactor = effectiveParams.standard === 'BS EN 50288-7' ? 0 : 0.85; 
-    const totalInnerSheathArea = ringArea + (intersticeArea * fillerFactor);
+    const totalCoresCount = effectiveParams.cores + earthingCores;
+    const weightAdditionFactor = getWeightAdditionFactor(totalCoresCount);
+    const totalInnerSheathArea = (ringArea + (intersticeArea * fillerFactor)) * (1 + weightAdditionFactor);
     
     innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC);
   }
