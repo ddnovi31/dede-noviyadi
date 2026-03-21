@@ -17,6 +17,7 @@ import {
   FlameRetardantCategory,
   NYCY_DATA,
   NFA2XT_DATA,
+  getWeightAdditionFactor,
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { safeLocalStorage } from '../utils/safeLocalStorage';
@@ -543,21 +544,26 @@ export default function CableDesigner() {
       if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasArmor) {
+        const armorLabel = sampleItem.params.standard === 'LiYCY' ? 'Braid Screen' : 'Armor';
         if (sampleItem.params.armorType === 'STA') {
-          addGroup('Armor (STA)', hArm, ['Steel Tape Thk (mm)', 'Tape Overlap (%)', 'OD (mm)', 'Tape Wt (kg/km)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`${armorLabel} (STA)`, hArm, ['Steel Tape Thk (mm)', 'Tape Overlap (%)', 'OD (mm)', 'Tape Wt (kg/km)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'SWA' || sampleItem.params.armorType === 'AWA') {
-          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Armor Wire Dia (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`${armorLabel} (${sampleItem.params.armorType})`, hArm, ['Armor Wire Dia (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'SFA') {
-          addGroup('Armor (SFA)', hArm, ['Steel Flat Thk (mm)', 'Steel Tape Thk (mm)', 'OD (mm)', 'Flat Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`${armorLabel} (SFA)`, hArm, ['Steel Flat Thk (mm)', 'Steel Tape Thk (mm)', 'OD (mm)', 'Flat Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'RGB') {
-          addGroup('Armor (RGB)', hArm, ['Armor Wire Dia (mm)', 'Armor Tape Thk (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(`${armorLabel} (RGB)`, hArm, ['Armor Wire Dia (mm)', 'Armor Tape Thk (mm)', 'OD (mm)', 'Wire Wt (kg/km)', 'Tape Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Tape Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else if (sampleItem.params.armorType === 'GSWB' || sampleItem.params.armorType === 'TCWB') {
-          addGroup(`Armor (${sampleItem.params.armorType})`, hArm, ['Braid Wire Dia (mm)', 'No. of Carriers', 'Wires/Carrier', 'Lay Pitch (mm)', 'Braid Coverage (%)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
+          const wireLabel = sampleItem.params.standard === 'LiYCY' ? 'Braid Wire Dia (mm)' : 'Braid Wire Dia (mm)';
+          addGroup(`${armorLabel} (${sampleItem.params.armorType})`, hArm, [wireLabel, 'No. of Carriers', 'Wires/Carrier', 'Lay Pitch (mm)', 'Braid Coverage (%)', 'OD (mm)', 'Wire Wt (kg/km)', 'Wire Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else {
-          addGroup('Armor', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+          addGroup(armorLabel, hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
         }
       }
-      if (hasOuterSheath) addGroup('Outer Sheath', hOutSh, ['Thk (mm)', 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (hasOuterSheath) {
+        const sheathThkLabel = sampleItem.params.standard === 'LiYCY' ? 'Min. Thk (mm)' : 'Thk (mm)';
+        addGroup('Outer Sheath', hOutSh, [sheathThkLabel, 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      }
 
       addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price']);
 
@@ -659,7 +665,9 @@ export default function CableDesigner() {
         const insThkCol = pushCol(item.result.spec.phaseCore.insulationThickness || 0, fmtNum);
         currentDiaFormula = `(${currentDiaFormula}+2*${insThkCol}${r})`;
         pushCol(null, fmtNum, currentDiaFormula); // OD
-        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}-2*${insThkCol}${r}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)`);
+        
+        const insulationFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.phaseCore.wireCount || 7) : 0;
+        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}-2*${insThkCol}${r}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)*(1+${insulationFactor})`);
         const insPrcCol = pushCol(insPrice, fmtRp);
         const insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
 
@@ -733,7 +741,8 @@ export default function CableDesigner() {
           
           const earthInsThkCol = pushCol(item.result.spec.earthingCore?.insulationThickness || 0, fmtNum);
           let earthCurrentDiaFormula = isNFA2XT ? `(${getColName(colIdx - 5)}${r})` : `(${getColName(colIdx - 3)}${r})`;
-          earthInsWtCol = pushCol(null, fmtNum, `PI()*${earthInsThkCol}${r}*(${earthCurrentDiaFormula}+${earthInsThkCol}${r})*${getDensity(item.params.insulationMaterial)}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)`);
+          const earthingInsFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.earthingCore?.wireCount || 7) : 0;
+          earthInsWtCol = pushCol(null, fmtNum, `PI()*${earthInsThkCol}${r}*(${earthCurrentDiaFormula}+${earthInsThkCol}${r})*${getDensity(item.params.insulationMaterial)}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)*(1+${earthingInsFactor})`);
           earthInsCstCol = pushCol(null, fmtRp, `${earthInsWtCol}${r}*${insPrcCol}${r}/1000`);
         }
 
@@ -799,7 +808,25 @@ export default function CableDesigner() {
           inShThkCol = pushCol(item.result.spec.innerCoveringThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${inShThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          inShWtCol = pushCol(null, fmtNum, `PI()*${inShThkCol}${r}*(${currentDiaFormula}-2*${inShThkCol}${r}+${inShThkCol}${r})*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)`);
+          
+          const fillerFactor = item.params.standard === 'BS EN 50288-7' ? 0 : 0.85;
+          const totalCores = item.params.cores + (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0);
+          const innerSheathFactor = getWeightAdditionFactor(totalCores);
+          
+          // Complex formula to match ringArea + intersticeArea * fillerFactor
+          const rLaidUp = item.result.spec.laidUpDiameter / 2;
+          const rUnderArmor = item.result.spec.diameterUnderArmor / 2;
+          const phaseCoreAreaTotal = item.params.cores * Math.PI * Math.pow((item.result.spec.coreDiameter || 0) / 2, 2);
+          const earthingCoreAreaTotal = (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0) * Math.PI * Math.pow((item.result.spec.earthingCore?.coreDiameter || 0) / 2, 2);
+          const coreAreaTotal = phaseCoreAreaTotal + earthingCoreAreaTotal;
+          const laidUpArea = Math.PI * Math.pow(item.result.spec.laidUpDiameter / 2, 2);
+          const intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
+          const ringArea = Math.PI * (Math.pow(rUnderArmor, 2) - Math.pow(rLaidUp, 2));
+          
+          // We use the calculated values for interstice and ring area to keep the formula manageable
+          const baseArea = ringArea + (intersticeArea * fillerFactor);
+          
+          inShWtCol = pushCol(null, fmtNum, `${baseArea.toFixed(4)}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
         }

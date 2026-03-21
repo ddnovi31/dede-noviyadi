@@ -265,7 +265,7 @@ interface ABCMessengerData extends ABCData {
  * Returns the weight addition factor (PENAMBAHAN BERAT) based on n.
  * n is wire count for insulation or core count for inner sheath.
  */
-const getWeightAdditionFactor = (n: number): number => {
+export const getWeightAdditionFactor = (n: number): number => {
   if (n <= 1) return 0;
   if (n === 2) return 0.113;
   if (n === 3) return 0.081;
