@@ -772,29 +772,104 @@ const RESISTANCE_TCU_CLASS5: Record<number, number> = {
   185: 0.108, 240: 0.0817, 300: 0.0654, 400: 0.0495, 500: 0.0391, 630: 0.0292
 };
 
-const CLASS5_CONSTRUCTION: Record<number, { wireCount: number, wireDiameter: number }> = {
-  0.5: { wireCount: 16, wireDiameter: 0.20 },
-  0.75: { wireCount: 24, wireDiameter: 0.20 },
-  1: { wireCount: 32, wireDiameter: 0.20 },
-  1.5: { wireCount: 30, wireDiameter: 0.25 },
-  2.5: { wireCount: 50, wireDiameter: 0.25 },
-  4: { wireCount: 56, wireDiameter: 0.30 },
-  6: { wireCount: 84, wireDiameter: 0.30 },
-  10: { wireCount: 80, wireDiameter: 0.40 },
-  16: { wireCount: 126, wireDiameter: 0.40 },
-  25: { wireCount: 196, wireDiameter: 0.40 },
-  35: { wireCount: 276, wireDiameter: 0.40 },
-  50: { wireCount: 396, wireDiameter: 0.40 },
-  70: { wireCount: 360, wireDiameter: 0.50 },
-  95: { wireCount: 475, wireDiameter: 0.50 },
-  120: { wireCount: 608, wireDiameter: 0.50 },
-  150: { wireCount: 756, wireDiameter: 0.50 },
-  185: { wireCount: 925, wireDiameter: 0.50 },
-  240: { wireCount: 1221, wireDiameter: 0.50 },
-  300: { wireCount: 1525, wireDiameter: 0.50 },
-  400: { wireCount: 2035, wireDiameter: 0.50 },
-  500: { wireCount: 2540, wireDiameter: 0.50 },
-  630: { wireCount: 3200, wireDiameter: 0.50 },
+const CONDUCTOR_CONSTRUCTION: Record<string, Record<number, { wireCount: number, wireDiameter: number }>> = {
+  re: {
+    0.5: { wireCount: 1, wireDiameter: 0.78 },
+    0.75: { wireCount: 1, wireDiameter: 0.95 },
+    1: { wireCount: 1, wireDiameter: 1.10 },
+    1.5: { wireCount: 1, wireDiameter: 1.35 },
+    2.5: { wireCount: 1, wireDiameter: 1.72 },
+    4: { wireCount: 1, wireDiameter: 2.19 },
+    6: { wireCount: 1, wireDiameter: 2.67 },
+    10: { wireCount: 1, wireDiameter: 3.47 },
+    16: { wireCount: 1, wireDiameter: 4.38 },
+    25: { wireCount: 1, wireDiameter: 5.50 },
+  },
+  rm: {
+    0.5: { wireCount: 7, wireDiameter: 0.30 },
+    0.75: { wireCount: 7, wireDiameter: 0.36 },
+    1: { wireCount: 7, wireDiameter: 0.42 },
+    1.5: { wireCount: 7, wireDiameter: 0.51 },
+    2.5: { wireCount: 7, wireDiameter: 0.65 },
+    4: { wireCount: 7, wireDiameter: 0.83 },
+    6: { wireCount: 7, wireDiameter: 1.02 },
+    10: { wireCount: 7, wireDiameter: 1.32 },
+    16: { wireCount: 7, wireDiameter: 1.66 },
+    25: { wireCount: 7, wireDiameter: 2.09 },
+    35: { wireCount: 7, wireDiameter: 2.46 },
+    50: { wireCount: 19, wireDiameter: 1.74 },
+    70: { wireCount: 19, wireDiameter: 2.09 },
+    95: { wireCount: 19, wireDiameter: 2.46 },
+    120: { wireCount: 37, wireDiameter: 1.98 },
+    150: { wireCount: 37, wireDiameter: 2.20 },
+    185: { wireCount: 37, wireDiameter: 2.46 },
+    240: { wireCount: 61, wireDiameter: 2.20 },
+    300: { wireCount: 61, wireDiameter: 2.46 },
+    400: { wireCount: 61, wireDiameter: 2.79 },
+    500: { wireCount: 61, wireDiameter: 3.16 },
+    630: { wireCount: 127, wireDiameter: 2.49 },
+    800: { wireCount: 127, wireDiameter: 2.81 },
+    1000: { wireCount: 127, wireDiameter: 3.15 },
+  },
+  sm: {
+    25: { wireCount: 7, wireDiameter: 2.19 },
+    35: { wireCount: 7, wireDiameter: 2.59 },
+    50: { wireCount: 19, wireDiameter: 1.83 },
+    70: { wireCount: 19, wireDiameter: 2.19 },
+    95: { wireCount: 19, wireDiameter: 2.59 },
+    120: { wireCount: 37, wireDiameter: 2.08 },
+    150: { wireCount: 37, wireDiameter: 2.31 },
+    185: { wireCount: 37, wireDiameter: 2.59 },
+    240: { wireCount: 37, wireDiameter: 2.96 },
+    300: { wireCount: 37, wireDiameter: 3.32 },
+    400: { wireCount: 61, wireDiameter: 2.92 },
+    500: { wireCount: 61, wireDiameter: 3.31 },
+    630: { wireCount: 61, wireDiameter: 3.77 },
+    800: { wireCount: 61, wireDiameter: 4.26 },
+    1000: { wireCount: 61, wireDiameter: 4.78 },
+  },
+  cm: {
+    16: { wireCount: 7, wireDiameter: 1.75 },
+    25: { wireCount: 7, wireDiameter: 2.19 },
+    35: { wireCount: 7, wireDiameter: 2.59 },
+    50: { wireCount: 19, wireDiameter: 1.83 },
+    70: { wireCount: 19, wireDiameter: 2.19 },
+    95: { wireCount: 19, wireDiameter: 2.59 },
+    120: { wireCount: 35, wireDiameter: 2.14 },
+    150: { wireCount: 35, wireDiameter: 2.38 },
+    185: { wireCount: 35, wireDiameter: 2.66 },
+    240: { wireCount: 35, wireDiameter: 3.05 },
+    300: { wireCount: 35, wireDiameter: 3.41 },
+    400: { wireCount: 56, wireDiameter: 3.05 },
+    500: { wireCount: 56, wireDiameter: 3.46 },
+    630: { wireCount: 56, wireDiameter: 3.93 },
+    800: { wireCount: 56, wireDiameter: 4.45 },
+    1000: { wireCount: 56, wireDiameter: 4.99 },
+  },
+  f: {
+    0.5: { wireCount: 13, wireDiameter: 0.22 },
+    0.75: { wireCount: 20, wireDiameter: 0.21 },
+    1: { wireCount: 26, wireDiameter: 0.22 },
+    1.5: { wireCount: 30, wireDiameter: 0.25 },
+    2.5: { wireCount: 50, wireDiameter: 0.25 },
+    4: { wireCount: 54, wireDiameter: 0.30 },
+    6: { wireCount: 80, wireDiameter: 0.30 },
+    10: { wireCount: 80, wireDiameter: 0.39 },
+    16: { wireCount: 126, wireDiameter: 0.39 },
+    25: { wireCount: 196, wireDiameter: 0.40 },
+    35: { wireCount: 276, wireDiameter: 0.40 },
+    50: { wireCount: 396, wireDiameter: 0.38 },
+    70: { wireCount: 360, wireDiameter: 0.48 },
+    95: { wireCount: 475, wireDiameter: 0.50 },
+    120: { wireCount: 608, wireDiameter: 0.49 },
+    150: { wireCount: 756, wireDiameter: 0.49 },
+    185: { wireCount: 925, wireDiameter: 0.50 },
+    240: { wireCount: 1221, wireDiameter: 0.50 },
+    300: { wireCount: 1525, wireDiameter: 0.50 },
+    400: { wireCount: 2013, wireDiameter: 0.49 },
+    500: { wireCount: 2135, wireDiameter: 0.54 },
+    630: { wireCount: 2135, wireDiameter: 0.61 },
+  }
 };
 
 const CURRENT_CAPACITY_AIR_CU: Record<number, number> = {
@@ -998,15 +1073,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let wireCount = effectiveParams.manualWireCount || (effectiveParams.conductorType === 're' ? 1 : 7);
   let wireDiameter = effectiveParams.manualWireDiameter || Math.sqrt((4 * effectiveParams.size) / (Math.PI * (effectiveParams.manualWireCount || (effectiveParams.conductorType === 're' ? 1 : 7))));
 
-  if (effectiveParams.conductorType === 'f' && !effectiveParams.manualWireCount) {
-    const class5 = CLASS5_CONSTRUCTION[effectiveParams.size];
-    if (class5) {
-      wireCount = class5.wireCount;
-      wireDiameter = class5.wireDiameter;
-    } else {
-      wireCount = Math.ceil(effectiveParams.size / 0.2);
-      wireDiameter = Math.sqrt((4 * effectiveParams.size) / (Math.PI * wireCount));
-    }
+  const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType]?.[effectiveParams.size];
+  if (construction && !effectiveParams.manualWireCount) {
+    wireCount = construction.wireCount;
+    wireDiameter = construction.wireDiameter;
   } else if (effectiveParams.manualWireCount && effectiveParams.manualWireDiameter) {
     // If both are provided, we trust them but maybe update diameter?
     // conductorDiameter = ... (handled below)
@@ -1186,17 +1256,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       earthingWireDiameter = earthingAlWireDiameter;
     } else {
       earthingWireCount = effectiveParams.manualEarthingWireCount || (effectiveParams.conductorType === 're' ? 1 : 7);
-      if (effectiveParams.conductorType === 'f' && !effectiveParams.manualEarthingWireCount) {
-        const class5 = CLASS5_CONSTRUCTION[earthingSize];
-        if (class5) {
-          earthingWireCount = class5.wireCount;
-          earthingWireDiameter = class5.wireDiameter;
-        } else {
-          earthingWireCount = Math.ceil(earthingSize / 0.2);
-          earthingWireDiameter = Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
-        }
-      } else {
-        earthingWireDiameter = effectiveParams.manualEarthingWireDiameter || Math.sqrt((4 * earthingSize) / (Math.PI * earthingWireCount));
+      earthingWireDiameter = effectiveParams.manualEarthingWireDiameter || Math.sqrt((4 * earthingSize) / (Math.PI * (effectiveParams.manualEarthingWireCount || (effectiveParams.conductorType === 're' ? 1 : 7))));
+
+      const earthConstruction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType]?.[earthingSize];
+      if (earthConstruction && !effectiveParams.manualEarthingWireCount) {
+        earthingWireCount = earthConstruction.wireCount;
+        earthingWireDiameter = earthConstruction.wireDiameter;
       }
 
       if (effectiveParams.manualEarthingConductorDiameter) {
