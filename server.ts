@@ -63,8 +63,12 @@ async function initMysql() {
     `;
     await mysqlPool.query(createTableQuery);
     console.log("MySQL initialized.");
-  } catch (error) {
-    console.error("MySQL initialization failed:", error);
+  } catch (error: any) {
+    if (mysqlConfig.host.includes('infinityfree.com')) {
+      console.error("MySQL initialization failed: InfinityFree blocks external database connections. You cannot connect to their MySQL servers from outside their hosting environment.");
+    } else {
+      console.error("MySQL initialization failed:", error.message || error);
+    }
     mysqlPool = null;
   }
 }

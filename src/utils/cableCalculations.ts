@@ -634,6 +634,7 @@ export interface CoreSpec {
   conductorDiameter: number;
   wireCount: number;
   wireDiameter: number;
+  calculatedSectionalArea: number;
   insulationThickness: number;
   coreDiameter: number;
   alWireCount?: number;
@@ -1105,7 +1106,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else {
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
-  let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
+  let calculatedSectionalArea = wireCount * (Math.PI / 4) * Math.pow(wireDiameter, 2);
+  let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
 
   // Helper function to find KHA
   const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
@@ -1283,11 +1285,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   }
   
+  let earthingCalculatedSectionalArea = earthingWireCount * (Math.PI / 4) * Math.pow(earthingWireDiameter, 2);
   let earthingConductorWeightPerCore = abcTData 
     ? abcTData.messenger.condWeight
     : (effectiveParams.standard.includes('NFA2X-T') 
-      ? (earthingSize * (6/7) * densities.Al + earthingSize * (1/7) * densities.Steel) * 1.05 // 6 Al + 1 Steel mix with lay factor
-      : earthingSize * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR);
+      ? (earthingCalculatedSectionalArea * (6/7) * densities.Al + earthingCalculatedSectionalArea * (1/7) * densities.Steel) * 1.05 // 6 Al + 1 Steel mix with lay factor
+      : earthingCalculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR);
   
   let earthingAlWeight = 0;
   let earthingSteelWeight = 0;
@@ -2266,7 +2269,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Weight Details with Formulas
   const weightDetails = {
-    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${wireCount} wires * π * (${wireDiameter.toFixed(2)}/2)² * ${densities[effectiveParams.conductorMaterial]} * ${STRANDING_FACTOR} (stranding) * ${CABLING_FACTOR} (cabling)`, 'conductor'),
+    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${calculatedSectionalArea.toFixed(4)} mm² * ${densities[effectiveParams.conductorMaterial]} * ${STRANDING_FACTOR} (stranding) * ${CABLING_FACTOR} (cabling)`, 'conductor'),
     insulation: evalFormula(totalInsulationWeight, `${effectiveParams.cores} cores * π * ((${coreDiameter.toFixed(2)}/2)² - (${(conductorDiameter + 2 * conductorScreenThickness).toFixed(2)}/2)²) * ${densities[effectiveParams.insulationMaterial]}`, 'insulation'),
     outerSheath: evalFormula(sheathWeight, `π * ((${overallDiameter.toFixed(2)}/2)² - (${diameterOverArmor.toFixed(2)}/2)²) * ${densities[effectiveParams.sheathMaterial]}`, 'outerSheath')
   } as any;
@@ -2445,6 +2448,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
         conductorDiameter: Number(conductorDiameter.toFixed(2)),
         wireCount,
         wireDiameter: Number(wireDiameter.toFixed(2)),
+        calculatedSectionalArea: Number(calculatedSectionalArea.toFixed(4)),
         insulationThickness: Number(insulationThickness.toFixed(2)),
         coreDiameter: Number(coreDiameter.toFixed(2)),
       },
@@ -2452,6 +2456,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
         conductorDiameter: Number(earthingConductorDiameter.toFixed(2)),
         wireCount: earthingWireCount,
         wireDiameter: Number(earthingWireDiameter.toFixed(2)),
+        calculatedSectionalArea: Number(earthingCalculatedSectionalArea.toFixed(4)),
         insulationThickness: Number(earthingInsulationThickness.toFixed(2)),
         coreDiameter: Number(earthingCoreDiameter.toFixed(2)),
         alWireCount: earthingAlWireCount,

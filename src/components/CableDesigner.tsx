@@ -395,7 +395,7 @@ export default function CableDesigner() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (projectItems.length === 0) {
       alert('No items to export.');
       return;
@@ -529,7 +529,7 @@ export default function CableDesigner() {
       addGroup('General', hGen, ['No', coreLabel, 'Size', 'Laid-up Dia']);
       
       // Conductor
-      addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Calc Area (mm2)', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (sampleItem.params.fireguard) {
         addGroup('MGT', hMGT, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       }
@@ -547,7 +547,7 @@ export default function CableDesigner() {
       
       if (hasEarth) {
         if (isNFA2XT) addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
-        else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
+        else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Calc Area (mm2)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
       }
 
       if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
@@ -649,9 +649,10 @@ export default function CableDesigner() {
         // Conductor
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
+        const calcAreaCol = pushCol(null, fmtNum, `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`);
         const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
         
-        let condWtFormula = `${sizeCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
+        let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
         if (isNFA2X || isNFA2XT) {
           condWtFormula = `${item.result.bom.conductorWeight - (item.result.bom.earthingConductorWeight || 0)}`;
         }
@@ -757,7 +758,8 @@ export default function CableDesigner() {
           } else {
             const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
             const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            earthWtCol = pushCol(null, fmtNum, `${earthSizeCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+            const earthCalcAreaCol = pushCol(null, fmtNum, `${earthWiresCol}${r}*PI()/4*POWER(${earthWireDiaCol}${r},2)`);
+            earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
@@ -1098,7 +1100,31 @@ export default function CableDesigner() {
       XLSX.utils.book_append_sheet(wb, wsDetails, sheetName);
     });
 
-    XLSX.writeFile(wb, `${projectNumber ? projectNumber + '_' : ''}${projectName || 'Cable_Project'}.xlsx`);
+    const filename = `${projectNumber ? projectNumber + '_' : ''}${projectName || 'Cable_Project'}.xlsx`;
+    try {
+      if ('showSaveFilePicker' in window && window.self === window.top) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'Excel File',
+            accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        await writable.write(buffer);
+        await writable.close();
+        alert(`File berhasil disimpan di lokasi yang Anda pilih.`);
+      } else {
+        XLSX.writeFile(wb, filename);
+        alert(`File berhasil diunduh ke folder Downloads default Anda.`);
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Save failed:', err);
+        alert('Gagal menyimpan file Excel.');
+      }
+    }
   };
 
   const handleCreateLocalDB = async () => {
