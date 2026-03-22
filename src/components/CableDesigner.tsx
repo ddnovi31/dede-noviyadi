@@ -1093,6 +1093,44 @@ export default function CableDesigner() {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSaveConfig = () => {
+    const filename = prompt('Enter filename:', 'cable_config.config');
+    if (!filename) return;
+    const finalFilename = filename.endsWith('.config') ? filename : `${filename}.config`;
+    
+    const config = {
+      materialPrices,
+      materialDensities,
+      materialScrap,
+      lmeParams,
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = finalFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoadConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const config = JSON.parse(e.target?.result as string);
+        setMaterialPrices(config.materialPrices);
+        setMaterialDensities(config.materialDensities);
+        setMaterialScrap(config.materialScrap);
+        setLmeParams(config.lmeParams);
+      } catch (error) {
+        alert('Error loading configuration file');
+      }
+    };
+    reader.readAsText(file);
+  };
   const createDbInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadLocalDB = () => {
@@ -6832,6 +6870,27 @@ export default function CableDesigner() {
                           <RotateCcw className="w-3 h-3" />
                           Reset to Default
                         </button>
+                        <button 
+                          onClick={handleSaveConfig}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                        >
+                          <Save className="w-3 h-3" />
+                          Save Config
+                        </button>
+                        <button 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                        >
+                          <FolderOpen className="w-3 h-3" />
+                          Load Config
+                        </button>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleLoadConfig} 
+                          className="hidden" 
+                          accept=".config"
+                        />
                         <button 
                           onClick={saveMaterialSettings}
                           className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
