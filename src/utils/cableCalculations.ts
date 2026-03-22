@@ -706,6 +706,7 @@ export interface CalculationResult {
     earthingAlWeight?: number;
     earthingSteelWeight?: number;
     earthingInsulationWeight: number;
+    masterbatchWeight: number;
     isWeight?: number;
     osWeight?: number;
     isAlWeight?: number;
@@ -2203,7 +2204,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const sheathArea = Math.PI * (rOverall * rOverall - rOverArmor * rOverArmor);
   const sheathWeight = finalSheathThickness > 0 ? sheathArea * densities[effectiveParams.sheathMaterial] : 0;
 
-  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight);
+  const isMV = effectiveParams.standard === 'IEC 60502-2';
+  const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
+  
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + masterbatchWeight);
 
   const scope = {
     PI: Math.PI,
@@ -2507,6 +2511,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       earthingAlWeight: earthingAlWeight > 0 ? Number(applyScrap(earthingAlWeight, 'Al').toFixed(1)) : undefined,
       earthingSteelWeight: earthingSteelWeight > 0 ? Number(applyScrap(earthingSteelWeight, 'SteelWire').toFixed(1)) : undefined,
       earthingInsulationWeight: Number(applyScrap(totalEarthingInsulationWeight, effectiveParams.insulationMaterial).toFixed(1)),
+      masterbatchWeight: Number(applyScrap(masterbatchWeight, 'Masterbatch').toFixed(1)),
       isWeight: isWeight > 0 ? Number(applyScrap(isWeight, 'Cu').toFixed(1)) : 0,
       osWeight: osWeight > 0 ? Number(applyScrap(osWeight, 'Cu').toFixed(1)) : 0,
       isAlWeight: isAlWeight > 0 ? Number(applyScrap(isAlWeight, 'Al').toFixed(1)) : 0,

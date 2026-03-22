@@ -55,6 +55,7 @@ const DEFAULT_MATERIAL_PRICES = {
   RGB: 26000,
   'Aluminium Foil': 15000,
   'Polyester Tape': 10000,
+  'Masterbatch': 50000,
 };
 
 const DEFAULT_MATERIAL_DENSITIES = {
@@ -88,6 +89,7 @@ const DEFAULT_MATERIAL_DENSITIES = {
   RGB: 7.85,
   'Aluminium Foil': 2.7,
   'Polyester Tape': 1.4,
+  'Masterbatch': 1.2,
 };
 
 const DEFAULT_MATERIAL_SCRAP = {
@@ -118,6 +120,7 @@ const DEFAULT_MATERIAL_SCRAP = {
   GSWB: 2.5,
   SFA: 2.5,
   RGB: 2.5,
+  'Masterbatch': 0,
 };
 
 const DEFAULT_PARAMS: CableDesignParams = {
@@ -491,10 +494,11 @@ export default function CableDesigner() {
       const hasArmor = sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored';
       const hasEarth = sampleItem.params.hasEarthing && sampleItem.params.earthingSize && sampleItem.params.earthingSize > 0;
       const isNoSheath = sampleItem.params.standard.includes('NYA') || sampleItem.params.standard.includes('NYAF') || sampleItem.params.standard.includes('NFA2X');
-      const hasInnerSheath = !isNoSheath && ((sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None'));
+      const hasInnerSheath = !isNoSheath && (sampleItem.params.hasInnerSheath !== false) && ((sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None'));
       const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
       const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X');
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
+      const isNFA2X = sampleItem.params.standard.includes('NFA2X') && !isNFA2XT;
       const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7';
 
       let sheetName = getCableDesignation(sampleItem.params, sampleItem.result).split(' ')[0];
@@ -568,6 +572,9 @@ export default function CableDesigner() {
         const sheathThkLabel = sampleItem.params.standard === 'LiYCY' ? 'Min. Thk (mm)' : 'Thk (mm)';
         addGroup('Outer Sheath', hOutSh, [sheathThkLabel, 'Overall Dia', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       }
+      if (!isMV) {
+        addGroup('Masterbatch', hOutSh, ['Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      }
 
       addGroup('Summary', hTot, ['Pack Cst', 'Base HPP', 'OH (%)', 'HPP/m', 'MG (%)', 'Selling Price']);
 
@@ -628,7 +635,7 @@ export default function CableDesigner() {
         pushCol(index + 1);
         const coreVal = isInstrumentation ? (item.params.formationCount || 1) : item.params.cores;
         const coreCol = pushCol(coreVal);
-        pushCol(item.params.size);
+        const sizeCol = pushCol(item.params.size);
         
         // We will fill Laid-up Dia formula later once we know Core OD
         const laidUpDiaColIdx = colIdx;
@@ -639,18 +646,25 @@ export default function CableDesigner() {
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
         const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
-        const condWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${wiresCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+        
+        let condWtFormula = `${sizeCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
+        if (isNFA2X || isNFA2XT) {
+          condWtFormula = `${item.result.bom.conductorWeight - (item.result.bom.earthingConductorWeight || 0)}`;
+        }
+        const condWtCol = pushCol(null, fmtNum, condWtFormula);
+        
         const condPrcCol = pushCol(condPrice, fmtRp);
         const condCstCol = pushCol(null, fmtRp, `${condWtCol}${r}*${condPrcCol}${r}/1000`);
 
         let currentDiaFormula = `${condOdCol}${r}`;
 
         // MGT
+        let mgtCstCol;
         if (item.params.fireguard) {
           const mgtThkCol = pushCol(item.result.spec.mgtThickness || 0.2, fmtNum);
           const mgtWtCol = pushCol(item.result.bom.mgtWeight || 0, fmtNum);
           const mgtPrcCol = pushCol(getPrice('MGT', 120000), fmtRp);
-          pushCol(null, fmtRp, `${mgtWtCol}${r}*${mgtPrcCol}${r}/1000`);
+          mgtCstCol = pushCol(null, fmtRp, `${mgtWtCol}${r}*${mgtPrcCol}${r}/1000`);
           currentDiaFormula = `(${currentDiaFormula}+2*${mgtThkCol}${r})`;
         }
 
@@ -723,7 +737,7 @@ export default function CableDesigner() {
         // Earth
         let earthCstCol, earthInsCstCol, earthWtCol, earthInsWtCol;
         if (hasEarth) {
-          pushCol(item.params.earthingSize || 0, fmtNum);
+          const earthSizeCol = pushCol(item.params.earthingSize || 0, fmtNum);
           if (isNFA2XT) {
             const alWiresCol = pushCol(item.result.spec.earthingCore?.alWireCount || 0);
             const alDiaCol = pushCol(item.result.spec.earthingCore?.alWireDiameter || 0, fmtNum);
@@ -739,7 +753,7 @@ export default function CableDesigner() {
           } else {
             const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
             const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            earthWtCol = pushCol(null, fmtNum, `PI()*(${earthWireDiaCol}${r}/2)^2*${earthWiresCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+            earthWtCol = pushCol(null, fmtNum, `${earthSizeCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
@@ -763,7 +777,7 @@ export default function CableDesigner() {
           pushCol(null, fmtNum, isDiaFormula); // OD
           const isAlOverlap = item.params.manualIsAluminiumOverlap !== undefined ? item.params.manualIsAluminiumOverlap : 25;
           isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*(1+${materialScrap['Al'] || 0}/100)`);
-          const isAlPrcCol = pushCol(getPrice('Al', 0), fmtRp);
+          const isAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
           const isDrainCount = item.params.manualIsDrainWireCount || 17;
           pushCol(isDrainCount * isMultiplier, fmtNum); // Drain Wire Qty
           const isDrainDia = item.params.manualIsDrainWireDiameter || 0.2;
@@ -776,7 +790,7 @@ export default function CableDesigner() {
           isDiaFormula = `(${isDiaFormula}+2*${isPetThkCol}${r})`;
           const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
           isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['PE'] || 0}/100)`);
-          const isPetPrcCol = pushCol(getPrice('PE', 25000), fmtRp);
+          const isPetPrcCol = pushCol(getPrice('Polyester Tape', getPrice('PE', 25000)), fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
 
@@ -789,7 +803,7 @@ export default function CableDesigner() {
           pushCol(null, fmtNum, currentDiaFormula); // OD
           const osAlOverlap = item.params.manualOsAluminiumOverlap !== undefined ? item.params.manualOsAluminiumOverlap : 25;
           osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*(1+${materialScrap['Al'] || 0}/100)`);
-          const osAlPrcCol = pushCol(getPrice('Al', 0), fmtRp);
+          const osAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
           const osDrainCount = item.params.manualOsDrainWireCount || 17;
           pushCol(osDrainCount, fmtNum); // Drain Wire Qty
           const osDrainDia = item.params.manualOsDrainWireDiameter || 0.2;
@@ -802,7 +816,7 @@ export default function CableDesigner() {
           currentDiaFormula = `(${currentDiaFormula}+2*${osPetThkCol}${r})`;
           const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
           osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['PE'] || 0}/100)`);
-          const osPetPrcCol = pushCol(getPrice('PE', 25000), fmtRp);
+          const osPetPrcCol = pushCol(getPrice('Polyester Tape', getPrice('PE', 25000)), fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
 
@@ -876,7 +890,7 @@ export default function CableDesigner() {
             currentDiaFormula = `(${currentDiaFormula}+2*${armThkCol}${r})`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
             const densityKey = item.params.armorType === 'AWA' ? 'Al' : 'SteelWire';
-            armWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${armThkCol}${r})*${armThkCol}${r}*${getDensity(densityKey)}*1.05*(1+${materialScrap[densityKey] || 0}/100)`);
+            armWtCol = pushCol(null, fmtNum, `INT(PI()*(${currentDiaFormula}-${armThkCol}${r})/(${armThkCol}${r}*1.05))*PI()*POWER(${armThkCol}${r}/2,2)*${getDensity(densityKey)}*1.05*(1+${materialScrap[densityKey] || 0}/100)`);
             const armPrcCol = pushCol(armorWirePrice, fmtRp);
             armCstCol = pushCol(null, fmtRp, `${armWtCol}${r}*${armPrcCol}${r}/1000`);
           } else if (item.params.armorType === 'SFA') {
@@ -894,7 +908,7 @@ export default function CableDesigner() {
             const tapeThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
             currentDiaFormula = `(${currentDiaFormula}+2*(${wireDiaCol}${r}+${tapeThkCol}${r}))`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
-            const wireWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-${wireDiaCol}${r})*${wireDiaCol}${r}*${getDensity('RGB')}*1.05*(1+${materialScrap['RGB'] || 0}/100)`);
+            const wireWtCol = pushCol(null, fmtNum, `INT(PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-${wireDiaCol}${r})/(${wireDiaCol}${r}*1.05))*PI()*POWER(${wireDiaCol}${r}/2,2)*${getDensity('RGB')}*1.05*(1+${materialScrap['RGB'] || 0}/100)`);
             const tapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('RGB')}*1.2*1.02*(1+${materialScrap['RGB'] || 0}/100)`);
             const wirePrcCol = pushCol(armorWirePrice, fmtRp);
             const tapePrcCol = pushCol(armorTapePrice, fmtRp);
@@ -951,10 +965,24 @@ export default function CableDesigner() {
           outShCstCol = pushCol(null, fmtRp, `${outShWtCol}${r}*${outShPrcCol}${r}/1000`);
         }
 
+        // Masterbatch
+        let mbWtCol, mbCstCol;
+        if (!isMV) {
+          let mbWtFormula = `(${insWtCol}${r}*0.02)`;
+          if (hasEarth) mbWtFormula += `+(${earthInsWtCol}${r}*0.02)`;
+          if (hasInnerSheath) mbWtFormula += `+(${inShWtCol}${r}*0.02)`;
+          if (hasSeparator) mbWtFormula += `+(${sepWtCol}${r}*0.02)`;
+          if (hasOuterSheath) mbWtFormula += `+(${outShWtCol}${r}*0.02)`;
+          mbWtCol = pushCol(null, fmtNum, mbWtFormula);
+          const mbPrcCol = pushCol(getPrice('Masterbatch', 50000), fmtRp);
+          mbCstCol = pushCol(null, fmtRp, `${mbWtCol}${r}*${mbPrcCol}${r}/1000`);
+        }
+
         // Summary
         const packCstCol = pushCol(packingCost, fmtRp);
         
         let baseHppFormula = `${condCstCol}${r}+${insCstCol}${r}`;
+        if (item.params.fireguard) baseHppFormula += `+${mgtCstCol}${r}`;
         if (isMV) baseHppFormula += `+${cScrCstCol}${r}+${iScrCstCol}${r}`;
         if (hasScreen) baseHppFormula += `+${mScrCstCol}${r}`;
         if (hasEarth) baseHppFormula += `+${earthCstCol}${r}+${earthInsCstCol}${r}`;
@@ -964,13 +992,19 @@ export default function CableDesigner() {
         if (hasSeparator) baseHppFormula += `+${sepCstCol}${r}`;
         if (hasArmor) baseHppFormula += `+${armCstCol}${r}`;
         if (hasOuterSheath) baseHppFormula += `+${outShCstCol}${r}`;
+        if (!isMV) {
+          baseHppFormula += `+${mbCstCol}${r}`;
+        } else {
+          const masterbatchCost = (item.result.bom.masterbatchWeight || 0) * (getPrice('Masterbatch', 50000) / 1000);
+          baseHppFormula += `+${masterbatchCost.toFixed(2)}`;
+        }
         baseHppFormula += `+${packCstCol}${r}`;
 
         const baseHppCol = pushCol(null, fmtRp, baseHppFormula);
         const ohCol = pushCol(item.params.overhead || 0, fmtNum);
         const hppCol = pushCol(null, fmtRp, `${baseHppCol}${r}*(1+${ohCol}${r}/100)`);
         const mgCol = pushCol(item.params.margin || 0, fmtNum);
-        const sellPrcCol = pushCol(null, fmtRp, `${hppCol}${r}*(1+${mgCol}${r}/100)`);
+        const sellPrcCol = pushCol(null, fmtRp, `ROUND(${hppCol}${r}*(1+${mgCol}${r}/100),-1)`);
 
         sheetsData[sheetName].push(row);
 
@@ -989,6 +1023,11 @@ export default function CableDesigner() {
         if (hasSeparator) totalWtFormula += `+'${sheetName}'!${sepWtCol}${r}`;
         if (hasArmor) totalWtFormula += `+'${sheetName}'!${armWtCol}${r}`;
         if (hasOuterSheath) totalWtFormula += `+'${sheetName}'!${outShWtCol}${r}`;
+        if (!isMV) {
+          totalWtFormula += `+'${sheetName}'!${mbWtCol}${r}`;
+        } else {
+          totalWtFormula += `+${item.result.bom.masterbatchWeight || 0}`;
+        }
 
         summaryDataAOA.push([
           { v: index + 1, t: 'n' },
@@ -2070,6 +2109,7 @@ export default function CableDesigner() {
       osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('PE', 25000)) / 1000 : 0,
+      masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
     };
 
     if (params.standard.includes('NFA2X-T') && bom.earthingAlWeight !== undefined && bom.earthingSteelWeight !== undefined) {
@@ -7070,22 +7110,8 @@ export default function CableDesigner() {
                     </div>
 
                     <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
-                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-amber-500" />
-                        Target Price (Rp/m)
-                      </label>
-                      <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <span className="text-sm font-bold text-slate-400">Rp</span>
-                        <input
-                          type="number"
-                          value={params.targetPrice || ''}
-                          onChange={(e) => handleParamChange('targetPrice', parseFloat(e.target.value))}
-                          placeholder="Target Selling Price"
-                          className="w-full bg-transparent border-none p-0 text-sm font-mono font-bold text-amber-600 focus:ring-0"
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-2 italic">
-                        * Used to compare against calculated HPP and Selling Price.
+                      <p className="text-[10px] text-slate-400 italic">
+                        * Target Price is managed in the Project Review section.
                       </p>
                     </div>
                     
@@ -7725,6 +7751,10 @@ export default function CableDesigner() {
                     </>
                   )}
                   
+                  {result.bom.masterbatchWeight !== undefined && result.bom.masterbatchWeight > 0 && (
+                    <SpecRow label="Masterbatch" value={result.bom.masterbatchWeight} unit="kg/km" />
+                  )}
+                  
                   {result.bom.innerCoveringWeight > 0 && (
                     <SpecRow label="Inner Covering (PVC)" value={result.bom.innerCoveringWeight} unit="kg/km" />
                   )}
@@ -7921,6 +7951,7 @@ export default function CableDesigner() {
                           { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
                           { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
+                          { label: `Masterbatch`, cost: breakdown.masterbatch },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
                         ].filter(item => item.cost > 0);
 
