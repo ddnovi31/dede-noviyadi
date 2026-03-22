@@ -1552,17 +1552,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     earthingInsulationThickness = effectiveParams.manualEarthingInsulationThickness || (abcTData ? abcTData.messenger.insulationThickness : (effectiveParams.insulationMaterial === 'XLPE' ? earthingData.xlpeThick : earthingData.pvcThick));
     earthingCoreDiameter = abcTData && !effectiveParams.manualEarthingInsulationThickness && !effectiveParams.manualEarthingConductorDiameter ? abcTData.messenger.coreDiameter : earthingConductorDiameter + (2 * earthingInsulationThickness);
     
-    const rEarthCond = earthingConductorDiameter / 2;
-    const rEarthIns = earthingCoreDiameter / 2;
-    let earthingInsArea = Math.PI * (rEarthIns * rEarthIns - rEarthCond * rEarthCond);
+    // Adopsi rumus skala industri detail untuk earthing core
+    const earthingFactor = effectiveParams.conductorType !== 're' ? getWeightAdditionFactor(earthingWireCount) : 0;
+    const earthingInsArea = (earthingConductorDiameter + earthingInsulationThickness) * Math.PI * (earthingInsulationThickness + (earthingConductorDiameter * earthingFactor));
     
-    // Add filling factor for stranded conductors without conductor screen
-    if (effectiveParams.conductorType !== 're') {
-      const factor = getWeightAdditionFactor(earthingWireCount);
-      earthingInsArea *= (1 + factor);
-    }
-    
-    earthingInsulationWeightPerCore = earthingInsArea * densities[effectiveParams.insulationMaterial];
+    // 1.01 adalah faktor toleransi/cabling skala industri
+    earthingInsulationWeightPerCore = earthingInsArea * densities[effectiveParams.insulationMaterial] * 1.01;
   }
 
   // 2.5 Metallic Screen (MV Only)
@@ -1632,13 +1627,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     insulationArea = Math.PI * (rIns * rIns - rCond * rCond);
     
     // Add filling factor for stranded conductors without conductor screen
-    if (effectiveParams.conductorType !== 're') {
-      const factor = getWeightAdditionFactor(wireCount);
-      insulationArea *= (1 + factor);
-    }
+    const factor = effectiveParams.conductorType !== 're' ? getWeightAdditionFactor(wireCount) : 0;
+    // Adopsi rumus skala industri detail: 
+    // Area = (Diameter konduktor + Thickness Insul) * PI * (Thickness Insul + (Diameter konduktor * factor))
+    insulationArea = (conductorDiameter + insulationThickness) * Math.PI * (insulationThickness + (conductorDiameter * factor));
   }
 
-  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial]; // kg/km
+  // 1.01 adalah faktor toleransi/cabling skala industri
+  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * 1.01; // kg/km
+  
   const totalInsulationWeight = (insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores);
   const totalEarthingInsulationWeight = earthingInsulationWeightPerCore * earthingCores;
   

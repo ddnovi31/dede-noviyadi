@@ -191,6 +191,10 @@ export default function CableDesigner() {
   const [projectNumber, setProjectNumber] = useState('');
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  
+  const [isBulkCalculationEnabled, setIsBulkCalculationEnabled] = useState(false);
+  const [bulkCores, setBulkCores] = useState<number[]>([]);
+  const [bulkSizes, setBulkSizes] = useState<number[]>([]);
 
   const updateProjectItemParam = (idx: number, key: string, value: any) => {
     setProjectItems(prev => prev.map((item, i) => {
@@ -685,12 +689,17 @@ export default function CableDesigner() {
         }
 
         // Insulation
+        const diaBeforeIns = currentDiaFormula;
         const insThkCol = pushCol(item.result.spec.phaseCore.insulationThickness || 0, fmtNum);
         currentDiaFormula = `(${currentDiaFormula}+2*${insThkCol}${r})`;
         pushCol(null, fmtNum, currentDiaFormula); // OD
         
-        const insulationFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.phaseCore.wireCount || 7) : 0;
-        const insWtCol = pushCol(null, fmtNum, `PI()*${insThkCol}${r}*(${currentDiaFormula}-2*${insThkCol}${r}+${insThkCol}${r})*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)*(1+${insulationFactor})`);
+        // Only apply filling factor if there is no conductor screen
+        const hasCondScreen = isMV && (item.result.spec.conductorScreenThickness || 0) > 0;
+        const insulationFactor = (!hasCondScreen && item.params.conductorType !== 're') ? getWeightAdditionFactor(item.result.spec.phaseCore.wireCount || 7) : 0;
+        
+        // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
+        const insWtCol = pushCol(null, fmtNum, `ROUND((${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
         const insPrcCol = pushCol(insPrice, fmtRp);
         const insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
 
@@ -759,14 +768,16 @@ export default function CableDesigner() {
             const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
             const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
             const earthCalcAreaCol = pushCol(null, fmtNum, `${earthWiresCol}${r}*PI()/4*POWER(${earthWireDiaCol}${r},2)`);
-            earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+            earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${item.params.earthingCores || 1}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
           const earthInsThkCol = pushCol(item.result.spec.earthingCore?.insulationThickness || 0, fmtNum);
           let earthCurrentDiaFormula = isNFA2XT ? `(${getColName(colIdx - 5)}${r})` : `(${getColName(colIdx - 3)}${r})`;
           const earthingInsFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.earthingCore?.wireCount || 7) : 0;
-          earthInsWtCol = pushCol(null, fmtNum, `PI()*${earthInsThkCol}${r}*(${earthCurrentDiaFormula}+${earthInsThkCol}${r})*${getDensity(item.params.insulationMaterial)}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100)*(1+${earthingInsFactor})`);
+          
+          // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
+          earthInsWtCol = pushCol(null, fmtNum, `ROUND((${earthCurrentDiaFormula}+${earthInsThkCol}${r})*PI()*(${earthInsThkCol}${r}+(${earthCurrentDiaFormula}*${earthingInsFactor}))*${getDensity(item.params.insulationMaterial)}*${item.params.earthingCores || 1}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
           earthInsCstCol = pushCol(null, fmtRp, `${earthInsWtCol}${r}*${insPrcCol}${r}/1000`);
         }
 
@@ -2093,7 +2104,6 @@ export default function CableDesigner() {
   };
 
   const addToProject = () => {
-    if (!result) return;
     if (params.hasIndividualScreen && params.hasOverallScreen) {
       if (params.formationType === 'Pair' || params.formationType === 'Triad') {
         const formationCount = params.formationCount || 1;
@@ -2103,8 +2113,35 @@ export default function CableDesigner() {
         }
       }
     }
-    setProjectItems(prev => [...prev, { params: { ...params, id: crypto.randomUUID() }, result }]);
+
+    if (isBulkCalculationEnabled) {
+      if (bulkCores.length === 0 || bulkSizes.length === 0) {
+        alert('Please select at least one core and one size for bulk calculation.');
+        return;
+      }
+      
+      const newItems: {params: CableDesignParams, result: CalculationResult}[] = [];
+      for (const core of bulkCores) {
+        for (const size of bulkSizes) {
+          const newParams = { ...params, cores: core, size: size, id: crypto.randomUUID() };
+          const newResult = calculateCable(newParams, materialDensities, materialScrap);
+          if (newResult) {
+            newItems.push({ params: newParams, result: newResult });
+          }
+        }
+      }
+      
+      setProjectItems(prev => [...prev, ...newItems]);
+      alert(`Successfully added ${newItems.length} items to the project.`);
+    } else {
+      if (!result) return;
+      setProjectItems(prev => [...prev, { params: { ...params, id: crypto.randomUUID() }, result }]);
+    }
+    
     setParams(prev => ({ ...DEFAULT_PARAMS, projectName: prev.projectName }));
+    setIsBulkCalculationEnabled(false);
+    setBulkCores([]);
+    setBulkSizes([]);
   };
 
   const removeFromProject = (id: string) => {
@@ -5803,6 +5840,155 @@ export default function CableDesigner() {
                       </select>
                     </div>
 
+                    {/* Bulk Calculation Toggle */}
+                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-xl border border-indigo-100 mt-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-indigo-900">Bulk Calculation</span>
+                        <span className="text-xs text-indigo-700">Calculate multiple cores and sizes at once</span>
+                      </div>
+                      <button
+                        onClick={() => setIsBulkCalculationEnabled(!isBulkCalculationEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isBulkCalculationEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isBulkCalculationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Bulk Calculation Options */}
+                    {isBulkCalculationEnabled && (
+                      <div className="space-y-4 p-4 bg-white border border-indigo-200 rounded-xl mt-2 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-bold text-slate-700">Select Cores</label>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  let cores = [1, 2, 3, 4, 5];
+                                  if (params.standard === 'IEC 60502-2') cores = [1, 3];
+                                  else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
+                                  else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
+                                  else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
+                                  else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
+                                  else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
+                                  else if (params.standard.includes('NFA2X')) cores = [2, 4];
+                                  else if (params.standard === 'BS EN 50288-7') cores = [1, 2, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 30, 32, 40, 50];
+                                  setBulkCores(cores);
+                                }}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                              >
+                                Select All
+                              </button>
+                              <span className="text-slate-300">|</span>
+                              <button 
+                                onClick={() => setBulkCores([])}
+                                className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(() => {
+                              let cores = [1, 2, 3, 4, 5];
+                              if (params.standard === 'IEC 60502-2') cores = [1, 3];
+                              else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
+                              else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
+                              else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
+                              else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
+                              else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
+                              else if (params.standard.includes('NFA2X')) cores = [2, 4];
+                              else if (params.standard === 'BS EN 50288-7') cores = [1, 2, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 30, 32, 40, 50];
+                              
+                              return cores.map((c) => (
+                                <button
+                                  key={c}
+                                  onClick={() => {
+                                    if (bulkCores.includes(c)) {
+                                      setBulkCores(bulkCores.filter(core => core !== c));
+                                    } else {
+                                      setBulkCores([...bulkCores, c].sort((a, b) => a - b));
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    bulkCores.includes(c)
+                                      ? 'bg-indigo-600 text-white shadow-sm' 
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  {c}C
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-bold text-slate-700">Select Sizes (mm²)</label>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  const availableSizes = CABLE_SIZES.filter(s => {
+                                    if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                                    if (params.standard === 'IEC 60502-2') return s >= 25;
+                                    if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                    if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                                    if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                                    if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                                    if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                                    if (params.conductorMaterial === 'Al') return s >= 10;
+                                    return true;
+                                  });
+                                  setBulkSizes(availableSizes);
+                                }}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                              >
+                                Select All
+                              </button>
+                              <span className="text-slate-300">|</span>
+                              <button 
+                                onClick={() => setBulkSizes([])}
+                                className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {CABLE_SIZES.filter(s => {
+                              if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                              if (params.standard === 'IEC 60502-2') return s >= 25;
+                              if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                              if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                              if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                              if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                              if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                              if (params.conductorMaterial === 'Al') return s >= 10;
+                              return true;
+                            }).map((s) => (
+                              <button
+                                key={s}
+                                onClick={() => {
+                                  if (bulkSizes.includes(s)) {
+                                    setBulkSizes(bulkSizes.filter(size => size !== s));
+                                  } else {
+                                    setBulkSizes([...bulkSizes, s].sort((a, b) => a - b));
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  bulkSizes.includes(s)
+                                    ? 'bg-indigo-600 text-white shadow-sm' 
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Cores and Size in one row */}
                     <div className={`grid grid-cols-2 gap-4 ${isInstrumentationPairTriad ? 'opacity-40 pointer-events-none' : ''}`}>
                       {/* Number of Cores */}
@@ -5815,8 +6001,8 @@ export default function CableDesigner() {
                             max={params.standard === 'IEC 60502-2' ? 3 : params.standard.includes('(NYMHY)') ? 5 : params.standard.includes('(NYM)') ? 4 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
                             value={params.cores}
                             onChange={(e) => handleParamChange('cores', Number(e.target.value))}
-                            disabled={isInstrumentationPairTriad}
-                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100"
+                            disabled={isInstrumentationPairTriad || isBulkCalculationEnabled}
+                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:opacity-50"
                           />
                         </div>
                         {params.standard === 'BS EN 50288-7' && (
@@ -5840,7 +6026,7 @@ export default function CableDesigner() {
                               <button
                                 key={c}
                                 onClick={() => handleParamChange('cores', c)}
-                                disabled={isInstrumentationPairTriad}
+                                disabled={isInstrumentationPairTriad || isBulkCalculationEnabled}
                                 className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
                                   params.cores === c 
                                     ? 'bg-indigo-600 text-white shadow-sm' 
@@ -5865,8 +6051,8 @@ export default function CableDesigner() {
                         <select
                           value={params.size}
                           onChange={(e) => handleParamChange('size', Number(e.target.value))}
-                          disabled={isInstrumentationPairTriad}
-                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100"
+                          disabled={isInstrumentationPairTriad || isBulkCalculationEnabled}
+                          className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:opacity-50"
                         >
                           {CABLE_SIZES.filter(s => {
                             if (params.standard === 'BS EN 50288-7') {
@@ -7048,7 +7234,9 @@ export default function CableDesigner() {
                         className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] uppercase tracking-wider text-sm"
                       >
                         <Plus className="w-5 h-5" />
-                        Add to Project
+                        {isBulkCalculationEnabled 
+                          ? `Bulk Add to Project (${bulkCores.length * bulkSizes.length} Items)` 
+                          : 'Add to Project'}
                       </button>
                     </div>
                   </div>
@@ -7533,6 +7721,23 @@ export default function CableDesigner() {
           {/* Results Panel */}
           <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
             
+            {isBulkCalculationEnabled && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in duration-300">
+                <div className="bg-amber-100 p-2 rounded-lg text-amber-600 shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-amber-900">Bulk Calculation Active</h3>
+                  <p className="text-xs text-amber-700 mt-1">
+                    The results below show a preview for <strong>{params.cores}C x {params.size} mm²</strong>. 
+                    Clicking "Bulk Add to Project" will generate and add <strong>{bulkCores.length * bulkSizes.length}</strong> different cable configurations based on your selected cores and sizes.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Cable Designation */}
             <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 rounded-2xl p-10 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-white/10">
               {/* Decorative elements for 3D feel */}
