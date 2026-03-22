@@ -635,11 +635,14 @@ export default function CableDesigner() {
         const laidUpDiaCol = getColName(colIdx++);
         row.push(null); // Placeholder for Laid-up Dia
 
+        const totalCores = item.params.cores + (item.params.hasEarthing ? (item.params.earthingCores || 1) : 0);
+        const cablingFactorStr = totalCores > 1 ? '1.01*' : '';
+
         // Conductor
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
         const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
-        const condWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${wiresCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+        const condWtCol = pushCol(null, fmtNum, `PI()*(${wireDiaCol}${r}/2)^2*${wiresCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*${cablingFactorStr}(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
         const condPrcCol = pushCol(condPrice, fmtRp);
         const condCstCol = pushCol(null, fmtRp, `${condWtCol}${r}*${condPrcCol}${r}/1000`);
 
@@ -730,7 +733,7 @@ export default function CableDesigner() {
             const stWiresCol = pushCol(item.result.spec.earthingCore?.steelWireCount || 0);
             const stDiaCol = pushCol(item.result.spec.earthingCore?.steelWireDiameter || 0, fmtNum);
             
-            earthWtCol = pushCol(null, fmtNum, `(PI()*(${alDiaCol}${r}/2)^2*${alWiresCol}${r}*${getDensity('Al')}*(1+${materialScrap['Al'] || 0}/100) + PI()*(${stDiaCol}${r}/2)^2*${stWiresCol}${r}*${getDensity('SteelWire')}*(1+${materialScrap['SteelWire'] || 0}/100))`);
+            earthWtCol = pushCol(null, fmtNum, `(PI()*(${alDiaCol}${r}/2)^2*${alWiresCol}${r}*${getDensity('Al')}*(1+${materialScrap['Al'] || 0}/100) + PI()*(${stDiaCol}${r}/2)^2*${stWiresCol}${r}*${getDensity('SteelWire')}*(1+${materialScrap['SteelWire'] || 0}/100))*1.05*1.008*${cablingFactorStr === '' ? '1' : cablingFactorStr + '1'}`);
             if (item.result.bom.earthingAlWeight !== undefined && item.result.bom.earthingSteelWeight !== undefined) {
               earthCstCol = pushCol(null, fmtRp, `(${item.result.bom.earthingAlWeight}*${getPrice('Al', 0)}+${item.result.bom.earthingSteelWeight}*${getPrice('SteelWire', 0)})/1000`);
             } else {
@@ -739,7 +742,7 @@ export default function CableDesigner() {
           } else {
             const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
             const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            earthWtCol = pushCol(null, fmtNum, `PI()*(${earthWireDiaCol}${r}/2)^2*${earthWiresCol}${r}*${getDensity(item.params.conductorMaterial)}*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+            earthWtCol = pushCol(null, fmtNum, `PI()*(${earthWireDiaCol}${r}/2)^2*${earthWiresCol}${r}*${getDensity(item.params.conductorMaterial)}*1.008*${cablingFactorStr}(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
