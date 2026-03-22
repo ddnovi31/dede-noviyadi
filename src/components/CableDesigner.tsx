@@ -183,6 +183,7 @@ export default function CableDesigner() {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [loadedProjectConfig, setLoadedProjectConfig] = useState<{lmeParams?: any, materialPrices?: any, exchangeRate?: number} | null>(null);
   const [projectName, setProjectName] = useState('New Project');
   const [projectNumber, setProjectNumber] = useState('');
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
@@ -300,6 +301,9 @@ export default function CableDesigner() {
       projectNumber,
       items: projectItems,
       updatedAt: Date.now(),
+      lmeParams,
+      materialPrices,
+      exchangeRate: lmeParams.kurs,
     };
 
     if (dbFileHandle) {
@@ -1176,6 +1180,11 @@ export default function CableDesigner() {
     setProjectNumber(project.projectNumber || '');
     setProjectItems(project.items);
     setProjectId(project.id);
+    setLoadedProjectConfig({
+      lmeParams: project.lmeParams,
+      materialPrices: project.materialPrices,
+      exchangeRate: project.exchangeRate
+    });
     setShowProjectsModal(false);
   };
 
@@ -1957,8 +1966,8 @@ export default function CableDesigner() {
     setProjectItems(prev => prev.filter(item => item.params.id !== id));
   };
 
-  const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams) => {
-    const prices = { ...materialPrices, ...(params.customMaterialPrices || {}) };
+  const calculateCostBreakdown = (bom: CalculationResult['bom'], params: CableDesignParams, pricesOverride?: Record<string, number>) => {
+    const prices = pricesOverride || { ...materialPrices, ...(params.customMaterialPrices || {}) };
     const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
     
     const formationType = params.formationType || 'Pair';
@@ -2067,8 +2076,8 @@ export default function CableDesigner() {
     };
   };
 
-  const calculateHPP = (res: CalculationResult, par: CableDesignParams) => {
-    const breakdown = calculateCostBreakdown(res.bom, par);
+  const calculateHPP = (res: CalculationResult, par: CableDesignParams, pricesOverride?: Record<string, number>) => {
+    const breakdown = calculateCostBreakdown(res.bom, par, pricesOverride);
     const baseHpp = (Object.values(breakdown) as number[]).reduce((a: number, b: number) => a + (typeof b === 'number' ? b : 0), 0);
     
     // Add packing cost
@@ -2284,7 +2293,11 @@ export default function CableDesigner() {
                     <th className="px-6 py-4 border-b border-slate-100 text-center">Order Length (m)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">OH (%)</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-center">MG (%)</th>
-                    <th className="px-6 py-4 border-b border-slate-100 text-right">HPP / Meter</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Old HPP</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Current HPP</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-right">Deviasi</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-center">Target Price</th>
+                    <th className="px-6 py-4 border-b border-slate-100 text-center">MG vs Target</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">Selling Price</th>
                     <th className="px-6 py-4 border-b border-slate-100 text-right">Total Price</th>
                   </tr>
@@ -2292,6 +2305,11 @@ export default function CableDesigner() {
                 <tbody className="divide-y divide-slate-100">
                   {projectItems.map((item, idx) => {
                     const hpp = calculateHPP(item.result, item.params);
+                    const oldHpp = loadedProjectConfig?.materialPrices ? calculateHPP(item.result, item.params, loadedProjectConfig.materialPrices) : hpp;
+                    const deviation = hpp - oldHpp;
+                    const targetPrice = item.params.targetPrice || 0;
+                    const marginVsTarget = targetPrice > 0 ? ((targetPrice - hpp) / hpp) * 100 : 0;
+                    
                     const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
                     const breakdown = calculateCostBreakdown(item.result.bom, item.params);
                     const conductorPrice = breakdown.conductor + (breakdown.earthingConductor || 0) + (breakdown.earthingAl || 0) + (breakdown.earthingSteel || 0);
@@ -2385,7 +2403,36 @@ export default function CableDesigner() {
                             />
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="text-xs font-bold text-slate-400 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
+                            <div className="text-[10px] font-bold text-slate-400 font-mono">Rp {oldHpp.toLocaleString('id-ID')}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="text-[10px] font-bold text-slate-900 font-mono">Rp {hpp.toLocaleString('id-ID')}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className={`text-[10px] font-bold font-mono ${deviation > 0 ? 'text-red-600' : (deviation < 0 ? 'text-emerald-600' : 'text-slate-400')}`}>
+                              {deviation > 0 ? '+' : ''}{deviation.toLocaleString('id-ID')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input 
+                              type="number" 
+                              className="w-24 px-2 py-1 text-xs border border-slate-200 rounded text-center font-mono print:border-none print:bg-transparent print:p-0"
+                              value={item.params.targetPrice || ''}
+                              placeholder="Target Price"
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) {
+                                  setProjectItems(prev => prev.map((pItem, pIdx) => 
+                                    (pItem.params.id ? pItem.params.id === item.params.id : pIdx === idx) ? { ...pItem, params: { ...pItem.params, targetPrice: val } } : pItem
+                                  ));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className={`text-xs font-bold font-mono ${marginVsTarget >= (item.params.margin || 0) ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {marginVsTarget.toFixed(2)}%
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="text-sm font-bold text-indigo-600 font-mono">Rp {sellingPrice.toLocaleString('id-ID')}</div>
@@ -2396,7 +2443,7 @@ export default function CableDesigner() {
                         </tr>
                         {isExpanded && (
                           <tr className="bg-slate-50/80 border-b border-slate-200 print:hidden">
-                            <td colSpan={11} className="p-6">
+                            <td colSpan={15} className="p-6">
                               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                                 <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                                   <Settings className="w-4 h-4 text-indigo-500" />
@@ -6932,6 +6979,26 @@ export default function CableDesigner() {
                       </div>
                       <p className="text-[10px] text-slate-400 mt-2 italic">
                         * Margin is added to HPP to calculate Selling Price (Price = HPP × (1 + Margin%))
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-amber-500" />
+                        Target Price (Rp/m)
+                      </label>
+                      <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                        <span className="text-sm font-bold text-slate-400">Rp</span>
+                        <input
+                          type="number"
+                          value={params.targetPrice || ''}
+                          onChange={(e) => handleParamChange('targetPrice', parseFloat(e.target.value))}
+                          placeholder="Target Selling Price"
+                          className="w-full bg-transparent border-none p-0 text-sm font-mono font-bold text-amber-600 focus:ring-0"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-2 italic">
+                        * Used to compare against calculated HPP and Selling Price.
                       </p>
                     </div>
                     

@@ -51,7 +51,10 @@ async function initMysql() {
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         items LONGTEXT NOT NULL,
-        updatedAt BIGINT NOT NULL
+        updatedAt BIGINT NOT NULL,
+        lmeParams LONGTEXT,
+        materialPrices LONGTEXT,
+        exchangeRate DOUBLE
       )
     `;
     await mysqlPool.query(createTableQuery);
@@ -82,7 +85,10 @@ async function initSqlite(dbName: string) {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         items TEXT NOT NULL,
-        updatedAt INTEGER NOT NULL
+        updatedAt INTEGER NOT NULL,
+        lmeParams TEXT,
+        materialPrices TEXT,
+        exchangeRate REAL
       )
     `);
     activeSqliteDb = dbName;
@@ -173,7 +179,10 @@ app.get("/api/projects", async (req, res) => {
       id: row.id,
       name: row.name,
       items: JSON.parse(row.items),
-      updatedAt: row.updatedAt
+      updatedAt: row.updatedAt,
+      lmeParams: row.lmeParams ? JSON.parse(row.lmeParams) : null,
+      materialPrices: row.materialPrices ? JSON.parse(row.materialPrices) : null,
+      exchangeRate: row.exchangeRate
     }));
     
     res.json(projects);
@@ -185,28 +194,36 @@ app.get("/api/projects", async (req, res) => {
 
 app.post("/api/projects", async (req, res) => {
   try {
-    const { id, name, items, updatedAt } = req.body;
+    const { id, name, items, updatedAt, lmeParams, materialPrices, exchangeRate } = req.body;
     const itemsJson = JSON.stringify(items);
+    const lmeParamsJson = lmeParams ? JSON.stringify(lmeParams) : null;
+    const materialPricesJson = materialPrices ? JSON.stringify(materialPrices) : null;
     
     if (activeDbType === 'mysql' && mysqlPool) {
       const query = `
-        INSERT INTO projects (id, name, items, updatedAt)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO projects (id, name, items, updatedAt, lmeParams, materialPrices, exchangeRate)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           items = VALUES(items),
-          updatedAt = VALUES(updatedAt)
+          updatedAt = VALUES(updatedAt),
+          lmeParams = VALUES(lmeParams),
+          materialPrices = VALUES(materialPrices),
+          exchangeRate = VALUES(exchangeRate)
       `;
-      await mysqlPool.query(query, [id, name, itemsJson, updatedAt]);
+      await mysqlPool.query(query, [id, name, itemsJson, updatedAt, lmeParamsJson, materialPricesJson, exchangeRate]);
     } else if (activeDbType === 'sqlite' && sqliteConn) {
       await sqliteConn.run(`
-        INSERT INTO projects (id, name, items, updatedAt)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO projects (id, name, items, updatedAt, lmeParams, materialPrices, exchangeRate)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name = excluded.name,
           items = excluded.items,
-          updatedAt = excluded.updatedAt
-      `, [id, name, itemsJson, updatedAt]);
+          updatedAt = excluded.updatedAt,
+          lmeParams = excluded.lmeParams,
+          materialPrices = excluded.materialPrices,
+          exchangeRate = excluded.exchangeRate
+      `, [id, name, itemsJson, updatedAt, lmeParamsJson, materialPricesJson, exchangeRate]);
     } else {
       throw new Error("No active database");
     }

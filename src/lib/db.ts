@@ -4,6 +4,9 @@ export interface SavedProject {
   projectNumber?: string;
   items: any[];
   updatedAt: number;
+  lmeParams?: any;
+  materialPrices?: any;
+  exchangeRate?: number;
 }
 
 export async function setDbHandle(handle: any): Promise<void> {

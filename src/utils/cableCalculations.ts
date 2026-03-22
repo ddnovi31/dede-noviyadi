@@ -51,6 +51,7 @@ export interface CableDesignParams {
   cablingModel?: 'Auto' | 'Single Circle' | 'Groove';
   orderLength?: number; // In meters
   ambientTemperature?: number; // In degrees Celsius
+  targetPrice?: number; // Target selling price per meter
   
   // Instrumentation specific
   formationType?: FormationType;
