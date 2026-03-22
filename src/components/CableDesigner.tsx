@@ -725,8 +725,8 @@ export default function CableDesigner() {
         if (hasEarth) {
           pushCol(item.params.earthingSize || 0, fmtNum);
           if (isNFA2XT) {
-            const alWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
-            const alDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
+            const alWiresCol = pushCol(item.result.spec.earthingCore?.alWireCount || 0);
+            const alDiaCol = pushCol(item.result.spec.earthingCore?.alWireDiameter || 0, fmtNum);
             const stWiresCol = pushCol(item.result.spec.earthingCore?.steelWireCount || 0);
             const stDiaCol = pushCol(item.result.spec.earthingCore?.steelWireDiameter || 0, fmtNum);
             

@@ -288,41 +288,41 @@ export const getWeightAdditionFactor = (n: number): number => {
 
 const NFA2X_DATA: Record<string, ABCData> = {
   '2x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 100.4, breakingLoad: 3.22 },
-  '2x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 144.2, breakingLoad: 5.15 },
+  '2x16': { size: 16, wireCount: 7, wireDiameter: 1.70, condDiameter: 5.10, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.50, resistance: 1.91, ampacity: 72, netWeight: 144.2, breakingLoad: 5.15 },
   '4x10': { size: 10, wireCount: 7, wireDiameter: 1.35, condDiameter: 4.05, condWeight: 27.61, insulationThickness: 1.20, coreDiameter: 6.45, resistance: 3.08, ampacity: 54, netWeight: 200.8, breakingLoad: 6.44 },
-  '4x16': { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 72, netWeight: 288.4, breakingLoad: 10.30 },
-  '4x25': { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.20, ampacity: 102, netWeight: 437.8, breakingLoad: 16.10 },
+  '4x16': { size: 16, wireCount: 7, wireDiameter: 1.70, condDiameter: 5.10, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.50, resistance: 1.91, ampacity: 72, netWeight: 288.4, breakingLoad: 10.30 },
+  '4x25': { size: 25, wireCount: 7, wireDiameter: 2.14, condDiameter: 6.42, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.22, resistance: 1.20, ampacity: 102, netWeight: 437.8, breakingLoad: 16.10 },
   '4x35': { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 603.7, breakingLoad: 22.54 },
 };
 
 export const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMessengerData, netWeight: number }> = {
   '2x25+25': {
-    phase: { size: 25, wireCount: 7, wireDiameter: 2.12, condDiameter: 6.36, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.16, resistance: 1.20, ampacity: 105, netWeight: 0 },
+    phase: { size: 25, wireCount: 7, wireDiameter: 2.14, condDiameter: 6.42, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.22, resistance: 1.20, ampacity: 105, netWeight: 0 },
     messenger: { size: 25, wireCount: 7, wireDiameter: 2.12, condDiameter: 6.36, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.16, resistance: 1.38, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 2.12, steelWireCount: 1, steelWireDiameter: 2.12, breakingLoad: 8.52 },
     netWeight: 320
   },
   '2x35+25': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.48, condWeight: 68.73, insulationThickness: 1.4, coreDiameter: 9.28, resistance: 1.38, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.13, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 8.52 },
     netWeight: 410
   },
   '2x35+35': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.31, condWeight: 96.21, insulationThickness: 1.5, coreDiameter: 11.31, resistance: 0.986, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73, breakingLoad: 11.90 },
     netWeight: 500
   },
   '2x35+50': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.92, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 13.12, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26, breakingLoad: 17.00 },
     netWeight: 600
   },
   '2x50+35': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.06, condWeight: 137.4, insulationThickness: 1.60, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    phase: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.60, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
     messenger: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.60, coreDiameter: 10.76, resistance: 0.986, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 2.52, steelWireCount: 1, steelWireDiameter: 2.52, breakingLoad: 11.90 },
     netWeight: 560
   },
   '2x50+50': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.19, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.39, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    phase: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
     messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.92, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 13.12, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26, breakingLoad: 17.00 },
     netWeight: 900
   },
@@ -342,28 +342,28 @@ export const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMesseng
     netWeight: 1100
   },
   '2x120+95': {
-    phase: { size: 120, wireCount: 19, wireDiameter: 2.84, condDiameter: 14.20, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.85, resistance: 0.253, ampacity: 275, netWeight: 0 },
+    phase: { size: 120, wireCount: 37, wireDiameter: 2.03, condDiameter: 14.21, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.81, resistance: 0.253, ampacity: 275, netWeight: 0 },
     messenger: { size: 95, wireCount: 19, wireDiameter: 2.52, condDiameter: 12.60, condWeight: 261.3, insulationThickness: 1.80, coreDiameter: 16.20, resistance: 0.306, ampacity: 0, netWeight: 0, alWireCount: 18, alWireDiameter: 2.52, steelWireCount: 1, steelWireDiameter: 2.52, breakingLoad: 32.64 },
     netWeight: 1400
   },
   '3x35+25': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 35, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.48, condWeight: 96.21, insulationThickness: 1.4, coreDiameter: 9.28, resistance: 0.986, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.13, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 11.90 },
     netWeight: 545
   },
   '3x35+35': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 35, wireCount: 7, wireDiameter: 2.73, condDiameter: 8.31, condWeight: 96.21, insulationThickness: 1.5, coreDiameter: 11.31, resistance: 0.986, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 2.73, steelWireCount: 1, steelWireDiameter: 2.73, breakingLoad: 11.90 },
     netWeight: 600
   },
   '3x35+50': {
-    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.868, ampacity: 125, netWeight: 0 },
+    phase: { size: 35, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 96.21, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.868, ampacity: 125, netWeight: 0 },
     messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.92, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 13.12, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26, breakingLoad: 17.00 },
     netWeight: 700
   },
   '3x50+35': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.19, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.39, resistance: 0.641, ampacity: 154, netWeight: 0 },
-    messenger: { size: 50, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.67, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 10.87, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.52, steelWireCount: 0, steelWireDiameter: 2.73, breakingLoad: 17.00 },
+    phase: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    messenger: { size: 50, wireCount: 7, wireDiameter: 2.52, condDiameter: 7.56, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 10.76, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 2.52, steelWireCount: 0, steelWireDiameter: 2.73, breakingLoad: 17.00 },
     netWeight: 750
   },
   '3x70+50': {
@@ -382,27 +382,27 @@ export const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMesseng
     netWeight: 1550
   },
   '3x120+95': {
-    phase: { size: 120, wireCount: 19, wireDiameter: 2.82, condDiameter: 14.14, condWeight: 330.1, insulationThickness: 1.8, coreDiameter: 17.74, resistance: 0.253, ampacity: 275, netWeight: 0 },
+    phase: { size: 120, wireCount: 37, wireDiameter: 2.03, condDiameter: 14.21, condWeight: 330.1, insulationThickness: 1.8, coreDiameter: 17.81, resistance: 0.253, ampacity: 275, netWeight: 0 },
     messenger: { size: 95, wireCount: 33, wireDiameter: 2.14, condDiameter: 14.14, condWeight: 261.3, insulationThickness: 1.6, coreDiameter: 17.34, resistance: 0.306, ampacity: 0, netWeight: 0, alWireCount: 26, alWireDiameter: 2.14, steelWireCount: 7, steelWireDiameter: 1.68, breakingLoad: 32.64 },
     netWeight: 1950
   },
   '3x50+50': {
-    phase: { size: 50, wireCount: 7, wireDiameter: 3.02, condDiameter: 9.19, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.39, resistance: 0.641, ampacity: 154, netWeight: 0 },
+    phase: { size: 50, wireCount: 19, wireDiameter: 1.83, condDiameter: 9.15, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 12.35, resistance: 0.641, ampacity: 154, netWeight: 0 },
     messenger: { size: 50, wireCount: 7, wireDiameter: 3.26, condDiameter: 9.92, condWeight: 137.4, insulationThickness: 1.6, coreDiameter: 13.12, resistance: 0.689, ampacity: 0, netWeight: 0, alWireCount: 6, alWireDiameter: 3.26, steelWireCount: 1, steelWireDiameter: 3.26, breakingLoad: 17.00 },
     netWeight: 900
   },
   '3x95+95': {
-    phase: { size: 95, wireCount: 19, wireDiameter: 2.5, condDiameter: 12.53, condWeight: 261.3, insulationThickness: 1.8, coreDiameter: 16.13, resistance: 0.320, ampacity: 235, netWeight: 0 },
+    phase: { size: 95, wireCount: 19, wireDiameter: 2.52, condDiameter: 12.60, condWeight: 261.3, insulationThickness: 1.8, coreDiameter: 16.20, resistance: 0.320, ampacity: 235, netWeight: 0 },
     messenger: { size: 95, wireCount: 33, wireDiameter: 2.16, condDiameter: 14.27, condWeight: 261.3, insulationThickness: 1.6, coreDiameter: 17.47, resistance: 0.306, ampacity: 0, netWeight: 0, alWireCount: 26, alWireDiameter: 2.16, steelWireCount: 7, steelWireDiameter: 1.68, breakingLoad: 32.64 },
     netWeight: 1700
   },
   '3x120+120': {
-    phase: { size: 120, wireCount: 19, wireDiameter: 2.84, condDiameter: 14.20, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.85, resistance: 0.253, ampacity: 275, netWeight: 0 },
+    phase: { size: 120, wireCount: 37, wireDiameter: 2.03, condDiameter: 14.21, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.81, resistance: 0.253, ampacity: 275, netWeight: 0 },
     messenger: { size: 120, wireCount: 19, wireDiameter: 2.85, condDiameter: 14.25, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.85, resistance: 0.253, ampacity: 0, netWeight: 0, alWireCount: 18, alWireDiameter: 2.85, steelWireCount: 1, steelWireDiameter: 2.85, breakingLoad: 40.0 },
     netWeight: 2100
   },
   '3x25+16': {
-    phase: { size: 25, wireCount: 7, wireDiameter: 2.13, condDiameter: 6.39, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.19, resistance: 1.20, ampacity: 105, netWeight: 0 },
+    phase: { size: 25, wireCount: 7, wireDiameter: 2.14, condDiameter: 6.42, condWeight: 68.73, insulationThickness: 1.40, coreDiameter: 9.22, resistance: 1.20, ampacity: 105, netWeight: 0 },
     messenger: { size: 16, wireCount: 7, wireDiameter: 1.71, condDiameter: 5.13, condWeight: 44.30, insulationThickness: 1.20, coreDiameter: 7.53, resistance: 1.91, ampacity: 0, netWeight: 0, alWireCount: 7, alWireDiameter: 1.71, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 5.15 },
     netWeight: 450
   },
@@ -412,13 +412,13 @@ export const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMesseng
     netWeight: 520
   },
   '3x150+120': {
-    phase: { size: 150, wireCount: 37, wireDiameter: 2.25, condDiameter: 15.75, condWeight: 412.6, insulationThickness: 2.00, coreDiameter: 19.75, resistance: 0.206, ampacity: 315, netWeight: 0 },
+    phase: { size: 150, wireCount: 37, wireDiameter: 2.27, condDiameter: 15.89, condWeight: 412.6, insulationThickness: 2.00, coreDiameter: 19.89, resistance: 0.206, ampacity: 315, netWeight: 0 },
     messenger: { size: 120, wireCount: 19, wireDiameter: 2.75, condDiameter: 13.75, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.35, resistance: 0.253, ampacity: 0, netWeight: 0, alWireCount: 19, alWireDiameter: 2.75, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 35.0 },
     netWeight: 2400
   },
   '3x185+150': {
     phase: { size: 185, wireCount: 37, wireDiameter: 2.52, condDiameter: 17.64, condWeight: 509.1, insulationThickness: 2.00, coreDiameter: 21.64, resistance: 0.164, ampacity: 360, netWeight: 0 },
-    messenger: { size: 150, wireCount: 37, wireDiameter: 2.25, condDiameter: 15.75, condWeight: 412.6, insulationThickness: 1.80, coreDiameter: 19.35, resistance: 0.206, ampacity: 0, netWeight: 0, alWireCount: 37, alWireDiameter: 2.25, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 42.0 },
+    messenger: { size: 150, wireCount: 37, wireDiameter: 2.27, condDiameter: 15.89, condWeight: 412.6, insulationThickness: 1.80, coreDiameter: 19.49, resistance: 0.206, ampacity: 0, netWeight: 0, alWireCount: 37, alWireDiameter: 2.27, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 42.0 },
     netWeight: 2900
   },
   '3x185+185': {
@@ -427,13 +427,13 @@ export const NFA2XT_DATA: Record<string, { phase: ABCData, messenger: ABCMesseng
     netWeight: 3300
   },
   '3x240+120': {
-    phase: { size: 240, wireCount: 61, wireDiameter: 2.25, condDiameter: 20.25, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.25, resistance: 0.125, ampacity: 425, netWeight: 0 },
+    phase: { size: 240, wireCount: 61, wireDiameter: 2.24, condDiameter: 20.16, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.16, resistance: 0.125, ampacity: 425, netWeight: 0 },
     messenger: { size: 120, wireCount: 19, wireDiameter: 2.75, condDiameter: 13.75, condWeight: 330.1, insulationThickness: 1.80, coreDiameter: 17.35, resistance: 0.253, ampacity: 0, netWeight: 0, alWireCount: 19, alWireDiameter: 2.75, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 35.0 },
     netWeight: 3100
   },
   '3x240+240': {
-    phase: { size: 240, wireCount: 61, wireDiameter: 2.23, condDiameter: 20.07, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.07, resistance: 0.125, ampacity: 425, netWeight: 0 },
-    messenger: { size: 240, wireCount: 61, wireDiameter: 2.23, condDiameter: 20.07, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.07, resistance: 0.125, ampacity: 0, netWeight: 0, alWireCount: 61, alWireDiameter: 2.23, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 60.0 },
+    phase: { size: 240, wireCount: 61, wireDiameter: 2.24, condDiameter: 20.16, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.16, resistance: 0.125, ampacity: 425, netWeight: 0 },
+    messenger: { size: 240, wireCount: 61, wireDiameter: 2.24, condDiameter: 20.16, condWeight: 660.2, insulationThickness: 2.00, coreDiameter: 24.16, resistance: 0.125, ampacity: 0, netWeight: 0, alWireCount: 61, alWireDiameter: 2.24, steelWireCount: 0, steelWireDiameter: 0, breakingLoad: 60.0 },
     netWeight: 3800
   }
 };
@@ -788,54 +788,54 @@ const CONDUCTOR_CONSTRUCTION: Record<string, Record<number, { wireCount: number,
   },
   rm: {
     0.5: { wireCount: 7, wireDiameter: 0.30 },
-    0.75: { wireCount: 7, wireDiameter: 0.36 },
-    1: { wireCount: 7, wireDiameter: 0.42 },
-    1.5: { wireCount: 7, wireDiameter: 0.51 },
-    2.5: { wireCount: 7, wireDiameter: 0.65 },
-    4: { wireCount: 7, wireDiameter: 0.83 },
-    6: { wireCount: 7, wireDiameter: 1.02 },
-    10: { wireCount: 7, wireDiameter: 1.32 },
-    16: { wireCount: 7, wireDiameter: 1.66 },
-    25: { wireCount: 7, wireDiameter: 2.09 },
-    35: { wireCount: 7, wireDiameter: 2.46 },
-    50: { wireCount: 19, wireDiameter: 1.74 },
-    70: { wireCount: 19, wireDiameter: 2.09 },
-    95: { wireCount: 19, wireDiameter: 2.46 },
-    120: { wireCount: 37, wireDiameter: 1.98 },
-    150: { wireCount: 37, wireDiameter: 2.20 },
-    185: { wireCount: 37, wireDiameter: 2.46 },
-    240: { wireCount: 61, wireDiameter: 2.20 },
-    300: { wireCount: 61, wireDiameter: 2.46 },
-    400: { wireCount: 61, wireDiameter: 2.79 },
-    500: { wireCount: 61, wireDiameter: 3.16 },
-    630: { wireCount: 127, wireDiameter: 2.49 },
+    0.75: { wireCount: 7, wireDiameter: 0.37 },
+    1: { wireCount: 7, wireDiameter: 0.43 },
+    1.5: { wireCount: 7, wireDiameter: 0.52 },
+    2.5: { wireCount: 7, wireDiameter: 0.67 },
+    4: { wireCount: 7, wireDiameter: 0.85 },
+    6: { wireCount: 7, wireDiameter: 1.04 },
+    10: { wireCount: 7, wireDiameter: 1.35 },
+    16: { wireCount: 7, wireDiameter: 1.70 },
+    25: { wireCount: 7, wireDiameter: 2.14 },
+    35: { wireCount: 7, wireDiameter: 2.52 },
+    50: { wireCount: 19, wireDiameter: 1.83 },
+    70: { wireCount: 19, wireDiameter: 2.17 },
+    95: { wireCount: 19, wireDiameter: 2.52 },
+    120: { wireCount: 37, wireDiameter: 2.03 },
+    150: { wireCount: 37, wireDiameter: 2.27 },
+    185: { wireCount: 37, wireDiameter: 2.52 },
+    240: { wireCount: 61, wireDiameter: 2.24 },
+    300: { wireCount: 61, wireDiameter: 2.50 },
+    400: { wireCount: 61, wireDiameter: 2.89 },
+    500: { wireCount: 61, wireDiameter: 3.23 },
+    630: { wireCount: 91, wireDiameter: 2.97 },
     800: { wireCount: 127, wireDiameter: 2.81 },
     1000: { wireCount: 127, wireDiameter: 3.15 },
   },
   sm: {
-    25: { wireCount: 7, wireDiameter: 2.19 },
-    35: { wireCount: 7, wireDiameter: 2.59 },
+    25: { wireCount: 7, wireDiameter: 2.14 },
+    35: { wireCount: 7, wireDiameter: 2.52 },
     50: { wireCount: 19, wireDiameter: 1.83 },
-    70: { wireCount: 19, wireDiameter: 2.19 },
-    95: { wireCount: 19, wireDiameter: 2.59 },
-    120: { wireCount: 37, wireDiameter: 2.08 },
-    150: { wireCount: 37, wireDiameter: 2.31 },
-    185: { wireCount: 37, wireDiameter: 2.59 },
+    70: { wireCount: 19, wireDiameter: 2.17 },
+    95: { wireCount: 19, wireDiameter: 2.52 },
+    120: { wireCount: 37, wireDiameter: 2.03 },
+    150: { wireCount: 37, wireDiameter: 2.27 },
+    185: { wireCount: 37, wireDiameter: 2.52 },
     240: { wireCount: 37, wireDiameter: 2.96 },
     300: { wireCount: 37, wireDiameter: 3.32 },
-    400: { wireCount: 61, wireDiameter: 2.92 },
-    500: { wireCount: 61, wireDiameter: 3.31 },
+    400: { wireCount: 61, wireDiameter: 2.89 },
+    500: { wireCount: 61, wireDiameter: 3.23 },
     630: { wireCount: 61, wireDiameter: 3.77 },
     800: { wireCount: 61, wireDiameter: 4.26 },
     1000: { wireCount: 61, wireDiameter: 4.78 },
   },
   cm: {
-    16: { wireCount: 7, wireDiameter: 1.75 },
-    25: { wireCount: 7, wireDiameter: 2.19 },
-    35: { wireCount: 7, wireDiameter: 2.59 },
+    16: { wireCount: 7, wireDiameter: 1.70 },
+    25: { wireCount: 7, wireDiameter: 2.14 },
+    35: { wireCount: 7, wireDiameter: 2.52 },
     50: { wireCount: 19, wireDiameter: 1.83 },
-    70: { wireCount: 19, wireDiameter: 2.19 },
-    95: { wireCount: 19, wireDiameter: 2.59 },
+    70: { wireCount: 19, wireDiameter: 2.17 },
+    95: { wireCount: 19, wireDiameter: 2.52 },
     120: { wireCount: 35, wireDiameter: 2.14 },
     150: { wireCount: 35, wireDiameter: 2.38 },
     185: { wireCount: 35, wireDiameter: 2.66 },
@@ -848,26 +848,26 @@ const CONDUCTOR_CONSTRUCTION: Record<string, Record<number, { wireCount: number,
     1000: { wireCount: 56, wireDiameter: 4.99 },
   },
   f: {
-    0.5: { wireCount: 13, wireDiameter: 0.22 },
-    0.75: { wireCount: 20, wireDiameter: 0.21 },
-    1: { wireCount: 26, wireDiameter: 0.22 },
+    0.5: { wireCount: 16, wireDiameter: 0.20 },
+    0.75: { wireCount: 24, wireDiameter: 0.20 },
+    1: { wireCount: 32, wireDiameter: 0.20 },
     1.5: { wireCount: 30, wireDiameter: 0.25 },
     2.5: { wireCount: 50, wireDiameter: 0.25 },
-    4: { wireCount: 54, wireDiameter: 0.30 },
-    6: { wireCount: 80, wireDiameter: 0.30 },
-    10: { wireCount: 80, wireDiameter: 0.39 },
-    16: { wireCount: 126, wireDiameter: 0.39 },
+    4: { wireCount: 56, wireDiameter: 0.30 },
+    6: { wireCount: 84, wireDiameter: 0.30 },
+    10: { wireCount: 80, wireDiameter: 0.40 },
+    16: { wireCount: 126, wireDiameter: 0.40 },
     25: { wireCount: 196, wireDiameter: 0.40 },
     35: { wireCount: 276, wireDiameter: 0.40 },
-    50: { wireCount: 396, wireDiameter: 0.38 },
-    70: { wireCount: 360, wireDiameter: 0.48 },
+    50: { wireCount: 396, wireDiameter: 0.40 },
+    70: { wireCount: 360, wireDiameter: 0.50 },
     95: { wireCount: 475, wireDiameter: 0.50 },
-    120: { wireCount: 608, wireDiameter: 0.49 },
-    150: { wireCount: 756, wireDiameter: 0.49 },
+    120: { wireCount: 608, wireDiameter: 0.50 },
+    150: { wireCount: 756, wireDiameter: 0.50 },
     185: { wireCount: 925, wireDiameter: 0.50 },
     240: { wireCount: 1221, wireDiameter: 0.50 },
     300: { wireCount: 1525, wireDiameter: 0.50 },
-    400: { wireCount: 2013, wireDiameter: 0.49 },
+    400: { wireCount: 2013, wireDiameter: 0.50 },
     500: { wireCount: 2135, wireDiameter: 0.54 },
     630: { wireCount: 2135, wireDiameter: 0.61 },
   }
