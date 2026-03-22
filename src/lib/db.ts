@@ -76,3 +76,25 @@ export async function deleteProjectFromDB(id: string): Promise<void> {
     throw new Error('Failed to delete project from database');
   }
 }
+
+export async function saveConfigToDB(config: { name: string, data: any }): Promise<void> {
+  const response = await fetch('/api/configs', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(config)
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to save config to database');
+  }
+}
+
+export async function getConfigsFromDB(): Promise<{ id: string, name: string, data: any }[]> {
+  const response = await fetch('/api/configs');
+  if (!response.ok) {
+    throw new Error('Failed to fetch configs from database');
+  }
+  return response.json();
+}

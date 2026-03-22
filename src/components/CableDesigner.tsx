@@ -21,7 +21,7 @@ import {
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { safeLocalStorage } from '../utils/safeLocalStorage';
-import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle } from '../lib/db';
+import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle, saveConfigToDB, getConfigsFromDB } from '../lib/db';
 import * as XLSX from 'xlsx-js-style';
 
 const DEFAULT_MATERIAL_PRICES = {
@@ -1094,27 +1094,47 @@ export default function CableDesigner() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSaveConfig = () => {
+  const handleSaveConfig = async () => {
     const filename = prompt('Enter filename:', 'cable_config.config');
     if (!filename) return;
-    const finalFilename = filename.endsWith('.config') ? filename : `${filename}.config`;
     
     const config = {
       materialPrices,
       materialDensities,
       materialScrap,
       lmeParams,
+      materialCategories,
     };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = finalFilename;
-    a.click();
-    URL.revokeObjectURL(url);
+    
+    try {
+      await saveConfigToDB({ name: filename, data: config });
+      alert('Configuration saved successfully');
+    } catch (error) {
+      alert('Error saving configuration');
+    }
   };
 
-  const handleLoadConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLoadConfigFromDB = async () => {
+    try {
+      const configs = await getConfigsFromDB();
+      if (configs.length === 0) {
+        alert('No configurations found');
+        return;
+      }
+      // For now, let's just load the first one or prompt user to select
+      const config = configs[0].data;
+      setMaterialPrices(config.materialPrices);
+      setMaterialDensities(config.materialDensities);
+      setMaterialScrap(config.materialScrap);
+      setLmeParams(config.lmeParams);
+      setMaterialCategories(config.materialCategories);
+      alert('Configuration loaded successfully');
+    } catch (error) {
+      alert('Error loading configuration');
+    }
+  };
+
+  const handleLoadConfigFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1125,6 +1145,7 @@ export default function CableDesigner() {
         setMaterialDensities(config.materialDensities);
         setMaterialScrap(config.materialScrap);
         setLmeParams(config.lmeParams);
+        setMaterialCategories(config.materialCategories);
       } catch (error) {
         alert('Error loading configuration file');
       }
@@ -6865,38 +6886,45 @@ export default function CableDesigner() {
                       <div className="flex gap-2 shrink-0">
                         <button 
                           onClick={handleResetToDefault}
-                          className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-rose-200 shadow-sm transition-all"
+                          title="Reset to Default"
+                          className="text-rose-600 hover:text-rose-700 flex items-center justify-center bg-white p-2 rounded-lg border border-rose-200 shadow-sm transition-all"
                         >
-                          <RotateCcw className="w-3 h-3" />
-                          Reset to Default
+                          <RotateCcw className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={handleSaveConfig}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                          title="Save Config"
+                          className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
                         >
-                          <Save className="w-3 h-3" />
-                          Save Config
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={handleLoadConfigFromDB}
+                          title="Load Config from DB"
+                          className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                        >
+                          <FolderOpen className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                          title="Load Config from File"
+                          className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
                         >
-                          <FolderOpen className="w-3 h-3" />
-                          Load Config
+                          <Upload className="w-4 h-4" />
                         </button>
                         <input 
                           type="file" 
                           ref={fileInputRef} 
-                          onChange={handleLoadConfig} 
+                          onChange={handleLoadConfigFromFile} 
                           className="hidden" 
                           accept=".config"
                         />
                         <button 
                           onClick={saveMaterialSettings}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm transition-all"
+                          title="Save All Settings"
+                          className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
                         >
-                          <Download className="w-3 h-3" />
-                          Save All Settings
+                          <Download className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
