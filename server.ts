@@ -22,24 +22,28 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 // Global state for active database
-let activeDbType: 'mysql' | 'sqlite' = 'mysql';
+let activeDbType: 'mysql' | 'sqlite' = 'sqlite';
 let activeSqliteDb: string | null = null;
 let sqliteConn: any = null;
 let mysqlPool: any = null;
 
 // MySQL configuration
 const mysqlConfig = {
-  host: "sql107.infinityfree.com",
-  port: 3306,
-  user: "if0_41301335",
-  password: "Ub9srlaPSTuG7Y",
-  database: "if0_41301335_dede",
+  host: process.env.MYSQL_HOST || "",
+  port: parseInt(process.env.MYSQL_PORT || "3306"),
+  user: process.env.MYSQL_USER || "",
+  password: process.env.MYSQL_PASSWORD || "",
+  database: process.env.MYSQL_DATABASE || "",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 };
 
 async function initMysql() {
+  if (!mysqlConfig.host || !mysqlConfig.user || !mysqlConfig.database) {
+    console.log("MySQL configuration incomplete, skipping MySQL initialization.");
+    return;
+  }
   try {
     if (!mysql) {
       const m = await import("mysql2/promise");

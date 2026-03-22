@@ -21,7 +21,7 @@ import {
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { safeLocalStorage } from '../utils/safeLocalStorage';
-import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle, saveConfigToDB, getConfigsFromDB } from '../lib/db';
+import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedProject, setDbHandle, getDbHandle } from '../lib/db';
 import * as XLSX from 'xlsx-js-style';
 
 const DEFAULT_MATERIAL_PRICES = {
@@ -225,6 +225,10 @@ export default function CableDesigner() {
   const [showSqlModal, setShowSqlModal] = useState(false);
   const [sqlForm, setSqlForm] = useState({ host: '', port: '', database: '', username: '', password: '' });
   const [isConnecting, setIsConnecting] = useState(false);
+  
+  const [showSaveConfigModal, setShowSaveConfigModal] = useState(false);
+  const [saveConfigName, setSaveConfigName] = useState('cable_config');
+  const [showLoadConfigModal, setShowLoadConfigModal] = useState(false);
 
   const handleConnectSql = async () => {
     setIsConnecting(true);
@@ -1133,10 +1137,12 @@ export default function CableDesigner() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSaveConfig = async () => {
-    const filename = prompt('Enter filename:', 'cable_config.config');
-    if (!filename) return;
-    
+  const handleSaveConfig = () => {
+    setShowSaveConfigModal(true);
+  };
+
+  const executeSaveConfig = async () => {
+    const filename = saveConfigName.trim() || 'cable_config';
     const config = {
       materialPrices,
       materialDensities,
@@ -1145,31 +1151,42 @@ export default function CableDesigner() {
       materialCategories,
     };
     
-    try {
-      await saveConfigToDB({ name: filename, data: config });
-      alert('Configuration saved successfully');
-    } catch (error) {
-      alert('Error saving configuration');
-    }
-  };
+    const dataStr = JSON.stringify(config, null, 2);
+    const finalFilename = filename.endsWith('.config') ? filename : `${filename}.config`;
 
-  const handleLoadConfigFromDB = async () => {
     try {
-      const configs = await getConfigsFromDB();
-      if (configs.length === 0) {
-        alert('No configurations found');
-        return;
+      if ('showSaveFilePicker' in window) {
+        // Show the native OS save dialog, allowing user to pick location
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: finalFilename,
+          types: [{
+            description: 'Configuration File',
+            accept: { 'application/json': ['.config', '.json'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(dataStr);
+        await writable.close();
+        alert(`File berhasil disimpan di lokasi yang Anda pilih.`);
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFilename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        alert(`File berhasil diunduh ke folder Downloads default Anda.`);
       }
-      // For now, let's just load the first one or prompt user to select
-      const config = configs[0].data;
-      setMaterialPrices(config.materialPrices);
-      setMaterialDensities(config.materialDensities);
-      setMaterialScrap(config.materialScrap);
-      setLmeParams(config.lmeParams);
-      setMaterialCategories(config.materialCategories);
-      alert('Configuration loaded successfully');
-    } catch (error) {
-      alert('Error loading configuration');
+      setShowSaveConfigModal(false);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Save failed:', err);
+        alert('Gagal menyimpan file.');
+      }
     }
   };
 
@@ -1180,13 +1197,17 @@ export default function CableDesigner() {
     reader.onload = (e) => {
       try {
         const config = JSON.parse(e.target?.result as string);
-        setMaterialPrices(config.materialPrices);
-        setMaterialDensities(config.materialDensities);
-        setMaterialScrap(config.materialScrap);
-        setLmeParams(config.lmeParams);
-        setMaterialCategories(config.materialCategories);
+        if (config.materialPrices) setMaterialPrices(config.materialPrices);
+        if (config.materialDensities) setMaterialDensities(config.materialDensities);
+        if (config.materialScrap) setMaterialScrap(config.materialScrap);
+        if (config.lmeParams) setLmeParams(config.lmeParams);
+        if (config.materialCategories) setMaterialCategories(config.materialCategories);
+        setShowLoadConfigModal(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       } catch (error) {
-        alert('Error loading configuration file');
+        alert('Error loading configuration file. Invalid format.');
       }
     };
     reader.readAsText(file);
@@ -4909,6 +4930,96 @@ export default function CableDesigner() {
         accept=".db" 
         onChange={handleOpenLocalDBFallback} 
       />
+      {/* Save Config Modal */}
+      {showSaveConfigModal && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Save className="w-5 h-5 text-indigo-600" />
+                Save Configuration
+              </h2>
+              <button 
+                onClick={() => setShowSaveConfigModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Filename</label>
+                <input
+                  type="text"
+                  value={saveConfigName}
+                  onChange={(e) => setSaveConfigName(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
+                  placeholder="cable_config"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowSaveConfigModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeSaveConfig}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm transition-all flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Save File
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Config Modal */}
+      {showLoadConfigModal && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-indigo-600" />
+                Load Configuration
+              </h2>
+              <button 
+                onClick={() => setShowLoadConfigModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div 
+                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:bg-slate-50 hover:border-indigo-300 transition-all cursor-pointer flex flex-col items-center justify-center gap-3"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Click to select a configuration file</p>
+                  <p className="text-xs text-slate-500 mt-1">Supports .config or .json files</p>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setShowLoadConfigModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SQL Connection Modal */}
       {showSqlModal && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -6933,21 +7044,14 @@ export default function CableDesigner() {
                         </button>
                         <button 
                           onClick={handleSaveConfig}
-                          title="Save Config"
+                          title="Save Configuration"
                           className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
                         >
                           <Save className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={handleLoadConfigFromDB}
-                          title="Load Config from DB"
-                          className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
-                        >
-                          <FolderOpen className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => fileInputRef.current?.click()}
-                          title="Load Config from File"
+                          onClick={() => setShowLoadConfigModal(true)}
+                          title="Load Configuration"
                           className="text-indigo-600 hover:text-indigo-700 flex items-center justify-center bg-white p-2 rounded-lg border border-indigo-200 shadow-sm transition-all"
                         >
                           <Upload className="w-4 h-4" />
@@ -6957,7 +7061,7 @@ export default function CableDesigner() {
                           ref={fileInputRef} 
                           onChange={handleLoadConfigFromFile} 
                           className="hidden" 
-                          accept=".config"
+                          accept=".config,.json"
                         />
                         <button 
                           onClick={saveMaterialSettings}
