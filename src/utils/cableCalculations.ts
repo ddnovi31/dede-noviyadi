@@ -1104,7 +1104,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else {
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
-  let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR;
+  let conductorWeightPerCore = effectiveParams.size * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
 
   // Helper function to find KHA
   const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
@@ -1286,7 +1286,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     ? abcTData.messenger.condWeight
     : (effectiveParams.standard.includes('NFA2X-T') 
       ? (earthingSize * (6/7) * densities.Al + earthingSize * (1/7) * densities.Steel) * 1.05 // 6 Al + 1 Steel mix with lay factor
-      : earthingSize * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR);
+      : earthingSize * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR);
   
   let earthingAlWeight = 0;
   let earthingSteelWeight = 0;
@@ -1302,7 +1302,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     earthingConductorWeightPerCore = alWeightPerCore + steelWeightPerCore;
   }
 
-  const totalConductorWeight = ((conductorWeightPerCore * effectiveParams.cores) + (earthingConductorWeightPerCore * earthingCores)) * (effectiveParams.cores + earthingCores > 1 ? CABLING_FACTOR : 1);
+  const totalConductorWeight = (conductorWeightPerCore * effectiveParams.cores) + (earthingConductorWeightPerCore * earthingCores);
 
   // 1.5 Mica Glass Tape (MGT) - Fire Resistant
   let mgtThickness = effectiveParams.manualMgtThickness || 0;
@@ -2262,7 +2262,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Weight Details with Formulas
   const weightDetails = {
-    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${wireCount} wires * π * (${wireDiameter.toFixed(2)}/2)² * ${densities[effectiveParams.conductorMaterial]} * ${STRANDING_FACTOR} (stranding) * ${effectiveParams.cores + earthingCores > 1 ? CABLING_FACTOR : 1} (cabling)`, 'conductor'),
+    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${wireCount} wires * π * (${wireDiameter.toFixed(2)}/2)² * ${densities[effectiveParams.conductorMaterial]} * ${STRANDING_FACTOR} (stranding) * ${CABLING_FACTOR} (cabling)`, 'conductor'),
     insulation: evalFormula(totalInsulationWeight, `${effectiveParams.cores} cores * π * ((${coreDiameter.toFixed(2)}/2)² - (${(conductorDiameter + 2 * conductorScreenThickness).toFixed(2)}/2)²) * ${densities[effectiveParams.insulationMaterial]}`, 'insulation'),
     outerSheath: evalFormula(sheathWeight, `π * ((${overallDiameter.toFixed(2)}/2)² - (${diameterOverArmor.toFixed(2)}/2)²) * ${densities[effectiveParams.sheathMaterial]}`, 'outerSheath')
   } as any;
