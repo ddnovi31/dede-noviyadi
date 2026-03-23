@@ -659,7 +659,14 @@ export default function CableDesigner() {
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
         const calcAreaCol = pushCol(null, fmtNum, `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`);
-        const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
+        
+        let condOdFormula = `${item.result.spec.phaseCore.conductorDiameter || 0}`;
+        if (item.params.conductorType === 're') {
+          condOdFormula = `SQRT(4*${sizeCol}${r}/PI())`;
+        } else if (item.params.conductorType === 'rm' && !item.params.manualConductorDiameter) {
+          condOdFormula = `SQRT(4*${sizeCol}${r}/PI())*1.05`; // Standard stranding factor
+        }
+        const condOdCol = pushCol(null, fmtNum, condOdFormula);
         
         let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
         if (isNFA2X || isNFA2XT) {
@@ -754,8 +761,15 @@ export default function CableDesigner() {
 
         // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
         const coreDiaFormula = currentDiaFormula;
-        const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1); // Approximate factor
-        row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
+        
+        let laidUpFormula = `${coreDiaFormula}*${(item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1)).toFixed(3)}`;
+        if (item.params.conductorType === 'sm' && item.params.cores >= 3) {
+          laidUpFormula = `2*(${coreDiaFormula}-${insThkCol}${r})`;
+        } else if (item.params.cores === 1) {
+          laidUpFormula = `${coreDiaFormula}`;
+        }
+        
+        row[laidUpDiaColIdx] = { t: 'n', f: laidUpFormula, z: fmtNum };
         currentDiaFormula = `${laidUpDiaCol}${r}`;
 
         // Binder Tape
@@ -875,21 +889,23 @@ export default function CableDesigner() {
           const totalCores = item.params.cores + (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0);
           const innerSheathFactor = getWeightAdditionFactor(totalCores);
           
-          // Complex formula to match ringArea + intersticeArea * fillerFactor
-          const rLaidUp = item.result.spec.laidUpDiameter / 2;
-          const rUnderArmor = item.result.spec.diameterUnderArmor / 2;
-          const phaseCoreAreaTotal = item.params.cores * Math.PI * Math.pow((item.result.spec.coreDiameter || 0) / 2, 2);
-          const earthingCoreAreaTotal = (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0) * Math.PI * Math.pow((item.result.spec.earthingCore?.coreDiameter || 0) / 2, 2);
-          const coreAreaTotal = phaseCoreAreaTotal + earthingCoreAreaTotal;
-          const laidUpArea = Math.PI * Math.pow(item.result.spec.laidUpDiameter / 2, 2);
-          let intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
-          if (item.params.conductorType === 'sm') intersticeArea = 0;
-          const ringArea = Math.PI * (Math.pow(rUnderArmor, 2) - Math.pow(rLaidUp, 2));
+          // Dynamic area calculation for Excel
+          const ringAreaFormula = `PI()*(${laidUpDiaCol}${r}*${inShThkCol}${r}+POWER(${inShThkCol}${r},2))`;
+          let intersticeAreaFormula = `PI()*POWER(${laidUpDiaCol}${r}/2,2) - (${coreCol}${r}*PI()*POWER(${coreDiaFormula}/2,2))`;
+          if (hasEarth) {
+            // We need earthing core diameter formula. 
+            // For simplicity, we use the pre-calculated value if it's complex, 
+            // but let's try to get the column if possible.
+            const earthCoreDia = item.result.spec.earthingCore?.coreDiameter || 0;
+            intersticeAreaFormula += ` - (${item.params.earthingCores || 1}*PI()*POWER(${earthCoreDia.toFixed(3)}/2,2))`;
+          }
+          if (item.params.conductorType === 'sm') {
+            intersticeAreaFormula = "0";
+          }
           
-          // We use the calculated values for interstice and ring area to keep the formula manageable
-          const baseArea = ringArea + (intersticeArea * fillerFactor);
+          const baseAreaFormula = `(${ringAreaFormula} + MAX(0, ${intersticeAreaFormula})*${fillerFactor})`;
           
-          inShWtCol = pushCol(null, fmtNum, `${baseArea.toFixed(4)}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
+          inShWtCol = pushCol(null, fmtNum, `${baseAreaFormula}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
         }
@@ -1818,8 +1834,8 @@ export default function CableDesigner() {
       if (newParams.cores > 5 && newParams.size > 10) {
         newParams.size = 10; // Max 10mm2 for > 5 cores
       }
-      if (newParams.cores === 1 && newParams.conductorType === 'sm') {
-        newParams.conductorType = 'rm'; // Sector only for multi-core
+      if (newParams.conductorType === 'sm' && (![3, 4].includes(newParams.cores) || newParams.size < 50)) {
+        newParams.conductorType = 'rm'; // Sector only for 3-4 cores and size >= 50
       }
 
       // Aluminum size constraint: min 10mm2
@@ -1853,10 +1869,6 @@ export default function CableDesigner() {
 
       if (key === 'size') {
         newParams.earthingSize = value as number;
-      }
-
-      if (newParams.size < 25 && newParams.conductorType === 'sm') {
-        newParams.conductorType = 'rm'; // Sector usually for larger sizes
       }
 
       // Standard specific overrides
@@ -6334,7 +6346,7 @@ export default function CableDesigner() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                         <div className="grid grid-cols-2 gap-2">
                           {(['re', 'rm', 'cm', 'sm', 'f'] as ConductorType[]).map((type) => {
-                            let isDisabled = (type === 'sm' && (params.cores === 1 || params.size < 25));
+                            let isDisabled = (type === 'sm' && (![3, 4].includes(params.cores) || params.size < 50));
                             if (params.standard.includes('SNI 04-6629')) {
                               if (params.standard.includes('(NYM)')) isDisabled = isDisabled || !['re', 'rm'].includes(type);
                               if (params.standard.includes('(NYAF)') || params.standard.includes('(NYMHY)')) isDisabled = isDisabled || type !== 'f';
