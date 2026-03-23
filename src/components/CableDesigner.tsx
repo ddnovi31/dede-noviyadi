@@ -193,8 +193,9 @@ export default function CableDesigner() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   
   const [isBulkCalculationEnabled, setIsBulkCalculationEnabled] = useState(false);
-  const [bulkCores, setBulkCores] = useState<number[]>([]);
-  const [bulkSizes, setBulkSizes] = useState<number[]>([]);
+  const [bulkItems, setBulkItems] = useState<{ cores: number; size: number }[]>([]);
+  const [tempBulkCoresInput, setTempBulkCoresInput] = useState<string>('');
+  const [tempBulkSizes, setTempBulkSizes] = useState<number[]>([]);
 
   const updateProjectItemParam = (idx: number, key: string, value: any) => {
     setProjectItems(prev => prev.map((item, i) => {
@@ -2157,19 +2158,17 @@ export default function CableDesigner() {
     }
 
     if (isBulkCalculationEnabled) {
-      if (bulkCores.length === 0 || bulkSizes.length === 0) {
-        alert('Please select at least one core and one size for bulk calculation.');
+      if (bulkItems.length === 0) {
+        alert('Please add at least one configuration for bulk calculation.');
         return;
       }
       
       const newItems: {params: CableDesignParams, result: CalculationResult}[] = [];
-      for (const core of bulkCores) {
-        for (const size of bulkSizes) {
-          const newParams = { ...params, cores: core, size: size, id: crypto.randomUUID() };
-          const newResult = calculateCable(newParams, materialDensities, materialScrap);
-          if (newResult) {
-            newItems.push({ params: newParams, result: newResult });
-          }
+      for (const item of bulkItems) {
+        const newParams = { ...params, cores: item.cores, size: item.size, id: crypto.randomUUID() };
+        const newResult = calculateCable(newParams, materialDensities, materialScrap);
+        if (newResult) {
+          newItems.push({ params: newParams, result: newResult });
         }
       }
       
@@ -2182,8 +2181,7 @@ export default function CableDesigner() {
     
     setParams(prev => ({ ...DEFAULT_PARAMS, projectName: prev.projectName }));
     setIsBulkCalculationEnabled(false);
-    setBulkCores([]);
-    setBulkSizes([]);
+    setBulkItems([]);
   };
 
   const removeFromProject = (id: string) => {
@@ -5904,133 +5902,170 @@ export default function CableDesigner() {
                     {/* Bulk Calculation Options */}
                     {isBulkCalculationEnabled && (
                       <div className="space-y-4 p-4 bg-white border border-indigo-200 rounded-xl mt-2 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-slate-700">Select Cores</label>
-                            <div className="flex gap-2">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                          <h3 className="text-sm font-bold text-indigo-900">Batch Configuration</h3>
+                          <button 
+                            onClick={() => setBulkItems([])}
+                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          {/* Step 1: Manual Cores Input */}
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">1. Input Cores (e.g. 1, 2, 3)</label>
                               <button 
-                                onClick={() => {
-                                  let cores = [1, 2, 3, 4, 5];
-                                  if (params.standard === 'IEC 60502-2') cores = [1, 3];
-                                  else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
-                                  else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
-                                  else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
-                                  else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
-                                  else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
-                                  else if (params.standard.includes('NFA2X')) cores = [2, 4];
-                                  else if (params.standard === 'BS EN 50288-7') cores = [1, 2, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 30, 32, 40, 50];
-                                  setBulkCores(cores);
-                                }}
-                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                              >
-                                Select All
-                              </button>
-                              <span className="text-slate-300">|</span>
-                              <button 
-                                onClick={() => setBulkCores([])}
-                                className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                                onClick={() => setTempBulkCoresInput('')}
+                                className="text-[10px] text-slate-500 hover:text-slate-700 font-medium"
                               >
                                 Clear
                               </button>
                             </div>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={tempBulkCoresInput}
+                                onChange={(e) => setTempBulkCoresInput(e.target.value)}
+                                placeholder="Example: 1, 2, 3, 7, 10"
+                                className="w-full rounded-lg border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2.5 border bg-slate-50"
+                              />
+                              <div className="mt-1 text-[9px] text-slate-400 italic">
+                                Separate multiple cores with commas or spaces
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {(() => {
-                              let cores = [1, 2, 3, 4, 5];
-                              if (params.standard === 'IEC 60502-2') cores = [1, 3];
-                              else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
-                              else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
-                              else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
-                              else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
-                              else if (params.standard.includes('NFA2X-T')) cores = [2, 3];
-                              else if (params.standard.includes('NFA2X')) cores = [2, 4];
-                              else if (params.standard === 'BS EN 50288-7') cores = [1, 2, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 30, 32, 40, 50];
-                              
-                              return cores.map((c) => (
-                                <button
-                                  key={c}
+                          
+                          {/* Step 2: Select Sizes */}
+                          <div className="space-y-3 border-l border-slate-100 pl-6">
+                            <div className="flex justify-between items-center">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">2. Select Sizes</label>
+                              <div className="flex gap-2">
+                                <button 
                                   onClick={() => {
-                                    if (bulkCores.includes(c)) {
-                                      setBulkCores(bulkCores.filter(core => core !== c));
+                                    const availableSizes = CABLE_SIZES.filter(s => {
+                                      if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                                      if (params.standard === 'IEC 60502-2') return s >= 25;
+                                      if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                      if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                                      if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                                      if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                                      if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                                      if (params.conductorMaterial === 'Al') return s >= 10;
+                                      return true;
+                                    });
+                                    setTempBulkSizes(availableSizes);
+                                  }}
+                                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium"
+                                >
+                                  All
+                                </button>
+                                <button 
+                                  onClick={() => setTempBulkSizes([])}
+                                  className="text-[10px] text-slate-500 hover:text-slate-700 font-medium"
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 bg-slate-50 rounded-lg border border-slate-100">
+                              {CABLE_SIZES.filter(s => {
+                                if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                                if (params.standard === 'IEC 60502-2') return s >= 25;
+                                if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                                if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                                if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                                if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                                if (params.conductorMaterial === 'Al') return s >= 10;
+                                return true;
+                              }).map((s) => (
+                                <button
+                                  key={s}
+                                  onClick={() => {
+                                    if (tempBulkSizes.includes(s)) {
+                                      setTempBulkSizes(tempBulkSizes.filter(size => size !== s));
                                     } else {
-                                      setBulkCores([...bulkCores, c].sort((a, b) => a - b));
+                                      setTempBulkSizes([...tempBulkSizes, s].sort((a, b) => a - b));
                                     }
                                   }}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    bulkCores.includes(c)
+                                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                                    tempBulkSizes.includes(s)
                                       ? 'bg-indigo-600 text-white shadow-sm' 
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                                   }`}
                                 >
-                                  {c}C
+                                  {s}
                                 </button>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-slate-700">Select Sizes (mm²)</label>
-                            <div className="flex gap-2">
-                              <button 
-                                onClick={() => {
-                                  const availableSizes = CABLE_SIZES.filter(s => {
-                                    if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
-                                    if (params.standard === 'IEC 60502-2') return s >= 25;
-                                    if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
-                                    if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
-                                    if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
-                                    if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
-                                    if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
-                                    if (params.conductorMaterial === 'Al') return s >= 10;
-                                    return true;
-                                  });
-                                  setBulkSizes(availableSizes);
-                                }}
-                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                              >
-                                Select All
-                              </button>
-                              <span className="text-slate-300">|</span>
-                              <button 
-                                onClick={() => setBulkSizes([])}
-                                className="text-xs text-slate-500 hover:text-slate-700 font-medium"
-                              >
-                                Clear
-                              </button>
+                              ))}
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {CABLE_SIZES.filter(s => {
-                              if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
-                              if (params.standard === 'IEC 60502-2') return s >= 25;
-                              if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
-                              if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
-                              if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
-                              if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
-                              if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
-                              if (params.conductorMaterial === 'Al') return s >= 10;
-                              return true;
-                            }).map((s) => (
-                              <button
-                                key={s}
-                                onClick={() => {
-                                  if (bulkSizes.includes(s)) {
-                                    setBulkSizes(bulkSizes.filter(size => size !== s));
-                                  } else {
-                                    setBulkSizes([...bulkSizes, s].sort((a, b) => a - b));
-                                  }
-                                }}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                  bulkSizes.includes(s)
-                                    ? 'bg-indigo-600 text-white shadow-sm' 
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {s}
-                              </button>
-                            ))}
+                          
+                          {/* Step 3: Current Batch */}
+                          <div className="space-y-3 border-l border-slate-100 pl-6">
+                            <div className="flex justify-between items-center">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">3. Current Batch ({bulkItems.length})</label>
+                              <div className="flex gap-1">
+                                <button 
+                                  onClick={() => {
+                                    // Parse cores input
+                                    const cores = tempBulkCoresInput
+                                      .split(/[,\s]+/)
+                                      .map(s => parseInt(s.trim()))
+                                      .filter(n => !isNaN(n) && n > 0);
+
+                                    if (cores.length === 0) {
+                                      alert('Please input at least one valid core number.');
+                                      return;
+                                    }
+                                    if (tempBulkSizes.length === 0) {
+                                      alert('Please select at least one size.');
+                                      return;
+                                    }
+
+                                    const newItems = [];
+                                    for (const c of cores) {
+                                      for (const s of tempBulkSizes) {
+                                        if (!bulkItems.some(item => item.cores === c && item.size === s)) {
+                                          newItems.push({ cores: c, size: s });
+                                        }
+                                      }
+                                    }
+                                    setBulkItems([...bulkItems, ...newItems]);
+                                    setTempBulkCoresInput('');
+                                    setTempBulkSizes([]);
+                                  }}
+                                  disabled={tempBulkCoresInput.trim() === '' || tempBulkSizes.length === 0}
+                                  className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors font-bold"
+                                >
+                                  Add Selection
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 h-32 overflow-y-auto custom-scrollbar">
+                              {bulkItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                  <List size={24} className="mb-1 opacity-20" />
+                                  <p className="text-[10px] italic">No items in batch</p>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-1">
+                                  {bulkItems.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-white px-2 py-1.5 rounded border border-slate-200 shadow-sm group hover:border-indigo-300 transition-colors">
+                                      <span className="text-[10px] font-bold text-slate-700">{item.cores}C x {item.size} mm²</span>
+                                      <button 
+                                        onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
+                                        className="text-slate-300 hover:text-red-500 transition-colors"
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -7282,7 +7317,7 @@ export default function CableDesigner() {
                       >
                         <Plus className="w-5 h-5" />
                         {isBulkCalculationEnabled 
-                          ? `Bulk Add to Project (${bulkCores.length * bulkSizes.length} Items)` 
+                          ? `Bulk Add to Project (${bulkItems.length} Items)` 
                           : 'Add to Project'}
                       </button>
                     </div>
@@ -7779,7 +7814,7 @@ export default function CableDesigner() {
                   <h3 className="text-sm font-bold text-amber-900">Bulk Calculation Active</h3>
                   <p className="text-xs text-amber-700 mt-1">
                     The results below show a preview for <strong>{params.cores}C x {params.size} mm²</strong>. 
-                    Clicking "Bulk Add to Project" will generate and add <strong>{bulkCores.length * bulkSizes.length}</strong> different cable configurations based on your selected cores and sizes.
+                    Clicking "Bulk Add to Project" will generate and add <strong>{bulkItems.length}</strong> different cable configurations based on your selected cores and sizes.
                   </p>
                 </div>
               </div>
