@@ -18,6 +18,12 @@ import {
   NYCY_DATA,
   NFA2XT_DATA,
   getWeightAdditionFactor,
+  CONDUCTOR_RESISTIVITY,
+  RESISTANCE_CU,
+  RESISTANCE_TCU,
+  RESISTANCE_AL,
+  RESISTANCE_CU_CLASS5,
+  RESISTANCE_TCU_CLASS5,
 } from '../utils/cableCalculations';
 import { INITIAL_DRUM_DATA, DrumData } from '../utils/drumData';
 import { safeLocalStorage } from '../utils/safeLocalStorage';
@@ -193,9 +199,9 @@ export default function CableDesigner() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   
   const [isBulkCalculationEnabled, setIsBulkCalculationEnabled] = useState(false);
-  const [bulkItems, setBulkItems] = useState<{ cores: number; size: number }[]>([]);
-  const [tempBulkCoresInput, setTempBulkCoresInput] = useState<string>('');
-  const [tempBulkSizes, setTempBulkSizes] = useState<number[]>([]);
+  const [bulkItems, setBulkItems] = useState<{ cores: number, size: number }[]>([]);
+  const [manualBulkCore, setManualBulkCore] = useState<number>(1);
+  const [selectedBulkSizes, setSelectedBulkSizes] = useState<number[]>([]);
 
   const updateProjectItemParam = (idx: number, key: string, value: any) => {
     setProjectItems(prev => prev.map((item, i) => {
@@ -557,11 +563,6 @@ export default function CableDesigner() {
 
       if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
       if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
-      
-      if (sampleItem.result.bom.binderTapeWeight > 0) {
-        addGroup('Binder Tape', hSep, ['Qty', 'Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      }
-
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
@@ -659,15 +660,14 @@ export default function CableDesigner() {
         // Conductor
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
-        const calcAreaCol = pushCol(null, fmtNum, `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`);
         
-        let condOdFormula = `${item.result.spec.phaseCore.conductorDiameter || 0}`;
-        if (item.params.conductorType === 're') {
-          condOdFormula = `SQRT(4*${sizeCol}${r}/PI())`;
-        } else if (item.params.conductorType === 'rm' && !item.params.manualConductorDiameter) {
-          condOdFormula = `SQRT(4*${sizeCol}${r}/PI())*1.05`; // Standard stranding factor
+        let calcAreaFormula = `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`;
+        if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.maxDcResistance > 0) {
+          const rho = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
+          calcAreaFormula = `(${rho}/(${item.result.electrical.maxDcResistance}/1.003))*1.01`;
         }
-        const condOdCol = pushCol(null, fmtNum, condOdFormula);
+        const calcAreaCol = pushCol(null, fmtNum, calcAreaFormula);
+        const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
         
         let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
         if (isNFA2X || isNFA2XT) {
@@ -712,10 +712,7 @@ export default function CableDesigner() {
         const insulationFactor = (!hasCondScreen && item.params.conductorType !== 're') ? getWeightAdditionFactor(item.result.spec.phaseCore.wireCount || 7) : 0;
         
         // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
-        // For sector conductors (sm), use the geometric formula: (2*h*t + t^2) * PI / cores
-        const insFormula = item.params.conductorType === 'sm' && item.params.cores >= 3
-          ? `(2*${diaBeforeIns}*${insThkCol}${r}+${insThkCol}${r}^2)*PI()/${coreCol}${r}`
-          : `(${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))`;
+        const insFormula = `(${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))`;
 
         const insWtCol = pushCol(null, fmtNum, `ROUND(${insFormula}*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
         const insPrcCol = pushCol(insPrice, fmtRp);
@@ -762,33 +759,9 @@ export default function CableDesigner() {
 
         // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
         const coreDiaFormula = currentDiaFormula;
-        
-        let laidUpFormula = `${coreDiaFormula}*${(item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1)).toFixed(3)}`;
-        if (item.params.conductorType === 'sm' && item.params.cores >= 3) {
-          laidUpFormula = `2*(${coreDiaFormula}-${insThkCol}${r})`;
-        } else if (item.params.cores === 1) {
-          laidUpFormula = `${coreDiaFormula}`;
-        }
-        
-        row[laidUpDiaColIdx] = { t: 'n', f: laidUpFormula, z: fmtNum };
+        const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1); // Approximate factor
+        row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
         currentDiaFormula = `${laidUpDiaCol}${r}`;
-
-        // Binder Tape
-        let binderTapeWtCol, binderTapeCstCol;
-        if (item.result.bom.binderTapeWeight > 0) {
-          const binderThk = 0.05;
-          const binderOverlap = 25;
-          const binderPetPrc = getPrice('Polyester Tape', getPrice('PE', 25000));
-          
-          pushCol(1, fmtNum); // Qty
-          const binderThkCol = pushCol(binderThk, fmtNum); // Thk
-          currentDiaFormula = `(${currentDiaFormula}+2*${binderThkCol}${r})`;
-          pushCol(null, fmtNum, currentDiaFormula); // OD
-          
-          binderTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${binderThkCol}${r})*${binderThkCol}${r}*${getDensity('PE')}*(1+${binderOverlap}/100)*(1+${materialScrap['PE'] || 0}/100)`);
-          const binderPrcCol = pushCol(binderPetPrc, fmtRp);
-          binderTapeCstCol = pushCol(null, fmtRp, `${binderTapeWtCol}${r}*${binderPrcCol}${r}/1000`);
-        }
 
         // Earth
         let earthCstCol, earthInsCstCol, earthWtCol, earthInsWtCol;
@@ -809,7 +782,12 @@ export default function CableDesigner() {
           } else {
             const earthWiresCol = pushCol(item.result.spec.earthingCore?.wireCount || 0);
             const earthWireDiaCol = pushCol(item.result.spec.earthingCore?.wireDiameter || 0, fmtNum);
-            const earthCalcAreaCol = pushCol(null, fmtNum, `${earthWiresCol}${r}*PI()/4*POWER(${earthWireDiaCol}${r},2)`);
+            let earthCalcAreaFormula = `${earthWiresCol}${r}*PI()/4*POWER(${earthWireDiaCol}${r},2)`;
+            if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.earthingMaxDcResistance && item.result.electrical.earthingMaxDcResistance > 0) {
+              const rho = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
+              earthCalcAreaFormula = `(${rho}/(${item.result.electrical.earthingMaxDcResistance}/1.003))*1.01`;
+            }
+            const earthCalcAreaCol = pushCol(null, fmtNum, earthCalcAreaFormula);
             earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${item.params.earthingCores || 1}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
@@ -886,27 +864,29 @@ export default function CableDesigner() {
           currentDiaFormula = `(${currentDiaFormula}+2*${inShThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
           
-          const fillerFactor = item.params.standard === 'BS EN 50288-7' ? 0 : 0.85;
+          let fillerFactor = item.params.standard === 'BS EN 50288-7' ? 0 : 0.85;
+          if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') fillerFactor = 0;
           const totalCores = item.params.cores + (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0);
-          const innerSheathFactor = getWeightAdditionFactor(totalCores);
+          // For sector conductors (sm), the weight addition factor is not used for inner sheath as per user request
+          const innerSheathFactor = (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') ? 0 : getWeightAdditionFactor(totalCores);
           
-          // Dynamic area calculation for Excel
-          const ringAreaFormula = `PI()*(${laidUpDiaCol}${r}*${inShThkCol}${r}+POWER(${inShThkCol}${r},2))`;
-          let intersticeAreaFormula = `PI()*POWER(${laidUpDiaCol}${r}/2,2) - (${coreCol}${r}*PI()*POWER(${coreDiaFormula}/2,2))`;
-          if (hasEarth) {
-            // We need earthing core diameter formula. 
-            // For simplicity, we use the pre-calculated value if it's complex, 
-            // but let's try to get the column if possible.
-            const earthCoreDia = item.result.spec.earthingCore?.coreDiameter || 0;
-            intersticeAreaFormula += ` - (${item.params.earthingCores || 1}*PI()*POWER(${earthCoreDia.toFixed(3)}/2,2))`;
-          }
-          if (item.params.conductorType === 'sm') {
-            intersticeAreaFormula = "0";
-          }
+          // Complex formula to match ringArea + intersticeArea * fillerFactor
+          const rLaidUp = item.result.spec.laidUpDiameter / 2;
+          const rUnderArmor = item.result.spec.diameterUnderArmor / 2;
+          const phaseCoreAreaTotal = item.params.cores * Math.PI * Math.pow((item.result.spec.coreDiameter || 0) / 2, 2);
+          const earthingCoreAreaTotal = (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0) * Math.PI * Math.pow((item.result.spec.earthingCore?.coreDiameter || 0) / 2, 2);
+          const coreAreaTotal = phaseCoreAreaTotal + earthingCoreAreaTotal;
+          const laidUpArea = Math.PI * Math.pow(item.result.spec.laidUpDiameter / 2, 2);
+          let intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
+          // Reduction for sector shape (sm) - gaps are much smaller
+          if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') intersticeArea = 0;
           
-          const baseAreaFormula = `(${ringAreaFormula} + MAX(0, ${intersticeAreaFormula})*${fillerFactor})`;
+          const ringArea = Math.PI * (Math.pow(rUnderArmor, 2) - Math.pow(rLaidUp, 2));
           
-          inShWtCol = pushCol(null, fmtNum, `${baseAreaFormula}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
+          // We use the calculated values for interstice and ring area to keep the formula manageable
+          const baseArea = ringArea + (intersticeArea * fillerFactor);
+          
+          inShWtCol = pushCol(null, fmtNum, `${baseArea.toFixed(4)}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
         }
@@ -1050,7 +1030,6 @@ export default function CableDesigner() {
         if (hasEarth) baseHppFormula += `+${earthCstCol}${r}+${earthInsCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) baseHppFormula += `+${isCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) baseHppFormula += `+${osCstCol}${r}`;
-        if (item.result.bom.binderTapeWeight > 0) baseHppFormula += `+${binderTapeCstCol}${r}`;
         if (hasInnerSheath) baseHppFormula += `+${inShCstCol}${r}`;
         if (hasSeparator) baseHppFormula += `+${sepCstCol}${r}`;
         if (hasArmor) baseHppFormula += `+${armCstCol}${r}`;
@@ -1082,7 +1061,6 @@ export default function CableDesigner() {
         if (hasEarth) totalWtFormula += `+'${sheetName}'!${earthWtCol}${r}+'${sheetName}'!${earthInsWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) totalWtFormula += `+'${sheetName}'!${isAlWtCol}${r}+'${sheetName}'!${isDrainWtCol}${r}+'${sheetName}'!${isPetWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) totalWtFormula += `+'${sheetName}'!${osAlWtCol}${r}+'${sheetName}'!${osDrainWtCol}${r}+'${sheetName}'!${osPetWtCol}${r}`;
-        if (item.result.bom.binderTapeWeight > 0) totalWtFormula += `+'${sheetName}'!${binderTapeWtCol}${r}`;
         if (hasInnerSheath) totalWtFormula += `+'${sheetName}'!${inShWtCol}${r}`;
         if (hasSeparator) totalWtFormula += `+'${sheetName}'!${sepWtCol}${r}`;
         if (hasArmor) totalWtFormula += `+'${sheetName}'!${armWtCol}${r}`;
@@ -1835,8 +1813,8 @@ export default function CableDesigner() {
       if (newParams.cores > 5 && newParams.size > 10) {
         newParams.size = 10; // Max 10mm2 for > 5 cores
       }
-      if (newParams.conductorType === 'sm' && (![3, 4].includes(newParams.cores) || newParams.size < 50)) {
-        newParams.conductorType = 'rm'; // Sector only for 3-4 cores and size >= 50
+      if (newParams.cores === 1 && newParams.conductorType === 'sm') {
+        newParams.conductorType = 'rm'; // Sector only for multi-core
       }
 
       // Aluminum size constraint: min 10mm2
@@ -1870,6 +1848,10 @@ export default function CableDesigner() {
 
       if (key === 'size') {
         newParams.earthingSize = value as number;
+      }
+
+      if (newParams.size < 25 && newParams.conductorType === 'sm') {
+        newParams.conductorType = 'rm'; // Sector usually for larger sizes
       }
 
       // Standard specific overrides
@@ -2159,11 +2141,12 @@ export default function CableDesigner() {
 
     if (isBulkCalculationEnabled) {
       if (bulkItems.length === 0) {
-        alert('Please add at least one configuration for bulk calculation.');
+        alert('Please add at least one configuration to the bulk list.');
         return;
       }
       
       const newItems: {params: CableDesignParams, result: CalculationResult}[] = [];
+      
       for (const item of bulkItems) {
         const newParams = { ...params, cores: item.cores, size: item.size, id: crypto.randomUUID() };
         const newResult = calculateCable(newParams, materialDensities, materialScrap);
@@ -2174,6 +2157,7 @@ export default function CableDesigner() {
       
       setProjectItems(prev => [...prev, ...newItems]);
       alert(`Successfully added ${newItems.length} items to the project.`);
+      setBulkItems([]); // Clear after adding
     } else {
       if (!result) return;
       setProjectItems(prev => [...prev, { params: { ...params, id: crypto.randomUUID() }, result }]);
@@ -2181,7 +2165,6 @@ export default function CableDesigner() {
     
     setParams(prev => ({ ...DEFAULT_PARAMS, projectName: prev.projectName }));
     setIsBulkCalculationEnabled(false);
-    setBulkItems([]);
   };
 
   const removeFromProject = (id: string) => {
@@ -2233,7 +2216,6 @@ export default function CableDesigner() {
       osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('PE', 25000)) / 1000 : 0,
-      binderTape: bom.binderTapeWeight ? (bom.binderTapeWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
     };
 
@@ -3535,10 +3517,6 @@ export default function CableDesigner() {
                   
                   const petWeight = (item.result.bom.isPetWeight || 0) + (item.result.bom.osPetWeight || 0);
                   if (petWeight > 0) acc['Polyester Tape (IS-OS/OS)'] = (acc['Polyester Tape (IS-OS/OS)'] || 0) + petWeight;
-                  
-                  if (item.result.bom.binderTapeWeight > 0) {
-                    acc['Polyester Binder Tape'] = (acc['Polyester Binder Tape'] || 0) + item.result.bom.binderTapeWeight;
-                  }
                   
                   return acc;
                 }, {} as Record<string, number>)).map(([mat, weight]) => (
@@ -5901,47 +5879,52 @@ export default function CableDesigner() {
 
                     {/* Bulk Calculation Options */}
                     {isBulkCalculationEnabled && (
-                      <div className="space-y-4 p-4 bg-white border border-indigo-200 rounded-xl mt-2 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                          <h3 className="text-sm font-bold text-indigo-900">Batch Configuration</h3>
-                          <button 
-                            onClick={() => setBulkItems([])}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium"
-                          >
-                            Clear All
-                          </button>
+                      <div className="space-y-4 p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl mt-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                            <List className="w-4 h-4" />
+                            Manual Bulk Input
+                          </h4>
                         </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          {/* Step 1: Manual Cores Input */}
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">1. Input Cores (e.g. 1, 2, 3)</label>
-                              <button 
-                                onClick={() => setTempBulkCoresInput('')}
-                                className="text-[10px] text-slate-500 hover:text-slate-700 font-medium"
-                              >
-                                Clear
-                              </button>
-                            </div>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={tempBulkCoresInput}
-                                onChange={(e) => setTempBulkCoresInput(e.target.value)}
-                                placeholder="Example: 1, 2, 3, 7, 10"
-                                className="w-full rounded-lg border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2.5 border bg-slate-50"
-                              />
-                              <div className="mt-1 text-[9px] text-slate-400 italic">
-                                Separate multiple cores with commas or spaces
+
+                        {/* Manual Input Form */}
+                        <div className="space-y-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Step 1: Input Core Count</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={manualBulkCore}
+                                  onChange={(e) => setManualBulkCore(parseInt(e.target.value) || 1)}
+                                  className="w-full rounded-lg border-slate-200 text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500 font-bold bg-slate-50"
+                                  placeholder="Enter number of cores..."
+                                />
                               </div>
                             </div>
+                            <div className="flex items-end">
+                              <button
+                                onClick={() => {
+                                  if (selectedBulkSizes.length === 0) {
+                                    alert('Please select at least one size first.');
+                                    return;
+                                  }
+                                  const newItems = selectedBulkSizes.map(size => ({ cores: manualBulkCore, size }));
+                                  setBulkItems([...bulkItems, ...newItems]);
+                                  setSelectedBulkSizes([]); // Clear selection after adding
+                                }}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-[0.98]"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Add {selectedBulkSizes.length > 0 ? `${selectedBulkSizes.length} Sizes` : 'to List'} for {manualBulkCore}C
+                              </button>
+                            </div>
                           </div>
-                          
-                          {/* Step 2: Select Sizes */}
-                          <div className="space-y-3 border-l border-slate-100 pl-6">
-                            <div className="flex justify-between items-center">
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">2. Select Sizes</label>
+
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Step 2: Select Sizes (mm²)</label>
                               <div className="flex gap-2">
                                 <button 
                                   onClick={() => {
@@ -5956,21 +5939,22 @@ export default function CableDesigner() {
                                       if (params.conductorMaterial === 'Al') return s >= 10;
                                       return true;
                                     });
-                                    setTempBulkSizes(availableSizes);
+                                    setSelectedBulkSizes(availableSizes);
                                   }}
-                                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium"
+                                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold uppercase"
                                 >
-                                  All
+                                  Select All
                                 </button>
+                                <span className="text-slate-300">|</span>
                                 <button 
-                                  onClick={() => setTempBulkSizes([])}
-                                  className="text-[10px] text-slate-500 hover:text-slate-700 font-medium"
+                                  onClick={() => setSelectedBulkSizes([])}
+                                  className="text-[10px] text-slate-500 hover:text-slate-700 font-bold uppercase"
                                 >
                                   Clear
                                 </button>
                               </div>
                             </div>
-                            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
                               {CABLE_SIZES.filter(s => {
                                 if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
                                 if (params.standard === 'IEC 60502-2') return s >= 25;
@@ -5985,16 +5969,16 @@ export default function CableDesigner() {
                                 <button
                                   key={s}
                                   onClick={() => {
-                                    if (tempBulkSizes.includes(s)) {
-                                      setTempBulkSizes(tempBulkSizes.filter(size => size !== s));
+                                    if (selectedBulkSizes.includes(s)) {
+                                      setSelectedBulkSizes(selectedBulkSizes.filter(size => size !== s));
                                     } else {
-                                      setTempBulkSizes([...tempBulkSizes, s].sort((a, b) => a - b));
+                                      setSelectedBulkSizes([...selectedBulkSizes, s].sort((a, b) => a - b));
                                     }
                                   }}
-                                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
-                                    tempBulkSizes.includes(s)
-                                      ? 'bg-indigo-600 text-white shadow-sm' 
-                                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    selectedBulkSizes.includes(s)
+                                      ? 'bg-indigo-600 text-white shadow-sm scale-105' 
+                                      : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
                                   }`}
                                 >
                                   {s}
@@ -6002,71 +5986,50 @@ export default function CableDesigner() {
                               ))}
                             </div>
                           </div>
-                          
-                          {/* Step 3: Current Batch */}
-                          <div className="space-y-3 border-l border-slate-100 pl-6">
-                            <div className="flex justify-between items-center">
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">3. Current Batch ({bulkItems.length})</label>
-                              <div className="flex gap-1">
-                                <button 
-                                  onClick={() => {
-                                    // Parse cores input
-                                    const cores = tempBulkCoresInput
-                                      .split(/[,\s]+/)
-                                      .map(s => parseInt(s.trim()))
-                                      .filter(n => !isNaN(n) && n > 0);
+                        </div>
 
-                                    if (cores.length === 0) {
-                                      alert('Please input at least one valid core number.');
-                                      return;
-                                    }
-                                    if (tempBulkSizes.length === 0) {
-                                      alert('Please select at least one size.');
-                                      return;
-                                    }
-
-                                    const newItems = [];
-                                    for (const c of cores) {
-                                      for (const s of tempBulkSizes) {
-                                        if (!bulkItems.some(item => item.cores === c && item.size === s)) {
-                                          newItems.push({ cores: c, size: s });
-                                        }
-                                      }
-                                    }
-                                    setBulkItems([...bulkItems, ...newItems]);
-                                    setTempBulkCoresInput('');
-                                    setTempBulkSizes([]);
-                                  }}
-                                  disabled={tempBulkCoresInput.trim() === '' || tempBulkSizes.length === 0}
-                                  className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors font-bold"
-                                >
-                                  Add Selection
-                                </button>
-                              </div>
-                            </div>
-                            <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 h-32 overflow-y-auto custom-scrollbar">
-                              {bulkItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                                  <List size={24} className="mb-1 opacity-20" />
-                                  <p className="text-[10px] italic">No items in batch</p>
-                                </div>
-                              ) : (
-                                <div className="grid grid-cols-1 gap-1">
-                                  {bulkItems.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center bg-white px-2 py-1.5 rounded border border-slate-200 shadow-sm group hover:border-indigo-300 transition-colors">
-                                      <span className="text-[10px] font-bold text-slate-700">{item.cores}C x {item.size} mm²</span>
-                                      <button 
-                                        onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
-                                        className="text-slate-300 hover:text-red-500 transition-colors"
-                                      >
-                                        <X size={12} />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                        {/* Added Items List */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Configuration List</label>
+                            {bulkItems.length > 0 && (
+                              <button 
+                                onClick={() => setBulkItems([])}
+                                className="text-[10px] text-rose-500 hover:text-rose-700 font-bold uppercase"
+                              >
+                                Clear All
+                              </button>
+                            )}
                           </div>
+                          
+                          {bulkItems.length === 0 ? (
+                            <div className="py-6 text-center border-2 border-dashed border-indigo-200 rounded-xl bg-white/50">
+                              <p className="text-xs text-indigo-400 font-medium">No items added yet</p>
+                            </div>
+                          ) : (
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                              {bulkItems.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-indigo-50 rounded-lg shadow-sm group">
+                                  <div className="flex items-center gap-3">
+                                    <span className="w-5 h-5 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold">
+                                      {idx + 1}
+                                    </span>
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                      <span className="px-2 py-0.5 bg-slate-100 rounded text-indigo-700">{item.cores}C</span>
+                                      <span className="text-slate-300">×</span>
+                                      <span className="px-2 py-0.5 bg-slate-100 rounded text-indigo-700">{item.size} mm²</span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
+                                    className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -6381,7 +6344,7 @@ export default function CableDesigner() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                         <div className="grid grid-cols-2 gap-2">
                           {(['re', 'rm', 'cm', 'sm', 'f'] as ConductorType[]).map((type) => {
-                            let isDisabled = (type === 'sm' && (![3, 4].includes(params.cores) || params.size < 50));
+                            let isDisabled = (type === 'sm' && (params.cores === 1 || params.size < 25));
                             if (params.standard.includes('SNI 04-6629')) {
                               if (params.standard.includes('(NYM)')) isDisabled = isDisabled || !['re', 'rm'].includes(type);
                               if (params.standard.includes('(NYAF)') || params.standard.includes('(NYMHY)')) isDisabled = isDisabled || type !== 'f';
@@ -7814,7 +7777,7 @@ export default function CableDesigner() {
                   <h3 className="text-sm font-bold text-amber-900">Bulk Calculation Active</h3>
                   <p className="text-xs text-amber-700 mt-1">
                     The results below show a preview for <strong>{params.cores}C x {params.size} mm²</strong>. 
-                    Clicking "Bulk Add to Project" will generate and add <strong>{bulkItems.length}</strong> different cable configurations based on your selected cores and sizes.
+                    Clicking "Bulk Add to Project" will generate and add <strong>{bulkItems.length}</strong> different cable configurations based on your manual list.
                   </p>
                 </div>
               </div>
@@ -8368,7 +8331,6 @@ export default function CableDesigner() {
                           { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
                           { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
-                          { label: `Polyester Binder Tape`, cost: breakdown.binderTape },
                           { label: `Masterbatch`, cost: breakdown.masterbatch },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
                         ].filter(item => item.cost > 0);

@@ -224,7 +224,7 @@ const DEFAULT_DENSITIES: MaterialDensities = {
 const STRANDING_FACTOR = 1.008;
 const CABLING_FACTOR = 1.01;
 
-const CONDUCTOR_RESISTIVITY: Record<string, number> = {
+export const CONDUCTOR_RESISTIVITY: Record<string, number> = {
   Cu: 17.241,
   Al: 28.264,
   TCu: 17.86,
@@ -742,6 +742,7 @@ export interface CalculationResult {
   };
   electrical: {
     maxDcResistance: number;
+    earthingMaxDcResistance?: number;
     currentCapacityAir: number;
     currentCapacityGround: number;
     voltageRating: string;
@@ -757,30 +758,30 @@ export interface CalculationResult {
   };
 }
 
-const RESISTANCE_CU: Record<number, number> = {
+export const RESISTANCE_CU: Record<number, number> = {
   0.5: 36, 0.75: 24.5, 1: 18.1, 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 
   70: 0.268, 95: 0.193, 120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601, 
   400: 0.047, 500: 0.0366, 630: 0.0283, 800: 0.0221, 1000: 0.0176
 };
 
-const RESISTANCE_TCU: Record<number, number> = {
+export const RESISTANCE_TCU: Record<number, number> = {
   0.5: 36.70, 0.75: 24.80, 1: 18.20, 1.5: 12.20, 2.5: 7.56, 4: 4.70, 6: 3.11, 10: 1.84, 16: 1.16, 25: 0.73, 35: 0.53, 50: 0.39, 
   70: 0.27, 95: 0.20, 120: 0.15, 150: 0.13, 185: 0.10, 240: 0.08, 300: 0.06, 
   400: 0.05, 500: 0.04, 630: 0.03
 };
 
-const RESISTANCE_CU_CLASS5: Record<number, number> = {
+export const RESISTANCE_CU_CLASS5: Record<number, number> = {
   0.5: 39, 0.75: 26, 1: 19.5, 1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.3, 10: 1.91, 16: 1.21, 25: 0.78, 35: 0.554, 50: 0.386, 
   70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 185: 0.106, 240: 0.0801, 300: 0.0641, 
   400: 0.0486, 500: 0.0384, 630: 0.0287
 };
 
-const RESISTANCE_AL: Record<number, number> = {
+export const RESISTANCE_AL: Record<number, number> = {
   4: 7.41, 6: 4.61, 10: 3.08, 16: 1.91, 25: 1.2, 35: 0.868, 50: 0.641, 70: 0.443, 95: 0.32, 120: 0.253, 150: 0.206, 185: 0.164, 
   240: 0.125, 300: 0.1, 400: 0.0778, 500: 0.0605, 630: 0.0469
 };
 
-const RESISTANCE_TCU_CLASS5: Record<number, number> = {
+export const RESISTANCE_TCU_CLASS5: Record<number, number> = {
   0.5: 40.1, 0.75: 26.7, 1: 20.0, 1.5: 13.7, 2.5: 8.21, 4: 5.09, 6: 3.39, 10: 1.95, 16: 1.24, 
   25: 0.795, 35: 0.565, 50: 0.393, 70: 0.277, 95: 0.210, 120: 0.164, 150: 0.132, 
   185: 0.108, 240: 0.0817, 300: 0.0654, 400: 0.0495, 500: 0.0391, 630: 0.0292
@@ -1115,6 +1116,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
   let calculatedSectionalArea = wireCount * (Math.PI / 4) * Math.pow(wireDiameter, 2);
+  if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && maxDcResistance > 0) {
+    const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
+    calculatedSectionalArea = (rho / (maxDcResistance / 1.003)) * 1.01;
+  }
   let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
 
   // Helper function to find KHA
@@ -1244,15 +1249,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
       if (maxDcResistance > 0) {
         const r20_eff = (maxDcResistance / 1.003) * 1.01;
-        if (effectiveParams.conductorType === 'sm') {
-          // Sector formula as requested: ([rho] / (([R20]/1.003) * 1.01) * [cores] / ((PI/4) * 0.9))^0.5 / 2 * 0.99
-          const area_total = (rho / r20_eff) * effectiveParams.cores;
-          conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
-        } else {
-          // Compacted circular formula (similar but no /2 and no *cores)
-          const area = (rho / r20_eff);
-          conductorDiameter = Math.pow(area / ((Math.PI / 4) * 0.9), 0.5) * 0.99;
-        }
+        // Menggunakan rumus yang sama persis untuk sm dan cm sesuai instruksi:
+        // Diameter = ( (Resistivity / ((Resistance_at_20 / 1.003) * 1.01) * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
+        const area_total = (rho / r20_eff) * effectiveParams.cores;
+        conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
       } else {
         const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
         if (construction) {
@@ -1312,7 +1312,32 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   }
   
+  let earthingMaxDcResistance = 0;
+  if (earthingCores > 0) {
+    if (effectiveParams.conductorMaterial === 'Cu') {
+      if (effectiveParams.conductorType === 'f') {
+        earthingMaxDcResistance = RESISTANCE_CU_CLASS5[earthingSize] || (RESISTANCE_CU[earthingSize] || 0);
+      } else {
+        earthingMaxDcResistance = RESISTANCE_CU[earthingSize] || 0;
+      }
+    } else if (effectiveParams.conductorMaterial === 'TCu') {
+      if (effectiveParams.conductorType === 'f') {
+        earthingMaxDcResistance = RESISTANCE_TCU_CLASS5[earthingSize] || (RESISTANCE_TCU[earthingSize] || 0);
+      } else {
+        earthingMaxDcResistance = RESISTANCE_TCU[earthingSize] || 0;
+      }
+    } else if (effectiveParams.conductorMaterial === 'Al') {
+      earthingMaxDcResistance = RESISTANCE_AL[earthingSize] || (RESISTANCE_CU[earthingSize] || 0) * 1.61;
+    } else {
+      earthingMaxDcResistance = (RESISTANCE_CU[earthingSize] || 0) * 1.61;
+    }
+  }
+
   let earthingCalculatedSectionalArea = earthingWireCount * (Math.PI / 4) * Math.pow(earthingWireDiameter, 2);
+  if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && earthingMaxDcResistance > 0) {
+    const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
+    earthingCalculatedSectionalArea = (rho / (earthingMaxDcResistance / 1.003)) * 1.01;
+  }
   let earthingConductorWeightPerCore = abcTData 
     ? abcTData.messenger.condWeight
     : (effectiveParams.standard.includes('NFA2X-T') 
@@ -1655,16 +1680,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     // Add filling factor for stranded conductors without conductor screen
     const factor = effectiveParams.conductorType !== 're' ? getWeightAdditionFactor(wireCount) : 0;
-    if (effectiveParams.conductorType === 'sm' && effectiveParams.cores >= 3) {
-      // Area of sector insulation per core = ((h+t)^2 - h^2) * (angle/2)
-      // Total area for all cores = (2*h*t + t^2) * PI
-      // Per core = (2*h*t + t^2) * PI / cores
-      insulationArea = (2 * conductorDiameter * insulationThickness + Math.pow(insulationThickness, 2)) * Math.PI / effectiveParams.cores;
-    } else {
-      // Adopsi rumus skala industri detail: 
-      // Area = (Diameter konduktor + Thickness Insul) * PI * (Thickness Insul + (Diameter konduktor * factor))
-      insulationArea = (conductorDiameter + insulationThickness) * Math.PI * (insulationThickness + (conductorDiameter * factor));
-    }
+    // Adopsi rumus skala industri detail: 
+    // Area = (Diameter konduktor + Thickness Insul) * PI * (Thickness Insul + (Diameter konduktor * factor))
+    insulationArea = (conductorDiameter + insulationThickness) * Math.PI * (insulationThickness + (conductorDiameter * factor));
   }
 
   // 1.01 adalah faktor toleransi/cabling skala industri
@@ -1686,6 +1704,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       laidUpDiameter = calculateMixedLayingUpDiameter(diameterOverScreen, earthingCoreDiameter, effectiveParams.cores, earthingCores, effectiveParams.cablingModel);
     } else {
       let laidUpFactor = getLayingUpFactor(totalCores);
+      
+      // Special handling for sector conductors (sm)
+      // For sector conductors, the coreDiameter is the height (radius of the circle)
+      // The assembly diameter is roughly 2 * height for 3 or 4 cores
+      if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && totalCores >= 2 && totalCores <= 4) {
+        laidUpFactor = 2.0;
+      }
+      
       laidUpDiameter = totalCores === 1 ? diameterOverScreen : diameterOverScreen * laidUpFactor;
     }
   }
@@ -1817,7 +1843,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   // Sector shaped reduction
-  if (effectiveParams.conductorType === 'sm' && effectiveParams.cores >= 3 && !effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
+  if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && effectiveParams.cores >= 3 && !effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
     // For sector conductors, the laid-up diameter is approximately 2 * (height + insulation thickness)
     // Since coreDiameter = conductorDiameter + 2 * insulationThickness, 
     // and conductorDiameter is the height (h), then h + insulationThickness = coreDiameter - insulationThickness.
@@ -1882,7 +1908,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     let intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
     
     // Reduction for sector shape (sm) - gaps are much smaller
-    if (effectiveParams.conductorType === 'sm') {
+    if (effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') {
       intersticeArea = 0; // "Tanpa pengisi" (without filler) for sector conductors
     }
     
@@ -1890,7 +1916,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const fillerFactor = effectiveParams.standard === 'BS EN 50288-7' ? 0 : 0.85; 
     const totalCoresCount = effectiveParams.cores + earthingCores;
     const weightAdditionFactor = getWeightAdditionFactor(totalCoresCount);
-    const totalInnerSheathArea = (ringArea + (intersticeArea * fillerFactor)) * (1 + weightAdditionFactor);
+    // For sector conductors (sm), the weight addition factor is not used for inner sheath as per user request
+    const effectiveWeightAdditionFactor = (effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') ? 0 : weightAdditionFactor;
+    const totalInnerSheathArea = (ringArea + (intersticeArea * fillerFactor)) * (1 + effectiveWeightAdditionFactor);
     
     innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC);
   }
@@ -2582,6 +2610,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     weights: weightDetails,
     electrical: {
       maxDcResistance: Number(maxDcResistance.toFixed(4)),
+      earthingMaxDcResistance: earthingCores > 0 ? Number(earthingMaxDcResistance.toFixed(4)) : undefined,
       currentCapacityAir: Number(currentCapacityAir.toFixed(0)),
       currentCapacityGround: Number(currentCapacityGround.toFixed(0)),
       voltageRating: displayVoltage,
