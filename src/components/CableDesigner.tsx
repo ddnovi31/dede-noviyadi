@@ -1046,7 +1046,7 @@ export default function CableDesigner() {
         const ohCol = pushCol(item.params.overhead || 0, fmtNum);
         const hppCol = pushCol(null, fmtRp, `${baseHppCol}${r}*(1+${ohCol}${r}/100)`);
         const mgCol = pushCol(item.params.margin || 0, fmtNum);
-        const sellPrcCol = pushCol(null, fmtRp, `ROUND(${hppCol}${r}*(1+${mgCol}${r}/100),-1)`);
+        const sellPrcCol = pushCol(null, fmtRp, `ROUNDUP(${hppCol}${r}/(1-${mgCol}${r}/100),-2)`);
 
         sheetsData[sheetName].push(row);
 
@@ -2295,9 +2295,11 @@ export default function CableDesigner() {
   };
 
   const calculateSellingPrice = (hpp: number, margin: number = 0) => {
-    const price = hpp * (1 + margin / 100);
-    // Round to nearest 10 (1 digit puluhan)
-    return Math.round(price / 10) * 10;
+    // Prevent division by zero or negative price if margin >= 100
+    const safeMargin = margin >= 100 ? 99.99 : margin;
+    const price = hpp / (1 - safeMargin / 100);
+    // Round up to nearest 100 (-2 in Excel ROUNDUP)
+    return Math.ceil(price / 100) * 100;
   };
 
   const currentHPP = result ? calculateHPP(result, params) : 0;
@@ -2514,7 +2516,7 @@ export default function CableDesigner() {
                     const oldHpp = loadedProjectConfig?.materialPrices ? calculateHPP(item.result, item.params, loadedProjectConfig.materialPrices) : hpp;
                     const deviation = hpp - oldHpp;
                     const targetPrice = item.params.targetPrice || 0;
-                    const marginVsTarget = targetPrice > 0 ? ((targetPrice - hpp) / hpp) * 100 : 0;
+                    const marginVsTarget = targetPrice > 0 ? ((targetPrice - hpp) / targetPrice) * 100 : 0;
                     
                     const sellingPrice = calculateSellingPrice(hpp, item.params.margin);
                     const breakdown = calculateCostBreakdown(item.result.bom, item.params);
@@ -3563,7 +3565,7 @@ export default function CableDesigner() {
                   return acc + calculateSellingPrice(hpp, item.params.margin);
                 }, 0);
                 const totalMargin = totalSellingPrice - totalHPP;
-                const marginPercentage = totalHPP > 0 ? (totalMargin / totalHPP) * 100 : 0;
+                const marginPercentage = totalSellingPrice > 0 ? (totalMargin / totalSellingPrice) * 100 : 0;
 
                 return (
                   <>
@@ -7468,7 +7470,7 @@ export default function CableDesigner() {
                         </div>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-2 italic">
-                        * Margin is added to HPP to calculate Selling Price (Price = HPP × (1 + Margin%))
+                        * Margin is used to calculate Selling Price (Price = ROUNDUP(HPP / (1 - Margin%), -2))
                       </p>
                     </div>
 
