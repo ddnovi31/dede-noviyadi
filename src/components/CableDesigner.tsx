@@ -540,7 +540,7 @@ export default function CableDesigner() {
       addGroup('General', hGen, ['No', coreLabel, 'Size', 'Laid-up Dia']);
       
       // Conductor
-      addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'Calc Area (mm2)', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'DC Res (Ω/km)', 'Resistivity', 'Calc Area (mm2)', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (sampleItem.params.fireguard) {
         addGroup('MGT', hMGT, ['Thk (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       }
@@ -661,12 +661,15 @@ export default function CableDesigner() {
         const wiresCol = pushCol(item.result.spec.phaseCore.wireCount || 0);
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
         
+        const dcResCol = pushCol(item.result.electrical.maxDcResistance || 0, fmtNum);
+        const rhoVal = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
+        const rhoCol = pushCol(rhoVal, fmtNum);
+
         let calcAreaFormula = `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`;
         let condOdFormula: string | null = null;
         if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.maxDcResistance > 0) {
-          const rho = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
-          calcAreaFormula = `(${rho}/((${item.result.electrical.maxDcResistance}/1.003)*1.01))`;
-          condOdFormula = `POWER((${getColName(colIdx)}${r}*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
+          calcAreaFormula = `(${rhoCol}${r}/((${dcResCol}${r}/1.003)*1.01))`;
+          condOdFormula = `POWER(((${rhoCol}${r}/((${dcResCol}${r}/1.003)*1.01))*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
         } else if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') {
           const compactionFactor = item.params.conductorType === 'cm' ? 0.92 : 0.95;
           condOdFormula = `POWER((4*${getColName(colIdx)}${r})/(PI()*${compactionFactor}), 0.5)`;
