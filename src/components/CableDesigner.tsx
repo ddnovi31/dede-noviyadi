@@ -557,8 +557,8 @@ export default function CableDesigner() {
       }
       
       if (hasEarth) {
-        if (isNFA2XT) addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
-        else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Dia (mm)', 'Calc Area (mm2)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
+        if (isNFA2XT) addGroup('Earth Core', hEarth, ['Size', 'Al Wires', 'Al Dia', 'St Wires', 'St Dia', 'Cond OD (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
+        else addGroup('Earth Core', hEarth, ['Size', 'Wires', 'Wire Dia (mm)', 'Calc Area (mm2)', 'Cond OD (mm)', 'Wt (kg/km)', 'Cst (Rp/m)', 'Ins Thk', 'Ins Wt', 'Ins Cst']);
       }
 
       if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
@@ -662,12 +662,19 @@ export default function CableDesigner() {
         const wireDiaCol = pushCol(item.result.spec.phaseCore.wireDiameter || 0, fmtNum);
         
         let calcAreaFormula = `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`;
+        let condOdFormula: string | null = null;
         if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.maxDcResistance > 0) {
           const rho = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
-          calcAreaFormula = `(${rho}/(${item.result.electrical.maxDcResistance}/1.003))*1.01`;
+          calcAreaFormula = `(${rho}/((${item.result.electrical.maxDcResistance}/1.003)*1.01))`;
+          condOdFormula = `POWER((${getColName(colIdx)}${r}*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
+        } else if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') {
+          const compactionFactor = item.params.conductorType === 'cm' ? 0.92 : 0.95;
+          condOdFormula = `POWER((4*${getColName(colIdx)}${r})/(PI()*${compactionFactor}), 0.5)`;
         }
         const calcAreaCol = pushCol(null, fmtNum, calcAreaFormula);
-        const condOdCol = pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
+        const condOdCol = condOdFormula 
+          ? pushCol(null, fmtNum, condOdFormula.replace(getColName(colIdx - 1), calcAreaCol))
+          : pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
         
         let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
         if (isNFA2X || isNFA2XT) {
@@ -772,6 +779,7 @@ export default function CableDesigner() {
             const alDiaCol = pushCol(item.result.spec.earthingCore?.alWireDiameter || 0, fmtNum);
             const stWiresCol = pushCol(item.result.spec.earthingCore?.steelWireCount || 0);
             const stDiaCol = pushCol(item.result.spec.earthingCore?.steelWireDiameter || 0, fmtNum);
+            const earthCondOdCol = pushCol(item.result.spec.earthingCore?.conductorDiameter || 0, fmtNum);
             
             earthWtCol = pushCol(null, fmtNum, `(PI()*(${alDiaCol}${r}/2)^2*${alWiresCol}${r}*${getDensity('Al')}*(1+${materialScrap['Al'] || 0}/100) + PI()*(${stDiaCol}${r}/2)^2*${stWiresCol}${r}*${getDensity('SteelWire')}*(1+${materialScrap['SteelWire'] || 0}/100))*1.05*1.008*1.01`);
             if (item.result.bom.earthingAlWeight !== undefined && item.result.bom.earthingSteelWeight !== undefined) {
@@ -785,15 +793,16 @@ export default function CableDesigner() {
             let earthCalcAreaFormula = `${earthWiresCol}${r}*PI()/4*POWER(${earthWireDiaCol}${r},2)`;
             if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.earthingMaxDcResistance && item.result.electrical.earthingMaxDcResistance > 0) {
               const rho = CONDUCTOR_RESISTIVITY[item.params.conductorMaterial] || 17.241;
-              earthCalcAreaFormula = `(${rho}/(${item.result.electrical.earthingMaxDcResistance}/1.003))*1.01`;
+              earthCalcAreaFormula = `(${rho}/((${item.result.electrical.earthingMaxDcResistance}/1.003)*1.01))`;
             }
             const earthCalcAreaCol = pushCol(null, fmtNum, earthCalcAreaFormula);
+            const earthCondOdCol = pushCol(item.result.spec.earthingCore?.conductorDiameter || 0, fmtNum);
             earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${item.params.earthingCores || 1}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
           const earthInsThkCol = pushCol(item.result.spec.earthingCore?.insulationThickness || 0, fmtNum);
-          let earthCurrentDiaFormula = isNFA2XT ? `(${getColName(colIdx - 5)}${r})` : `(${getColName(colIdx - 3)}${r})`;
+          let earthCurrentDiaFormula = `(${getColName(colIdx - 4)}${r})`;
           const earthingInsFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.earthingCore?.wireCount || 7) : 0;
           
           // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
@@ -7169,8 +7178,8 @@ export default function CableDesigner() {
                             <input
                               type="number"
                               step="0.1"
-                              placeholder={result.spec.conductorDiameter.toFixed(1)}
-                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(1) : ''}
+                              placeholder={result.spec.conductorDiameter.toFixed(2)}
+                              value={params.manualConductorDiameter !== undefined ? params.manualConductorDiameter.toFixed(2) : ''}
                               onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? parseFloat(e.target.value) : undefined)}
                               className="w-full rounded-lg border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
