@@ -699,7 +699,12 @@ export default function CableDesigner() {
         const insulationFactor = (!hasCondScreen && item.params.conductorType !== 're') ? getWeightAdditionFactor(item.result.spec.phaseCore.wireCount || 7) : 0;
         
         // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
-        const insWtCol = pushCol(null, fmtNum, `ROUND((${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
+        // For sector conductors (sm), use the geometric formula: (2*h*t + t^2) * PI / cores
+        const insFormula = item.params.conductorType === 'sm' && item.params.cores >= 3
+          ? `(2*${diaBeforeIns}*${insThkCol}${r}+${insThkCol}${r}^2)*PI()/${coreCol}${r}`
+          : `(${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))`;
+
+        const insWtCol = pushCol(null, fmtNum, `ROUND(${insFormula}*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
         const insPrcCol = pushCol(insPrice, fmtRp);
         const insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
 
@@ -747,6 +752,23 @@ export default function CableDesigner() {
         const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.coreDiameter || 1); // Approximate factor
         row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
         currentDiaFormula = `${laidUpDiaCol}${r}`;
+
+        // Binder Tape
+        let binderTapeWtCol, binderTapeCstCol;
+        if (item.result.bom.binderTapeWeight > 0) {
+          const binderThk = 0.05;
+          const binderOverlap = 25;
+          const binderPetPrc = getPrice('Polyester Tape', getPrice('PE', 25000));
+          
+          pushCol(1, fmtNum); // Qty
+          const binderThkCol = pushCol(binderThk, fmtNum); // Thk
+          currentDiaFormula = `(${currentDiaFormula}+2*${binderThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          
+          binderTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${binderThkCol}${r})*${binderThkCol}${r}*${getDensity('PE')}*(1+${binderOverlap}/100)*(1+${materialScrap['PE'] || 0}/100)`);
+          const binderPrcCol = pushCol(binderPetPrc, fmtRp);
+          binderTapeCstCol = pushCol(null, fmtRp, `${binderTapeWtCol}${r}*${binderPrcCol}${r}/1000`);
+        }
 
         // Earth
         let earthCstCol, earthInsCstCol, earthWtCol, earthInsWtCol;
@@ -855,7 +877,8 @@ export default function CableDesigner() {
           const earthingCoreAreaTotal = (item.params.hasEarthing !== false ? (item.params.earthingCores || 0) : 0) * Math.PI * Math.pow((item.result.spec.earthingCore?.coreDiameter || 0) / 2, 2);
           const coreAreaTotal = phaseCoreAreaTotal + earthingCoreAreaTotal;
           const laidUpArea = Math.PI * Math.pow(item.result.spec.laidUpDiameter / 2, 2);
-          const intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
+          let intersticeArea = Math.max(0, laidUpArea - coreAreaTotal);
+          if (item.params.conductorType === 'sm') intersticeArea = 0;
           const ringArea = Math.PI * (Math.pow(rUnderArmor, 2) - Math.pow(rLaidUp, 2));
           
           // We use the calculated values for interstice and ring area to keep the formula manageable
@@ -3494,6 +3517,10 @@ export default function CableDesigner() {
                   
                   const petWeight = (item.result.bom.isPetWeight || 0) + (item.result.bom.osPetWeight || 0);
                   if (petWeight > 0) acc['Polyester Tape (IS-OS/OS)'] = (acc['Polyester Tape (IS-OS/OS)'] || 0) + petWeight;
+                  
+                  if (item.result.bom.binderTapeWeight > 0) {
+                    acc['Polyester Binder Tape'] = (acc['Polyester Binder Tape'] || 0) + item.result.bom.binderTapeWeight;
+                  }
                   
                   return acc;
                 }, {} as Record<string, number>)).map(([mat, weight]) => (

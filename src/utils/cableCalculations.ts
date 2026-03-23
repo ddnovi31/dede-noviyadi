@@ -224,6 +224,12 @@ const DEFAULT_DENSITIES: MaterialDensities = {
 const STRANDING_FACTOR = 1.008;
 const CABLING_FACTOR = 1.01;
 
+const CONDUCTOR_RESISTIVITY: Record<string, number> = {
+  Cu: 17.241,
+  Al: 28.264,
+  TCu: 17.86,
+};
+
 // Laying up factors for multi-core cables (approximate)
 const LAYING_UP_FACTORS: Record<number, number> = {
   1: 1.0,
@@ -717,6 +723,7 @@ export interface CalculationResult {
     osDrainWeight?: number;
     osPetWeight?: number;
     isMultiplier?: number;
+    binderTapeWeight?: number;
     totalWeight: number;
   };
   weights?: {
@@ -727,6 +734,7 @@ export interface CalculationResult {
     insulationScreen?: WeightDetail;
     metallicScreen?: WeightDetail;
     innerSheath?: WeightDetail;
+    binderTape?: WeightDetail;
     armor?: WeightDetail;
     separator?: WeightDetail;
     outerSheath: WeightDetail;
@@ -1233,15 +1241,27 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else if (effectiveParams.conductorType === 'f') {
       conductorDiameter = data.diameter * 1.1; 
     } else if (effectiveParams.conductorType === 'cm' || effectiveParams.conductorType === 'sm') {
-      const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
-      if (construction) {
-        const area = construction.wireCount * Math.PI * Math.pow(construction.wireDiameter / 2, 2);
-        // Compaction factor for cm is typically around 0.92-0.95
-        // Sector conductors are also compacted, so a similar factor might apply.
-        const compactionFactor = effectiveParams.conductorType === 'cm' ? 0.92 : 0.95;
-        conductorDiameter = Math.sqrt((4 * area) / (Math.PI * compactionFactor));
+      const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
+      if (maxDcResistance > 0) {
+        const r20_eff = (maxDcResistance / 1.003) * 1.01;
+        if (effectiveParams.conductorType === 'sm') {
+          // Sector formula as requested: ([rho] / (([R20]/1.003) * 1.01) * [cores] / ((PI/4) * 0.9))^0.5 / 2 * 0.99
+          const area_total = (rho / r20_eff) * effectiveParams.cores;
+          conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
+        } else {
+          // Compacted circular formula (similar but no /2 and no *cores)
+          const area = (rho / r20_eff);
+          conductorDiameter = Math.pow(area / ((Math.PI / 4) * 0.9), 0.5) * 0.99;
+        }
       } else {
-        conductorDiameter = data.diameter * (effectiveParams.conductorType === 'cm' ? 0.92 : 0.95);
+        const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
+        if (construction) {
+          const area = construction.wireCount * Math.PI * Math.pow(construction.wireDiameter / 2, 2);
+          const compactionFactor = effectiveParams.conductorType === 'cm' ? 0.92 : 0.95;
+          conductorDiameter = Math.sqrt((4 * area) / (Math.PI * compactionFactor));
+        } else {
+          conductorDiameter = data.diameter * (effectiveParams.conductorType === 'cm' ? 0.92 : 0.95);
+        }
       }
     }
   }
@@ -1635,9 +1655,16 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     // Add filling factor for stranded conductors without conductor screen
     const factor = effectiveParams.conductorType !== 're' ? getWeightAdditionFactor(wireCount) : 0;
-    // Adopsi rumus skala industri detail: 
-    // Area = (Diameter konduktor + Thickness Insul) * PI * (Thickness Insul + (Diameter konduktor * factor))
-    insulationArea = (conductorDiameter + insulationThickness) * Math.PI * (insulationThickness + (conductorDiameter * factor));
+    if (effectiveParams.conductorType === 'sm' && effectiveParams.cores >= 3) {
+      // Area of sector insulation per core = ((h+t)^2 - h^2) * (angle/2)
+      // Total area for all cores = (2*h*t + t^2) * PI
+      // Per core = (2*h*t + t^2) * PI / cores
+      insulationArea = (2 * conductorDiameter * insulationThickness + Math.pow(insulationThickness, 2)) * Math.PI / effectiveParams.cores;
+    } else {
+      // Adopsi rumus skala industri detail: 
+      // Area = (Diameter konduktor + Thickness Insul) * PI * (Thickness Insul + (Diameter konduktor * factor))
+      insulationArea = (conductorDiameter + insulationThickness) * Math.PI * (insulationThickness + (conductorDiameter * factor));
+    }
   }
 
   // 1.01 adalah faktor toleransi/cabling skala industri
@@ -1791,7 +1818,22 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Sector shaped reduction
   if (effectiveParams.conductorType === 'sm' && effectiveParams.cores >= 3 && !effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
-    laidUpDiameter = laidUpDiameter * 0.9; // Approx 10% reduction for sector shape
+    // For sector conductors, the laid-up diameter is approximately 2 * (height + insulation thickness)
+    // Since coreDiameter = conductorDiameter + 2 * insulationThickness, 
+    // and conductorDiameter is the height (h), then h + insulationThickness = coreDiameter - insulationThickness.
+    laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+  }
+
+  // 3.5. Binder Tape (Polyester Tape) before Inner Sheath
+  let binderTapeWeight = 0;
+  let binderTapeThickness = 0;
+  if (effectiveParams.cores > 1) {
+    binderTapeThickness = 0.05; // Standard PET tape thickness
+    const binderTapeOverlap = 25; // 25% overlap
+    const petDensity = 1.38;
+    // Area = PI * (D + t) * t * (1 + overlap/100)
+    binderTapeWeight = Math.PI * (laidUpDiameter + binderTapeThickness) * binderTapeThickness * petDensity * (1 + binderTapeOverlap/100);
+    laidUpDiameter += 2 * binderTapeThickness;
   }
 
   // 4. Inner Covering (Extruded)
@@ -1841,7 +1883,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     // Reduction for sector shape (sm) - gaps are much smaller
     if (effectiveParams.conductorType === 'sm') {
-      intersticeArea = intersticeArea * 0.2; // 80% reduction in gaps for sector shape
+      intersticeArea = 0; // "Tanpa pengisi" (without filler) for sector conductors
     }
     
     // Filler Factor: Industrial cables often use 70-90% filling for extruded bedding
@@ -2214,7 +2256,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const isMV = effectiveParams.standard === 'IEC 60502-2';
   const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
   
-  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + masterbatchWeight);
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + masterbatchWeight);
 
   const scope = {
     PI: Math.PI,
@@ -2305,6 +2347,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   if (innerCoveringWeight > 0) {
     weightDetails.innerSheath = evalFormula(innerCoveringWeight, `π * ((${ (laidUpDiameter/2 + innerCoveringThickness).toFixed(2) })² - (${(laidUpDiameter/2).toFixed(2)})²) * ${densities[effectiveParams.innerSheathMaterial || 'PVC']}`, 'innerSheath');
+  }
+
+  if (binderTapeWeight > 0) {
+    weightDetails.binderTape = evalFormula(binderTapeWeight, `π * (D + t) * t * density * (1 + overlap/100)`, 'binderTape');
   }
 
   if (armorWeight > 0) {
@@ -2527,6 +2573,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       isDrainWeight: isDrainWeight > 0 ? Number(applyScrap(isDrainWeight, 'Cu').toFixed(1)) : 0,
       isPetWeight: isPetWeight > 0 ? Number(applyScrap(isPetWeight, 'PE').toFixed(1)) : 0,
       osAlWeight: osAlWeight > 0 ? Number(applyScrap(osAlWeight, 'Al').toFixed(1)) : 0,
+      binderTapeWeight: binderTapeWeight > 0 ? Number(applyScrap(binderTapeWeight, 'PE').toFixed(1)) : 0,
       osDrainWeight: osDrainWeight > 0 ? Number(applyScrap(osDrainWeight, 'Cu').toFixed(1)) : 0,
       osPetWeight: osPetWeight > 0 ? Number(applyScrap(osPetWeight, 'PE').toFixed(1)) : 0,
       isMultiplier: isMultiplier,
