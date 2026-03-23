@@ -556,6 +556,11 @@ export default function CableDesigner() {
 
       if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
       if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      
+      if (sampleItem.result.bom.binderTapeWeight > 0) {
+        addGroup('Binder Tape', hSep, ['Qty', 'Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      }
+
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
@@ -1028,6 +1033,7 @@ export default function CableDesigner() {
         if (hasEarth) baseHppFormula += `+${earthCstCol}${r}+${earthInsCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) baseHppFormula += `+${isCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) baseHppFormula += `+${osCstCol}${r}`;
+        if (item.result.bom.binderTapeWeight > 0) baseHppFormula += `+${binderTapeCstCol}${r}`;
         if (hasInnerSheath) baseHppFormula += `+${inShCstCol}${r}`;
         if (hasSeparator) baseHppFormula += `+${sepCstCol}${r}`;
         if (hasArmor) baseHppFormula += `+${armCstCol}${r}`;
@@ -1059,6 +1065,7 @@ export default function CableDesigner() {
         if (hasEarth) totalWtFormula += `+'${sheetName}'!${earthWtCol}${r}+'${sheetName}'!${earthInsWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) totalWtFormula += `+'${sheetName}'!${isAlWtCol}${r}+'${sheetName}'!${isDrainWtCol}${r}+'${sheetName}'!${isPetWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) totalWtFormula += `+'${sheetName}'!${osAlWtCol}${r}+'${sheetName}'!${osDrainWtCol}${r}+'${sheetName}'!${osPetWtCol}${r}`;
+        if (item.result.bom.binderTapeWeight > 0) totalWtFormula += `+'${sheetName}'!${binderTapeWtCol}${r}`;
         if (hasInnerSheath) totalWtFormula += `+'${sheetName}'!${inShWtCol}${r}`;
         if (hasSeparator) totalWtFormula += `+'${sheetName}'!${sepWtCol}${r}`;
         if (hasArmor) totalWtFormula += `+'${sheetName}'!${armWtCol}${r}`;
@@ -2216,6 +2223,7 @@ export default function CableDesigner() {
       osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('PE', 25000)) / 1000 : 0,
+      binderTape: bom.binderTapeWeight ? (bom.binderTapeWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
     };
 
@@ -8313,6 +8321,7 @@ export default function CableDesigner() {
                           { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
                           { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
+                          { label: `Polyester Binder Tape`, cost: breakdown.binderTape },
                           { label: `Masterbatch`, cost: breakdown.masterbatch },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
                         ].filter(item => item.cost > 0);
