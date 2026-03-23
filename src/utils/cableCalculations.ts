@@ -1232,10 +1232,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorDiameter = Math.sqrt((4 * effectiveParams.size) / Math.PI);
     } else if (effectiveParams.conductorType === 'f') {
       conductorDiameter = data.diameter * 1.1; 
-    } else if (effectiveParams.conductorType === 'cm') {
-      conductorDiameter = data.diameter * 0.92; 
-    } else if (effectiveParams.conductorType === 'sm') {
-      conductorDiameter = data.diameter; 
+    } else if (effectiveParams.conductorType === 'cm' || effectiveParams.conductorType === 'sm') {
+      const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
+      if (construction) {
+        const area = construction.wireCount * Math.PI * Math.pow(construction.wireDiameter / 2, 2);
+        // Compaction factor for cm is typically around 0.92-0.95
+        // Sector conductors are also compacted, so a similar factor might apply.
+        const compactionFactor = effectiveParams.conductorType === 'cm' ? 0.92 : 0.95;
+        conductorDiameter = Math.sqrt((4 * area) / (Math.PI * compactionFactor));
+      } else {
+        conductorDiameter = data.diameter * (effectiveParams.conductorType === 'cm' ? 0.92 : 0.95);
+      }
     }
   }
 
