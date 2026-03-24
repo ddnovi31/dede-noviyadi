@@ -1248,10 +1248,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else if (effectiveParams.conductorType === 'cm' || effectiveParams.conductorType === 'sm') {
       const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
       if (maxDcResistance > 0) {
-        const r20_eff = (maxDcResistance / 1.003) * 1.01;
         // Menggunakan rumus yang sama persis untuk sm dan cm sesuai instruksi:
-        // Diameter = ( (Resistivity / ((Resistance_at_20 / 1.003) * 1.01) * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
-        const area_total = (rho / r20_eff) * effectiveParams.cores;
+        // Diameter = ( (Resistivity / (Resistance_at_20 / 1.003) * 1.01 * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
+        const area_total = (rho / (maxDcResistance / 1.003)) * 1.01 * effectiveParams.cores;
         conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
       } else {
         const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
