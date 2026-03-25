@@ -98,6 +98,7 @@ export interface CableDesignParams {
   manualIsDrainWireDiameter?: number;
   manualIsDrainWireSize?: number;
   manualIsPolyesterThickness?: number;
+  autoSwitchSfaToRgb?: boolean;
   manualIsPolyesterOverlap?: number;
   
   manualOsAluminiumThickness?: number;
@@ -696,6 +697,7 @@ export interface CalculationResult {
     binderTapeOverArmorThickness?: number;
     diameterAfterIS?: number;
     diameterAfterOS?: number;
+    effectiveArmorType?: ArmorType;
     breakingLoad?: number;
   };
   bom: {
@@ -2020,6 +2022,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   diameterUnderArmor = diameterOverSeparator;
 
   // 5. Armor
+  // Auto Switch SFA to RGB if diameterUnderArmor < 15mm
+  if (effectiveParams.armorType === 'SFA' && effectiveParams.autoSwitchSfaToRgb && diameterUnderArmor < 15) {
+    effectiveParams.armorType = 'RGB';
+  }
+
   let armorThickness = effectiveParams.manualArmorThickness || 0;
   let armorWeight = 0;
   let armorWireWeight = 0;
@@ -2599,6 +2606,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       polyesterTapeThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
       binderTapeThickness: binderTapeThickness > 0 ? binderTapeThickness : undefined,
       binderTapeOverArmorThickness: binderTapeOverArmorThickness > 0 ? binderTapeOverArmorThickness : undefined,
+      effectiveArmorType: effectiveParams.armorType,
       pairTriadDiameter: formationDiameter,
       breakingLoad: abcData?.breakingLoad,
     },

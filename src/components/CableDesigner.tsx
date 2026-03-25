@@ -137,6 +137,7 @@ const DEFAULT_PARAMS: CableDesignParams = {
   conductorType: 'rm',
   insulationMaterial: 'XLPE',
   armorType: 'SWA',
+  autoSwitchSfaToRgb: false,
   sheathMaterial: 'PVC',
   voltage: '0.6/1 kV',
   standard: 'IEC 60502-1',
@@ -206,8 +207,16 @@ export default function CableDesigner() {
   const updateProjectItemParam = (idx: number, key: string, value: any) => {
     setProjectItems(prev => prev.map((item, i) => {
       if (i === idx) {
-        const newParams = { ...item.params, [key]: value };
-        const newResult = calculateCable(newParams, materialDensities, materialScrap);
+        let newParams = { ...item.params, [key]: value };
+        
+        let newResult = calculateCable(newParams, materialDensities, materialScrap);
+        
+        // Auto switch SFA to RGB if diameterUnderArmor < 15mm
+        if (newParams.armorType === 'SFA' && newParams.autoSwitchSfaToRgb && newResult.spec.diameterUnderArmor < 15) {
+          newParams = { ...newParams, armorType: 'RGB' };
+          newResult = calculateCable(newParams, materialDensities, materialScrap);
+        }
+
         return { params: newParams, result: newResult };
       }
       return item;
@@ -1684,6 +1693,13 @@ export default function CableDesigner() {
   useEffect(() => {
     try {
       const res = calculateCable(params, materialDensities, materialScrap);
+      
+      // Auto switch SFA to RGB if diameterUnderArmor < 15mm
+      if (params.armorType === 'SFA' && params.autoSwitchSfaToRgb && res.spec.diameterUnderArmor < 15) {
+        setParams(prev => ({ ...prev, armorType: 'RGB' }));
+        return;
+      }
+
       setResult(res);
       setCalcError(null);
     } catch (e) {
@@ -5883,6 +5899,24 @@ export default function CableDesigner() {
                             />
                             <div className={`block w-10 h-6 rounded-full transition-colors ${params.stopfire ? 'bg-red-600' : 'bg-slate-200'}`}></div>
                             <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.stopfire ? 'translate-x-4' : ''}`}></div>
+                          </div>
+                        </label>
+
+                        {/* Auto Switch SFA to RGB Toggle */}
+                        <label className="flex items-center justify-between cursor-pointer group">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Auto Switch to RGB</span>
+                            <span className="text-[10px] text-slate-400 italic">If dia. before armor {"<"} 15mm</span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={params.autoSwitchSfaToRgb || false}
+                              onChange={(e) => handleParamChange('autoSwitchSfaToRgb', e.target.checked)}
+                            />
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.autoSwitchSfaToRgb ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.autoSwitchSfaToRgb ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
                       </div>
