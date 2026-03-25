@@ -563,6 +563,8 @@ export default function CableDesigner() {
 
       if (isInstrumentation && sampleItem.params.hasIndividualScreen) addGroup('Indv Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
       if (isInstrumentation && sampleItem.params.hasOverallScreen) addGroup('Ovrl Screen', hMScr, ['Al Foil Qty', 'Al Foil Thk', 'OD (mm)', 'Al Foil Wt', 'Al Foil Prc', 'Drain Wire Qty', 'Drain Size (mm2)', 'Drain Wt', 'Drain Prc', 'PET Tape Qty', 'PET Thk', 'PET Wt', 'PET Prc', 'Cst (Rp/m)']);
+      const hasBinderTape = sampleItem.params.conductorType === 'sm' && sampleItem.params.cores > 1;
+      if (hasBinderTape) addGroup('Binder Tape', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
@@ -582,6 +584,10 @@ export default function CableDesigner() {
         } else {
           addGroup(armorLabel, hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
         }
+      }
+      const hasBinderTapeOverArmor = sampleItem.params.armorType === 'SWA' || sampleItem.params.armorType === 'AWA';
+      if (hasBinderTapeOverArmor) {
+        addGroup('Binder Tape (Armor)', hArm, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       }
       if (hasOuterSheath) {
         const sheathThkLabel = sampleItem.params.standard === 'LiYCY' ? 'Min. Thk (mm)' : 'Thk (mm)';
@@ -669,7 +675,7 @@ export default function CableDesigner() {
         let condOdFormula: string | null = null;
         if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.maxDcResistance > 0) {
           calcAreaFormula = `${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.01`;
-          condOdFormula = `POWER((${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.01*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
+          condOdFormula = `POWER((${rhoCol}${r}/((${dcResCol}${r}/1.003)*1.01)*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
         } else if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') {
           const compactionFactor = item.params.conductorType === 'cm' ? 0.92 : 0.95;
           condOdFormula = `POWER((4*${getColName(colIdx)}${r})/(PI()*${compactionFactor}), 0.5)`;
@@ -838,8 +844,8 @@ export default function CableDesigner() {
           const isPetThkCol = pushCol(item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           isDiaFormula = `(${isDiaFormula}+2*${isPetThkCol}${r})`;
           const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
-          isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('PE')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['PE'] || 0}/100)`);
-          const isPetPrcCol = pushCol(getPrice('Polyester Tape', getPrice('PE', 25000)), fmtRp);
+          isPetWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          const isPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
 
@@ -864,9 +870,23 @@ export default function CableDesigner() {
           const osPetThkCol = pushCol(item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           currentDiaFormula = `(${currentDiaFormula}+2*${osPetThkCol}${r})`;
           const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
-          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('PE')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['PE'] || 0}/100)`);
-          const osPetPrcCol = pushCol(getPrice('Polyester Tape', getPrice('PE', 25000)), fmtRp);
+          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          const osPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
+        }
+
+        // Binder Tape
+        let btCstCol, btThkCol, btWtCol;
+        if (hasBinderTape) {
+          const itemHasBinderTape = item.params.conductorType === 'sm' && item.params.cores > 1;
+          btThkCol = pushCol(itemHasBinderTape ? (item.result.spec.binderTapeThickness || 0.05) : 0, fmtNum);
+          currentDiaFormula = `(${currentDiaFormula}+2*${btThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          const btOverlap = 25;
+          const btDensity = getDensity('Polyester Tape');
+          btWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${btThkCol}${r})*${btThkCol}${r}*${btDensity}*(1+${btOverlap}/100)*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          const btPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
+          btCstCol = pushCol(null, fmtRp, `${btWtCol}${r}*${btPrcCol}${r}/1000`);
         }
 
         // Inner Sheath
@@ -1009,6 +1029,20 @@ export default function CableDesigner() {
           }
         }
 
+        // Binder Tape Over Armor
+        let btArmCstCol, btArmThkCol, btArmWtCol;
+        const hasBinderTapeOverArmor = item.params.armorType === 'SWA' || item.params.armorType === 'AWA';
+        if (hasBinderTapeOverArmor) {
+          btArmThkCol = pushCol(item.result.spec.binderTapeOverArmorThickness || 0.05, fmtNum);
+          currentDiaFormula = `(${currentDiaFormula}+2*${btArmThkCol}${r})`;
+          pushCol(null, fmtNum, currentDiaFormula); // OD
+          const btArmOverlap = 25;
+          const btArmDensity = getDensity('Polyester Tape');
+          btArmWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${btArmThkCol}${r})*${btArmThkCol}${r}*${btArmDensity}*(1+${btArmOverlap}/100)*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          const btArmPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
+          btArmCstCol = pushCol(null, fmtRp, `${btArmWtCol}${r}*${btArmPrcCol}${r}/1000`);
+        }
+
         // Outer Sheath
         let outShCstCol, outShThkCol, overallDiaCol, outShWtCol;
         if (hasOuterSheath) {
@@ -1042,9 +1076,11 @@ export default function CableDesigner() {
         if (hasEarth) baseHppFormula += `+${earthCstCol}${r}+${earthInsCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) baseHppFormula += `+${isCstCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) baseHppFormula += `+${osCstCol}${r}`;
+        if (hasBinderTape) baseHppFormula += `+${btCstCol}${r}`;
         if (hasInnerSheath) baseHppFormula += `+${inShCstCol}${r}`;
         if (hasSeparator) baseHppFormula += `+${sepCstCol}${r}`;
         if (hasArmor) baseHppFormula += `+${armCstCol}${r}`;
+        if (hasBinderTapeOverArmor) baseHppFormula += `+${btArmCstCol}${r}`;
         if (hasOuterSheath) baseHppFormula += `+${outShCstCol}${r}`;
         if (!isMV) {
           baseHppFormula += `+${mbCstCol}${r}`;
@@ -1073,6 +1109,7 @@ export default function CableDesigner() {
         if (hasEarth) totalWtFormula += `+'${sheetName}'!${earthWtCol}${r}+'${sheetName}'!${earthInsWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) totalWtFormula += `+'${sheetName}'!${isAlWtCol}${r}+'${sheetName}'!${isDrainWtCol}${r}+'${sheetName}'!${isPetWtCol}${r}`;
         if (isInstrumentation && sampleItem.params.hasOverallScreen) totalWtFormula += `+'${sheetName}'!${osAlWtCol}${r}+'${sheetName}'!${osDrainWtCol}${r}+'${sheetName}'!${osPetWtCol}${r}`;
+        if (hasBinderTape) totalWtFormula += `+'${sheetName}'!${btWtCol}${r}`;
         if (hasInnerSheath) totalWtFormula += `+'${sheetName}'!${inShWtCol}${r}`;
         if (hasSeparator) totalWtFormula += `+'${sheetName}'!${sepWtCol}${r}`;
         if (hasArmor) totalWtFormula += `+'${sheetName}'!${armWtCol}${r}`;
@@ -2224,10 +2261,12 @@ export default function CableDesigner() {
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
       isAl: bom.isAlWeight ? (bom.isAlWeight * getPrice('Aluminium Foil', getPrice('Al', 0))) / 1000 : 0,
       isDrain: bom.isDrainWeight ? (bom.isDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
-      isPet: bom.isPetWeight ? (bom.isPetWeight * getPrice('Polyester Tape', getPrice('PE', 25000))) / 1000 : 0,
+      isPet: bom.isPetWeight ? (bom.isPetWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
+      binderTape: bom.binderTapeWeight ? (bom.binderTapeWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
+      binderTapeOverArmor: bom.binderTapeOverArmorWeight ? (bom.binderTapeOverArmorWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
-      osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('PE', 25000)) / 1000 : 0,
+      osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
     };
 
@@ -3545,6 +3584,16 @@ export default function CableDesigner() {
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Sheaths & Armour</h3>
                 {Object.entries(projectItems.reduce((acc, item) => {
+                  // Binder Tape
+                  if (item.result.bom.binderTapeWeight && item.result.bom.binderTapeWeight > 0) {
+                    const btMat = `Polyester Tape (Binder Tape)`;
+                    acc[btMat] = (acc[btMat] || 0) + item.result.bom.binderTapeWeight;
+                  }
+                  // Binder Tape Over Armor
+                  if (item.result.bom.binderTapeOverArmorWeight && item.result.bom.binderTapeOverArmorWeight > 0) {
+                    const btArmMat = `Polyester Tape (Over Armor)`;
+                    acc[btArmMat] = (acc[btArmMat] || 0) + item.result.bom.binderTapeOverArmorWeight;
+                  }
                   // Inner Sheath
                   if (item.result.bom.innerCoveringWeight > 0) {
                     const isMat = `${item.params.innerSheathMaterial || 'PVC'} (Inner Sheath / Filler)`;
@@ -8149,6 +8198,10 @@ export default function CableDesigner() {
                     <SpecRow label="Masterbatch" value={result.bom.masterbatchWeight} unit="kg/km" />
                   )}
                   
+                  {result.bom.binderTapeWeight !== undefined && result.bom.binderTapeWeight > 0 && (
+                    <SpecRow label="Binder Tape (Polyester Tape)" value={result.bom.binderTapeWeight} unit="kg/km" />
+                  )}
+                  
                   {result.bom.innerCoveringWeight > 0 && (
                     <SpecRow label="Inner Covering (PVC)" value={result.bom.innerCoveringWeight} unit="kg/km" />
                   )}
@@ -8175,6 +8228,10 @@ export default function CableDesigner() {
                     </>
                   )}
                   
+                  {result.bom.binderTapeOverArmorWeight !== undefined && result.bom.binderTapeOverArmorWeight > 0 && (
+                    <SpecRow label="Binder Tape Over Armor (Polyester Tape)" value={result.bom.binderTapeOverArmorWeight} unit="kg/km" />
+                  )}
+
                   {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
                     <SpecRow label={`Outer Sheath (${params.sheathMaterial})`} value={result.bom.sheathWeight} unit="kg/km" />
                   )}
@@ -8339,11 +8396,13 @@ export default function CableDesigner() {
                           ] : []),
                           { label: `Earthing Insulation (${params.insulationMaterial})`, cost: breakdown.earthingInsulation },
                           { label: `Metallic Screen (${params.mvScreenType})`, cost: breakdown.mvScreen },
+                          { label: `Binder Tape (Polyester Tape)`, cost: breakdown.binderTape },
                           { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
                           { label: `Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`, cost: breakdown.screen },
                           { label: `Separator Sheath (${params.separatorMaterial || 'PVC'})`, cost: breakdown.separator },
                           { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
                           { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },
+                          { label: `Binder Tape Over Armor (Polyester Tape)`, cost: breakdown.binderTapeOverArmor },
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
                           { label: `Masterbatch`, cost: breakdown.masterbatch },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },

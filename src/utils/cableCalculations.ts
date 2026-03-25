@@ -692,6 +692,8 @@ export interface CalculationResult {
     aluminiumThickness?: number;
     drainWireSize?: number;
     polyesterTapeThickness?: number;
+    binderTapeThickness?: number;
+    binderTapeOverArmorThickness?: number;
     diameterAfterIS?: number;
     diameterAfterOS?: number;
     breakingLoad?: number;
@@ -724,6 +726,7 @@ export interface CalculationResult {
     osPetWeight?: number;
     isMultiplier?: number;
     binderTapeWeight?: number;
+    binderTapeOverArmorWeight?: number;
     totalWeight: number;
   };
   weights?: {
@@ -1249,8 +1252,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
       if (maxDcResistance > 0) {
         // Menggunakan rumus yang sama persis untuk sm dan cm sesuai instruksi:
-        // Diameter = ( (Resistivity / (Resistance_at_20 / 1.003) * 1.01 * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
-        const area_total = (rho / (maxDcResistance / 1.003)) * 1.01 * effectiveParams.cores;
+        // Diameter = ( (Resistivity / ((Resistance_at_20 / 1.003) * 1.01) * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
+        const area_total = (rho / ((maxDcResistance / 1.003) * 1.01)) * effectiveParams.cores;
         conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
       } else {
         const construction = CONDUCTOR_CONSTRUCTION[effectiveParams.conductorType][effectiveParams.size];
@@ -1842,20 +1845,27 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   // Sector shaped reduction
-  if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && effectiveParams.cores >= 3 && !effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
-    // For sector conductors, the laid-up diameter is approximately 2 * (height + insulation thickness)
-    // Since coreDiameter = conductorDiameter + 2 * insulationThickness, 
-    // and conductorDiameter is the height (h), then h + insulationThickness = coreDiameter - insulationThickness.
-    laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+  if (!effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
+    if (effectiveParams.conductorType === 'sm' && totalCores >= 3) {
+      if (totalCores === 3) {
+        laidUpDiameter = 2.14 * coreDiameter;
+      } else if (totalCores === 4) {
+        laidUpDiameter = 2.29 * coreDiameter;
+      } else {
+        laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+      }
+    } else if (effectiveParams.conductorType === 'cm' && totalCores >= 3) {
+      laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+    }
   }
 
   // 3.5. Binder Tape (Polyester Tape) before Inner Sheath
   let binderTapeWeight = 0;
   let binderTapeThickness = 0;
-  if (effectiveParams.cores > 1) {
+  if (effectiveParams.conductorType === 'sm' && effectiveParams.cores > 1) {
     binderTapeThickness = 0.05; // Standard PET tape thickness
     const binderTapeOverlap = 25; // 25% overlap
-    const petDensity = 1.38;
+    const petDensity = densities['Polyester Tape'] || 1.38;
     // Area = PI * (D + t) * t * (1 + overlap/100)
     binderTapeWeight = Math.PI * (laidUpDiameter + binderTapeThickness) * binderTapeThickness * petDensity * (1 + binderTapeOverlap/100);
     laidUpDiameter += 2 * binderTapeThickness;
@@ -2230,6 +2240,16 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 6. Outer Sheath
   // IEC 60502-1 formula: ts = 0.035D + 1.0
+  let binderTapeOverArmorWeight = 0;
+  let binderTapeOverArmorThickness = 0;
+  if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
+    binderTapeOverArmorThickness = 0.05; // Standard PET tape thickness
+    const binderTapeOverlap = 25; // 25% overlap
+    const petDensity = densities['Polyester Tape'] || 1.38;
+    binderTapeOverArmorWeight = Math.PI * (diameterOverArmor + binderTapeOverArmorThickness) * binderTapeOverArmorThickness * petDensity * (1 + binderTapeOverlap/100);
+    diameterOverArmor += 2 * binderTapeOverArmorThickness;
+  }
+
   const fictitiousDiameter = diameterOverArmor;
   if (effectiveParams.standard.includes('NFA2X')) {
     sheathThickness = 0;
@@ -2283,7 +2303,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const isMV = effectiveParams.standard === 'IEC 60502-2';
   const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
   
-  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + masterbatchWeight);
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + binderTapeOverArmorWeight + masterbatchWeight);
 
   const scope = {
     PI: Math.PI,
@@ -2378,6 +2398,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   if (binderTapeWeight > 0) {
     weightDetails.binderTape = evalFormula(binderTapeWeight, `π * (D + t) * t * density * (1 + overlap/100)`, 'binderTape');
+  }
+
+  if (binderTapeOverArmorWeight > 0) {
+    weightDetails.binderTapeOverArmor = evalFormula(binderTapeOverArmorWeight, `π * (D + t) * t * density * (1 + overlap/100)`, 'binderTapeOverArmor');
   }
 
   if (armorWeight > 0) {
@@ -2573,6 +2597,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       aluminiumThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
       drainWireSize: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.5 : undefined,
       polyesterTapeThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
+      binderTapeThickness: binderTapeThickness > 0 ? binderTapeThickness : undefined,
+      binderTapeOverArmorThickness: binderTapeOverArmorThickness > 0 ? binderTapeOverArmorThickness : undefined,
       pairTriadDiameter: formationDiameter,
       breakingLoad: abcData?.breakingLoad,
     },
@@ -2600,7 +2626,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       isDrainWeight: isDrainWeight > 0 ? Number(applyScrap(isDrainWeight, 'Cu').toFixed(1)) : 0,
       isPetWeight: isPetWeight > 0 ? Number(applyScrap(isPetWeight, 'PE').toFixed(1)) : 0,
       osAlWeight: osAlWeight > 0 ? Number(applyScrap(osAlWeight, 'Al').toFixed(1)) : 0,
-      binderTapeWeight: binderTapeWeight > 0 ? Number(applyScrap(binderTapeWeight, 'PE').toFixed(1)) : 0,
+      binderTapeWeight: binderTapeWeight > 0 ? Number(applyScrap(binderTapeWeight, 'Polyester Tape').toFixed(1)) : 0,
+      binderTapeOverArmorWeight: binderTapeOverArmorWeight > 0 ? Number(applyScrap(binderTapeOverArmorWeight, 'Polyester Tape').toFixed(1)) : 0,
       osDrainWeight: osDrainWeight > 0 ? Number(applyScrap(osDrainWeight, 'Cu').toFixed(1)) : 0,
       osPetWeight: osPetWeight > 0 ? Number(applyScrap(osPetWeight, 'PE').toFixed(1)) : 0,
       isMultiplier: isMultiplier,
