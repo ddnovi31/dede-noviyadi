@@ -3,6 +3,25 @@ import { KHA_DATA, KHA_CORRECTION_FACTORS, NYM_KHA_DATA, NYMHY_DATA } from './kh
 import { MV_KHA_DATA } from './mvKhaData';
 import { MARINE_KHA_DATA } from './marineKhaData';
 
+export const CWS_WIRE_DIAMETERS: Record<number, number> = {
+  1.5: 0.4,
+  2.5: 0.4,
+  4: 0.5,
+  6: 0.5,
+  10: 0.66,
+  16: 0.8,
+  25: 1.02,
+  35: 1.04,
+  50: 1.35,
+  70: 1.35,
+  95: 2.14,
+  120: 1.78,
+  150: 2.03,
+  185: 2.03,
+  240: 2.03,
+  300: 2.03,
+};
+
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
 export type InsulationMaterial = string;
@@ -2066,7 +2085,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   } else if (effectiveParams.standard === 'SPLN 43-4 (NYCY)' && effectiveParams.hasScreen) {
     const cwsSize = effectiveParams.screenSize || (nycyData ? nycyData.screenSize : Number(effectiveParams.size));
-    copperWireWeight = cwsSize * densities.Cu * 1.1; // 10% lay factor for concentric wires
+    
+    // Use wire diameter from CWS_WIRE_DIAMETERS if available
+    const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
+    const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
+    // Number of wires = Area / WireArea
+    const wireCount = Math.round(cwsSize / wireArea);
+    
+    copperWireWeight = wireCount * wireArea * densities.Cu * 1.1; // 10% lay factor for concentric wires
     
     // Copper tape gap 300% weight (coverage 25%)
     // Assuming tape thickness 0.1mm
@@ -2079,9 +2105,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     screenWeight = copperWireWeight + copperTapeWeight + polyesterTapeWeight;
     
     if (!effectiveParams.manualScreenThickness) {
-      screenThickness = 0.5 + 0.1; // wires + tape approx
+      // diameter = diameterUnderArmor + (2 * wireDia) + (2 * thickness Copper Tape) + (4 * thickness Polyester)
+      // screenThickness is the radial thickness added to diameterUnderArmor
+      screenThickness = wireDia + 0.1 + (2 * 0.05); 
     }
-    diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
+    diameterOverOverallScreen = diameterUnderArmor + (2 * wireDia) + (2 * 0.1) + (4 * 0.05);
   }
 
   // 4.6 Separator Sheath - New Feature

@@ -579,8 +579,8 @@ export default function CableDesigner() {
       if (hasBinderTape) addGroup('Binder Tape', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (!isMV && hasScreen) {
-        if (sampleItem.params.standard === 'SPLN 43-4 (NYCY)') {
-          addGroup('Met Screen (NYCY)', hMScr, ['Size (mm2)', 'OD (mm)', 'Cu Wire Wt (kg/km)', 'Cu Tape Wt (kg/km)', 'PET Tape Wt (kg/km)', 'Total Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+          if (sampleItem.params.standard === 'SPLN 43-4 (NYCY)') {
+          addGroup('Met Screen (NYCY)', hMScr, ['Dia Wire Screen (mm)', 'Cu Tape Thk (mm)', 'PET Tape Thk (mm)', 'OD (mm)', 'Cu Wire Wt (kg/km)', 'Cu Tape Wt (kg/km)', 'PET Tape Wt (kg/km)',  'Total Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
         } else {
           addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
         }
@@ -947,6 +947,10 @@ export default function CableDesigner() {
         // Met Screen (LV)
         if (!isMV && hasScreen) {
           mScrThkCol = pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
+          // Add tape thicknesses
+            pushCol(0.1, fmtNum); // Copper Tape Thickness (mm)
+            pushCol(0.05, fmtNum); // Polyester Tape Thickness (mm)
+          
           currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
           
@@ -956,19 +960,13 @@ export default function CableDesigner() {
             const cuTapeWtCol = pushCol(item.result.bom.copperTapeWeight || 0, fmtNum);
             const petTapeWtCol = pushCol(item.result.bom.polyesterTapeWeight || 0, fmtNum);
             
+        
             mScrWtCol = pushCol(null, fmtNum, `${cuWireWtCol}${r}+${cuTapeWtCol}${r}+${petTapeWtCol}${r}`);
-            const mScrPrcCol = pushCol(metScreenPrice, fmtRp); // Using CWS price for the wire
             
+            const mScrPrcCol = pushCol(metScreenPrice, fmtRp); // Using CWS price for the wire
             const ctsPrc = getPrice('CTS', getPrice('Cu', 0));
             const petPrc = getPrice('Polyester Tape', 10000);
             mScrCstCol = pushCol(null, fmtRp, `(${cuWireWtCol}${r}*${mScrPrcCol}${r} + ${cuTapeWtCol}${r}*${ctsPrc} + ${petTapeWtCol}${r}*${petPrc})/1000`);
-          } else {
-            if (item.params.screenType === 'CTS') {
-              mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}-2*${mScrThkCol}${r}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1*(1+${materialScrap['Cu'] || 0}/100)`;
-            }
-            mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
-            const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
-            mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
           }
         }
 
