@@ -578,7 +578,13 @@ export default function CableDesigner() {
       const hasBinderTape = sampleItem.params.conductorType === 'sm' && sampleItem.params.cores > 1;
       if (hasBinderTape) addGroup('Binder Tape', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (!isMV && hasScreen) addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+      if (!isMV && hasScreen) {
+        if (sampleItem.params.standard === 'SPLN 43-4 (NYCY)') {
+          addGroup('Met Screen (NYCY)', hMScr, ['Size (mm2)', 'OD (mm)', 'Cu Wire Wt (kg/km)', 'Cu Tape Wt (kg/km)', 'PET Tape Wt (kg/km)', 'Total Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+        } else {
+          addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
+        }
+      }
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasArmor) {
         const armorLabel = sampleItem.params.standard === 'LiYCY' ? 'Braid Screen' : 'Armor';
@@ -943,13 +949,27 @@ export default function CableDesigner() {
           mScrThkCol = pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
+          
           let mScrWtFormula = `${item.result.bom.screenWeight || 0}`;
-          if (item.params.screenType === 'CTS') {
-            mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}-2*${mScrThkCol}${r}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1*(1+${materialScrap['Cu'] || 0}/100)`;
+          if (item.params.standard === 'SPLN 43-4 (NYCY)') {
+            const cuWireWtCol = pushCol(item.result.bom.copperWireWeight || 0, fmtNum);
+            const cuTapeWtCol = pushCol(item.result.bom.copperTapeWeight || 0, fmtNum);
+            const petTapeWtCol = pushCol(item.result.bom.polyesterTapeWeight || 0, fmtNum);
+            
+            mScrWtCol = pushCol(null, fmtNum, `${cuWireWtCol}${r}+${cuTapeWtCol}${r}+${petTapeWtCol}${r}`);
+            const mScrPrcCol = pushCol(metScreenPrice, fmtRp); // Using CWS price for the wire
+            
+            const ctsPrc = getPrice('CTS', getPrice('Cu', 0));
+            const petPrc = getPrice('Polyester Tape', 10000);
+            mScrCstCol = pushCol(null, fmtRp, `(${cuWireWtCol}${r}*${mScrPrcCol}${r} + ${cuTapeWtCol}${r}*${ctsPrc} + ${petTapeWtCol}${r}*${petPrc})/1000`);
+          } else {
+            if (item.params.screenType === 'CTS') {
+              mScrWtFormula = `PI()*${mScrThkCol}${r}*(${currentDiaFormula}-2*${mScrThkCol}${r}+${mScrThkCol}${r})*${getDensity('Cu')}*1.1*(1+${materialScrap['Cu'] || 0}/100)`;
+            }
+            mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
+            const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
+            mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
           }
-          mScrWtCol = pushCol(null, fmtNum, mScrWtFormula);
-          const mScrPrcCol = pushCol(metScreenPrice, fmtRp);
-          mScrCstCol = pushCol(null, fmtRp, `${mScrWtCol}${r}*${mScrPrcCol}${r}/1000`);
         }
 
         // Separator
@@ -2296,7 +2316,9 @@ export default function CableDesigner() {
       armorTape: bom.armorTapeWeight ? (bom.armorTapeWeight * armorTapePrice) / 1000 : 0,
       sheath: (bom.sheathWeight * sheathPrice) / 1000,
       innerCovering: (bom.innerCoveringWeight * innerPrice) / 1000,
-      screen: (bom.screenWeight * screenPrice) / 1000,
+      screen: params.standard === 'SPLN 43-4 (NYCY)' 
+        ? (((bom.copperWireWeight || 0) * getPrice('CWS', getPrice('Cu', 0))) + ((bom.copperTapeWeight || 0) * getPrice('CTS', getPrice('Cu', 0))) + ((bom.polyesterTapeWeight || 0) * getPrice('Polyester Tape', 10000))) / 1000
+        : (bom.screenWeight * screenPrice) / 1000,
       separator: (bom.separatorWeight * separatorPrice) / 1000,
       semiCond: (bom.semiCondWeight * semiPrice) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
@@ -3581,6 +3603,16 @@ export default function CableDesigner() {
                   if (item.result.bom.mvScreenWeight > 0) {
                     const screenMat = item.params.mvScreenType === 'TCWB' ? 'Tinned Copper (TCWB)' : 'Copper Tape/Wire';
                     acc[screenMat] = (acc[screenMat] || 0) + item.result.bom.mvScreenWeight;
+                  }
+                  if (item.result.bom.screenWeight > 0) {
+                    if (item.params.standard === 'SPLN 43-4 (NYCY)') {
+                      acc['Overall Screen (Copper Wire)'] = (acc['Overall Screen (Copper Wire)'] || 0) + (item.result.bom.copperWireWeight || 0);
+                      acc['Overall Screen (Copper Tape)'] = (acc['Overall Screen (Copper Tape)'] || 0) + (item.result.bom.copperTapeWeight || 0);
+                      acc['Overall Screen (Polyester Tape)'] = (acc['Overall Screen (Polyester Tape)'] || 0) + (item.result.bom.polyesterTapeWeight || 0);
+                    } else {
+                      const screenMat = `Overall Screen (${item.params.screenType})`;
+                      acc[screenMat] = (acc[screenMat] || 0) + item.result.bom.screenWeight;
+                    }
                   }
                   return acc;
                 }, {} as Record<string, number>)).map(([mat, weight]) => (
@@ -6850,7 +6882,6 @@ export default function CableDesigner() {
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Size (mm²)</label>
                                 <select
                                   value={params.screenSize || 16}
-                                  disabled={isNYCY}
                                   onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
                                   className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                                 >
@@ -8298,7 +8329,16 @@ export default function CableDesigner() {
                   )}
                   
                   {result.bom.screenWeight > 0 && (
-                    <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.bom.screenWeight} unit="kg/km" />
+                    params.standard === 'SPLN 43-4 (NYCY)' ? (
+                      <>
+                        <SpecRow label={`Overall Screen (Copper Wire ${params.screenSize}mm²)`} value={result.bom.copperWireWeight} unit="kg/km" />
+                        <SpecRow label="Overall Screen (Copper Tape Gap 300%)" value={result.bom.copperTapeWeight} unit="kg/km" />
+                        <SpecRow label="Overall Screen (Polyester Tape)" value={result.bom.polyesterTapeWeight} unit="kg/km" />
+                        <SpecRow label="Total Screen Weight" value={result.bom.screenWeight} unit="kg/km" />
+                      </>
+                    ) : (
+                      <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.bom.screenWeight} unit="kg/km" />
+                    )
                   )}
                   
                   {result.bom.separatorWeight > 0 && (
@@ -8491,7 +8531,17 @@ export default function CableDesigner() {
                           { label: `Metallic Screen (${params.mvScreenType})`, cost: breakdown.mvScreen },
                           { label: `Binder Tape (Polyester Tape)`, cost: breakdown.binderTape },
                           { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
-                          { label: `Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`, cost: breakdown.screen },
+                          ...(params.standard === 'SPLN 43-4 (NYCY)' ? (() => {
+                            const prices = { ...materialPrices, ...(params.customMaterialPrices || {}) };
+                            const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
+                            return [
+                              { label: `Overall Screen (Copper Wire ${params.screenSize}mm²)`, cost: ((result.bom.copperWireWeight || 0) * getPrice('CWS', getPrice('Cu', 0))) / 1000 },
+                              { label: `Overall Screen (Copper Tape Gap 300%)`, cost: ((result.bom.copperTapeWeight || 0) * getPrice('CTS', getPrice('Cu', 0))) / 1000 },
+                              { label: `Overall Screen (Polyester Tape)`, cost: ((result.bom.polyesterTapeWeight || 0) * getPrice('Polyester Tape', 10000)) / 1000 },
+                            ];
+                          })() : [
+                            { label: `Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`, cost: breakdown.screen },
+                          ]),
                           { label: `Separator Sheath (${params.separatorMaterial || 'PVC'})`, cost: breakdown.separator },
                           { label: `Armor Wire/Flat (${params.armorType})`, cost: breakdown.armorWire },
                           { label: `Armor Tape (${params.armorType})`, cost: breakdown.armorTape },

@@ -769,6 +769,9 @@ export interface CalculationResult {
     isMultiplier?: number;
     binderTapeWeight?: number;
     binderTapeOverArmorWeight?: number;
+    copperWireWeight?: number;
+    copperTapeWeight?: number;
+    polyesterTapeWeight?: number;
     totalWeight: number;
   };
   weights?: {
@@ -2023,6 +2026,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 4.5 Screen (CTS, SWS) - New Feature
   let screenWeight = 0;
+  let copperWireWeight = 0;
+  let copperTapeWeight = 0;
+  let polyesterTapeWeight = 0;
   let screenThickness = effectiveParams.manualScreenThickness || 0;
   let diameterOverOverallScreen = diameterUnderArmor;
 
@@ -2060,10 +2066,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   } else if (effectiveParams.standard === 'SPLN 43-4 (NYCY)' && effectiveParams.hasScreen) {
     const cwsSize = effectiveParams.screenSize || (nycyData ? nycyData.screenSize : Number(effectiveParams.size));
-    screenWeight = cwsSize * densities.Cu * 1.1; // 10% lay factor for concentric wires
-    // Add copper tape weight (approx 0.1mm x width)
-    const tapeWeight = Math.PI * diameterUnderArmor * 0.1 * densities.Cu * 1.2; 
-    screenWeight += tapeWeight;
+    copperWireWeight = cwsSize * densities.Cu * 1.1; // 10% lay factor for concentric wires
+    
+    // Copper tape gap 300% weight (coverage 25%)
+    // Assuming tape thickness 0.1mm
+    copperTapeWeight = Math.PI * diameterUnderArmor * 0.1 * densities.Cu * 0.25 * 1.1; 
+    
+    // Polyester tape weight
+    // Assuming thickness 0.05mm, 25% overlap
+    polyesterTapeWeight = Math.PI * diameterUnderArmor * 0.05 * (densities['Polyester Tape'] || 1.38) * 1.25;
+    
+    screenWeight = copperWireWeight + copperTapeWeight + polyesterTapeWeight;
     
     if (!effectiveParams.manualScreenThickness) {
       screenThickness = 0.5 + 0.1; // wires + tape approx
@@ -2726,6 +2739,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       osAlWeight: (osAlWeight || 0) > 0 ? Number(applyScrap(osAlWeight || 0, 'Al').toFixed(1)) : 0,
       binderTapeWeight: (binderTapeWeight || 0) > 0 ? Number(applyScrap(binderTapeWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
       binderTapeOverArmorWeight: (binderTapeOverArmorWeight || 0) > 0 ? Number(applyScrap(binderTapeOverArmorWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
+      copperWireWeight: (copperWireWeight || 0) > 0 ? Number(applyScrap(copperWireWeight || 0, 'Cu').toFixed(1)) : 0,
+      copperTapeWeight: (copperTapeWeight || 0) > 0 ? Number(applyScrap(copperTapeWeight || 0, 'Cu').toFixed(1)) : 0,
+      polyesterTapeWeight: (polyesterTapeWeight || 0) > 0 ? Number(applyScrap(polyesterTapeWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
       osDrainWeight: (osDrainWeight || 0) > 0 ? Number(applyScrap(osDrainWeight || 0, 'Cu').toFixed(1)) : 0,
       osPetWeight: (osPetWeight || 0) > 0 ? Number(applyScrap(osPetWeight || 0, 'PE').toFixed(1)) : 0,
       isMultiplier: isMultiplier || 0,
