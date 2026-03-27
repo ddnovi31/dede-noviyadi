@@ -3815,10 +3815,10 @@ export default function CableDesigner() {
                           <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 text-center">2</td>
-                          <td className="border border-slate-400 p-2 font-medium">Reference Standard</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                          <td className="border border-slate-400 p-1 text-center">2</td>
+                          <td className="border border-slate-400 p-1 font-medium">Reference Standard</td>
+                          <td className="border border-slate-400 p-1 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
                             {(() => {
                               const editKey = `${groupKey}-ref-standard`;
                               const defaultVal = "SPLN D3.010-1:2014\nADDENDUM SPLN D3.010-1:2015";
@@ -3827,7 +3827,7 @@ export default function CableDesigner() {
                                   value={specEdits[editKey] ?? defaultVal}
                                   onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                                   className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
-                                  rows={2}
+                                  rows={1}
                                 />
                               );
                             })()}
@@ -4048,10 +4048,10 @@ export default function CableDesigner() {
                           <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 text-center">2</td>
-                          <td className="border border-slate-400 p-2 font-medium">Reference Standard</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                          <td className="border border-slate-400 p-1 text-center">2</td>
+                          <td className="border border-slate-400 p-1 font-medium">Reference Standard</td>
+                          <td className="border border-slate-400 p-1 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
                             {(() => {
                               const editKey = `${groupKey}-ref-standard-t`;
                               const defaultVal = "SPLN D3.010-1 : 2014\nADENDUM SPLN D3.010-1:2015";
@@ -4060,7 +4060,7 @@ export default function CableDesigner() {
                                   value={specEdits[editKey] ?? defaultVal}
                                   onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                                   className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
-                                  rows={2}
+                                  rows={1}
                                 />
                               );
                             })()}
@@ -4423,7 +4423,7 @@ export default function CableDesigner() {
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 text-center">
+                      <td className="border border-slate-400 p-1 text-center">
                         <input
                           type="text"
                           value={specEdits[`${groupKey}-no-2`] ?? "2"}
@@ -4431,7 +4431,7 @@ export default function CableDesigner() {
                           className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
                         />
                       </td>
-                      <td className="border border-slate-400 p-2 font-medium">
+                      <td className="border border-slate-400 p-1 font-medium">
                         <input
                           type="text"
                           value={specEdits[`${groupKey}-standard-ref-label`] ?? "Standard Reference"}
@@ -4439,7 +4439,7 @@ export default function CableDesigner() {
                           className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
                         />
                       </td>
-                      <td className="border border-slate-400 p-2 text-center">
+                      <td className="border border-slate-400 p-1 text-center">
                         <input
                           type="text"
                           value={specEdits[`${groupKey}-standard-ref-unit`] ?? "-"}
@@ -4447,7 +4447,7 @@ export default function CableDesigner() {
                           className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
                         />
                       </td>
-                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                      <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
                         {(() => {
                           const firstItem = items[0];
                           let std = firstItem.result.general.standardReference;
@@ -4464,7 +4464,7 @@ export default function CableDesigner() {
                               value={specEdits[editKey] ?? std}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                               className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
-                              rows={2}
+                              rows={1}
                             />
                           );
                         })()}
