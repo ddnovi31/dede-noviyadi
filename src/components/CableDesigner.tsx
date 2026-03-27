@@ -8883,13 +8883,33 @@ export default function CableDesigner() {
 
                     <div className="flex items-center justify-between mb-2 px-1">
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Drum List</h4>
-                      <button 
-                        onClick={() => setDrumData(INITIAL_DRUM_DATA)}
-                        className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 transition-all"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Reset to Default
-                      </button>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            const newDrum = {
+                              type: `NEW-${drumData.length + 1}`,
+                              diameterWithCover: 0,
+                              barrelDiameter: 0,
+                              innerWidth: 0,
+                              outerWidth: 0,
+                              weight: 0,
+                              price: 0
+                            };
+                            setDrumData([...drumData, newDrum]);
+                          }}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add New Drum
+                        </button>
+                        <button 
+                          onClick={() => setDrumData(INITIAL_DRUM_DATA)}
+                          className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Reset to Default
+                        </button>
+                      </div>
                     </div>
 
                     <div className="pr-2 border border-slate-100 rounded-xl">
@@ -8897,18 +8917,31 @@ export default function CableDesigner() {
                         <table className="w-full text-[10px] text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                              <th className="p-2 font-bold text-slate-500 uppercase">Type</th>
-                              <th className="p-2 font-bold text-slate-500 uppercase">D (mm)</th>
-                              <th className="p-2 font-bold text-slate-500 uppercase">d (mm)</th>
-                              <th className="p-2 font-bold text-slate-500 uppercase">L (mm)</th>
-                              <th className="p-2 font-bold text-slate-500 uppercase">W (kg)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Tipe</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Dia. Flange (D)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Dia. Barrel (d)</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Inner Width</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Outer Width</th>
+                              <th className="p-2 font-bold text-slate-500 uppercase">Weight (kg)</th>
                               <th className="p-2 font-bold text-slate-500 uppercase text-right">Price (Rp)</th>
                             </tr>
                           </thead>
                           <tbody>
                             {drumData.map((drum, idx) => (
-                              <tr key={drum.type} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                <td className="p-2 font-mono font-bold text-indigo-600">{drum.type}</td>
+                              <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                <td className="p-2">
+                                  <input 
+                                    type="text" 
+                                    value={drum.type} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, type: e.target.value };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-24 px-2 py-1 text-xs border border-slate-200 rounded font-mono font-bold text-indigo-600 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Tipe Drum"
+                                  />
+                                </td>
                                 <td className="p-2">
                                   <input 
                                     type="number" 
@@ -8919,6 +8952,7 @@ export default function CableDesigner() {
                                       setDrumData(newData);
                                     }}
                                     className="w-16 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Diameter With Cover (D)"
                                   />
                                 </td>
                                 <td className="p-2">
@@ -8931,6 +8965,20 @@ export default function CableDesigner() {
                                       setDrumData(newData);
                                     }}
                                     className="w-16 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Barrel Diameter (d)"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    type="number" 
+                                    value={drum.innerWidth ?? 0} 
+                                    onChange={(e) => {
+                                      const newData = [...drumData];
+                                      newData[idx] = { ...drum, innerWidth: Number(e.target.value) };
+                                      setDrumData(newData);
+                                    }}
+                                    className="w-16 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Inner Width"
                                   />
                                 </td>
                                 <td className="p-2">
@@ -8943,6 +8991,7 @@ export default function CableDesigner() {
                                       setDrumData(newData);
                                     }}
                                     className="w-16 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Outer Width"
                                   />
                                 </td>
                                 <td className="p-2">
@@ -8955,19 +9004,33 @@ export default function CableDesigner() {
                                       setDrumData(newData);
                                     }}
                                     className="w-16 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    title="Weight"
                                   />
                                 </td>
                                 <td className="p-2 text-right">
-                                  <input 
-                                    type="number" 
-                                    value={drum.price ?? 0} 
-                                    onChange={(e) => {
-                                      const newData = [...drumData];
-                                      newData[idx] = { ...drum, price: Number(e.target.value) };
-                                      setDrumData(newData);
-                                    }}
-                                    className="w-24 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500 text-right"
-                                  />
+                                  <div className="flex items-center justify-end gap-2">
+                                    <input 
+                                      type="number" 
+                                      value={drum.price ?? 0} 
+                                      onChange={(e) => {
+                                        const newData = [...drumData];
+                                        newData[idx] = { ...drum, price: Number(e.target.value) };
+                                        setDrumData(newData);
+                                      }}
+                                      className="w-24 px-2 py-1 text-xs border border-slate-200 rounded font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-500 text-right"
+                                      title="Price"
+                                    />
+                                    <button 
+                                      onClick={() => {
+                                        const newData = drumData.filter((_, i) => i !== idx);
+                                        setDrumData(newData);
+                                      }}
+                                      className="text-slate-300 hover:text-red-500 transition-colors"
+                                      title="Delete Drum"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
