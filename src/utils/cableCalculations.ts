@@ -858,7 +858,7 @@ const CONDUCTOR_CONSTRUCTION: Record<string, Record<number, { wireCount: number,
   re: {
     0.5: { wireCount: 1, wireDiameter: 0.78 },
     0.75: { wireCount: 1, wireDiameter: 0.95 },
-    1: { wireCount: 1, wireDiameter: 1.10 },
+    1: { wireCount: 1, wireDiameter: 1.13 },
     1.5: { wireCount: 1, wireDiameter: 1.35 },
     2.5: { wireCount: 1, wireDiameter: 1.72 },
     4: { wireCount: 1, wireDiameter: 2.19 },

@@ -3745,6 +3745,8 @@ export default function CableDesigner() {
             
             const isMV = p.standard === 'IEC 60502-2';
             const isInstrumentation = p.standard === 'BS EN 50288-7';
+            const isNYA = p.standard.includes('(NYA)');
+            const isNYAF = p.standard.includes('(NYAF)');
             const isABC = p.standard.includes('NFA2X');
             const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC';
 
@@ -4387,15 +4389,64 @@ export default function CableDesigner() {
                       <>
                         {/* 1. General Info */}
                     <tr>
-                      <td className="border border-slate-400 p-2 text-center">1</td>
-                      <td className="border border-slate-400 p-2 font-medium">Product Brand</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
-                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">MULTI KABEL</td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-no-1`] ?? "1"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-no-1`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-product-brand-label`] ?? "Product Brand"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-product-brand-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-product-brand-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-product-brand-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-product-brand-val`] ?? "MULTI KABEL"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-product-brand-val`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold uppercase"
+                        />
+                      </td>
                     </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 text-center">2</td>
-                      <td className="border border-slate-400 p-2 font-medium">Standard Reference</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-no-2`] ?? "2"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-no-2`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-standard-ref-label`] ?? "Standard Reference"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-standard-ref-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-standard-ref-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-standard-ref-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
                         {(() => {
                           const firstItem = items[0];
@@ -4409,20 +4460,41 @@ export default function CableDesigner() {
                           }
                           const editKey = `${groupKey}-standard-group`;
                           return (
-                            <input
-                              type="text"
+                            <textarea
                               value={specEdits[editKey] ?? std}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
-                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none resize-none"
+                              rows={2}
                             />
                           );
                         })()}
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 text-center">3</td>
-                      <td className="border border-slate-400 p-2 font-medium">Type & Size of Cable</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-no-3`] ?? "3"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-no-3`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-type-size-label`] ?? "Type & Size of Cable"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-size-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-type-size-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-size-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         let itemSizeDesignation = '';
                         if (p.formationType === 'Pair') {
@@ -4461,12 +4533,43 @@ export default function CableDesigner() {
                     </tr>
                     {p.standard !== 'SPLN 41-6 : 1981 AAC' && (
                       <tr>
-                        <td className="border border-slate-400 p-2 text-center">4</td>
-                        <td className="border border-slate-400 p-2 font-medium">Rated Voltage</td>
-                        <td className="border border-slate-400 p-2 text-center">kV</td>
-                        {items.map((item, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">{item.params.voltage}</td>
-                        ))}
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-no-4`] ?? "4"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-no-4`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 font-medium">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-rated-voltage-label`] ?? "Rated Voltage"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-rated-voltage-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-rated-voltage-unit`] ?? "kV"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-rated-voltage-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((item, idx) => {
+                          const editKey = `${groupKey}-rated-voltage-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? item.params.voltage}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
 
@@ -4482,55 +4585,189 @@ export default function CableDesigner() {
                     {/* Conductor (Phase) */}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? 4 : 3}></td>
-                      <td className="border border-slate-400 p-2 font-bold">• Conductor{p.hasEarthing ? ' (Phase)' : ''}</td>
-                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 font-bold">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-label`] ?? `• Conductor${p.hasEarthing ? ' (Phase)' : ''}`}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-unit`] ?? ""}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                     </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 pl-4">- Material of Conductor</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((_, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.conductorMaterial} ({p.conductorMaterial === 'Cu' ? 'Copper' : 'Aluminium'})</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-material-label`] ?? "- Material of Conductor"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-material-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-material-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-material-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((_, idx) => {
+                        const defaultVal = `${p.conductorMaterial} (${p.conductorMaterial === 'Cu' ? 'Copper' : 'Aluminium'})`;
+                        const editKey = `${groupKey}-conductor-material-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? defaultVal}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 pl-4">- Shape of Conductor</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((_, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">
-                          {p.conductorType === 're' ? 'Round Solid' : 
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-shape-label`] ?? "- Shape of Conductor"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-shape-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-shape-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-shape-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((_, idx) => {
+                        const defaultVal = `${p.conductorType === 're' ? 'Round Solid' : 
                            p.conductorType === 'rm' ? 'Round Stranded' : 
                            p.conductorType === 'cm' ? 'Compacted Stranded' : 
-                           p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} ({p.conductorType})
-                        </td>
-                      ))}
+                           p.conductorType === 'sm' ? 'Sector Stranded' : 'Flexible'} (${p.conductorType})`;
+                        const editKey = `${groupKey}-conductor-shape-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? defaultVal}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     {isMV && (
                       <tr>
-                        <td className="border border-slate-400 p-2 pl-4">- Conductor Screen</td>
-                        <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((_, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">Semi-conductive</td>
-                        ))}
+                        <td className="border border-slate-400 p-2 pl-4">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-conductor-screen-label`] ?? "- Conductor Screen"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-screen-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-conductor-screen-unit`] ?? "-"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-screen-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((_, idx) => {
+                          const editKey = `${groupKey}-conductor-screen-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? "Semi-conductive"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Diameter of Conductor (Approx.)</td>
-                      <td className="border border-slate-400 p-2 text-center">mm</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.conductorDiameter.toFixed(2)}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-dia-label`] ?? "- Diameter of Conductor (Approx.)"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-dia-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-conductor-dia-unit`] ?? "mm"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-dia-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-conductor-dia-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? item.result.spec.conductorDiameter.toFixed(2)}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
 
                     {p.fireguard && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 font-bold">• Fire Barrier</td>
-                        <td className="border border-slate-400 p-2 text-center">-</td>
-                        {items.map((_, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">MGT (Mica Glass Tape)</td>
-                        ))}
+                        <td className="border border-slate-400 p-2 font-bold">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-fire-barrier-label`] ?? "• Fire Barrier"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-fire-barrier-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-fire-barrier-unit`] ?? "-"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-fire-barrier-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((_, idx) => {
+                          const editKey = `${groupKey}-fire-barrier-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? "MGT (Mica Glass Tape)"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
 
@@ -4539,16 +4776,54 @@ export default function CableDesigner() {
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Insulation{p.hasEarthing ? ' (Phase)' : ''}</td>
-                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-insulation-label`] ?? `• Insulation${p.hasEarthing ? ' (Phase)' : ''}`}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-insulation-unit`] ?? ""}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                     <tr>
-                      <td className="border border-slate-400 p-2 pl-4">- Material of Insulation</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
-                      {items.map((_, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{p.insulationMaterial}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-insulation-material-label`] ?? "- Material of Insulation"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-material-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-insulation-material-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-material-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((_, idx) => {
+                        const editKey = `${groupKey}-insulation-material-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? p.insulationMaterial}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     {isMV && (
                       <tr>
@@ -4692,95 +4967,90 @@ export default function CableDesigner() {
                     )}
 
 
-                    {/* Metallic Screen */}
-                    {(isMV || p.hasScreen) && (
-                      <>
-                        <tr>
-                          <td className="border border-slate-400 p-2 text-center"></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Metallic Screen</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              {isMV ? p.mvScreenType : p.screenType}
-                            </td>
-                          ))}
-                        </tr>
-                        {(!isMV && !isInstrumentation && p.hasScreen) ? (
-                          <>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- Dia Wire Screen</td>
-                              <td className="border border-slate-400 p-2 text-center">mm</td>
-                              {items.map((item, idx) => {
-                                const cwsSize = item.params.screenSize || (item.params.standard === 'SPLN 43-4 (NYCY)' ? Number(item.params.size) : 16);
-                                const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
-                                return <td key={idx} className="border border-slate-400 p-2 text-center">{wireDia}</td>;
-                              })}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- Thickness of Copper Tape</td>
-                              <td className="border border-slate-400 p-2 text-center">mm</td>
-                              {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>)}
-                            </tr>
-                            <tr>
-                              <td className="border border-slate-400 p-2 text-center"></td>
-                              <td className="border border-slate-400 p-2 pl-4">- Thickness of Polyester Tape</td>
-                              <td className="border border-slate-400 p-2 text-center">mm</td>
-                              {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">0.05</td>)}
-                            </tr>
-                          </>
-                        ) : (
-                          <>
-                            {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
-                              <tr>
-                                <td className="border border-slate-400 p-2 text-center"></td>
-                                <td className="border border-slate-400 p-2 pl-4">- Thickness of Tape</td>
-                                <td className="border border-slate-400 p-2 text-center">mm</td>
-                                {items.map((_, idx) => (
-                                  <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>
-                                ))}
-                              </tr>
-                            )}
-                            {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
-                              <tr>
-                                <td className="border border-slate-400 p-2 text-center"></td>
-                                <td className="border border-slate-400 p-2 pl-4">- Cross-sectional Area</td>
-                                <td className="border border-slate-400 p-2 text-center">mm²</td>
-                                {items.map((_, idx) => (
-                                  <td key={idx} className="border border-slate-400 p-2 text-center">
-                                    {isMV ? p.mvScreenSize : p.screenSize}
-                                  </td>
-                                ))}
-                              </tr>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-
                     {/* Inner Sheath */}
                     {p.hasInnerSheath && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Inner Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-label`] ?? "• Inner Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-unit`] ?? ""}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Material of Inner Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.innerSheathMaterial}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-material-label`] ?? "- Material of Inner Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-material-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-material-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-material-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const editKey = `${groupKey}-inner-sheath-material-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? p.innerSheathMaterial}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Inner Sheath (Nom.)</td>
-                          <td className="border border-slate-400 p-2 text-center">mm</td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.innerCoveringThickness.toFixed(1)}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-thickness-label`] ?? "- Thickness of Inner Sheath (Nom.)"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-thickness-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-inner-sheath-thickness-unit`] ?? "mm"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-thickness-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-inner-sheath-thickness-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? item.result.spec.innerCoveringThickness.toFixed(1)}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-4">- Colour of Inner Sheath</td>
@@ -4802,30 +5072,320 @@ export default function CableDesigner() {
                       </>
                     )}
 
+                    {/* Metallic Screen (MV) */}
+                    {isMV && p.hasScreen && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-metallic-screen-label`] ?? "• Metallic Screen"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-metallic-screen-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const screenType = isMV ? p.mvScreenType : p.screenType;
+                            const screenMapping: Record<string, string> = {
+                              'CWS': 'Copper Wire Screen (CWS)',
+                              'CTS': 'Copper Tape Screen (CTS)',
+                              'CWB': 'Copper Wire Braided (CWB)',
+                              'TCWB': 'Tinned Copper Wire Braided (TCWB)'
+                            };
+                            const defaultVal = screenMapping[screenType] || screenType;
+                            const editKey = `${groupKey}-metallic-screen-type-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-thk-tape-label`] ?? "- Thickness of Tape"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-label`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                              />
+                            </td>
+                            <td className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-thk-tape-unit`] ?? "mm"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-unit`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                            {items.map((_, idx) => {
+                              const editKey = `${groupKey}-thk-tape-val-${idx}`;
+                              return (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">
+                                  <input
+                                    type="text"
+                                    value={specEdits[editKey] ?? "0.1"}
+                                    onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                    className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )}
+                        {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cross-area-label`] ?? "- Size"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-label`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                              />
+                            </td>
+                            <td className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cross-area-unit`] ?? "mm²"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-unit`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                            {items.map((_, idx) => {
+                              const editKey = `${groupKey}-cross-area-val-${idx}`;
+                              const defaultVal = isMV ? p.mvScreenSize : p.screenSize;
+                              return (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">
+                                  <input
+                                    type="text"
+                                    value={specEdits[editKey] ?? defaultVal}
+                                    onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                    className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )}
+                      </>
+                    )}
+
+                    {/* Metallic Screen (LV) */}
+                    {!isMV && p.hasScreen && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-metallic-screen-label`] ?? "• Metallic Screen"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-metallic-screen-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const screenType = p.screenType;
+                            const screenMapping: Record<string, string> = {
+                              'CWS': 'Copper Wire Screen (CWS)',
+                              'CTS': 'Copper Tape Screen (CTS)',
+                              'CWB': 'Copper Wire Braided (CWB)',
+                              'TCWB': 'Tinned Copper Wire Braided (TCWB)'
+                            };
+                            const defaultVal = screenMapping[screenType] || screenType;
+                            const editKey = `${groupKey}-metallic-screen-type-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {(p.screenType === 'CTS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-thk-tape-label-lv`] ?? "- Thickness of Tape"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-label-lv`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                              />
+                            </td>
+                            <td className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-thk-tape-unit-lv`] ?? "mm"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-unit-lv`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                            {items.map((_, idx) => {
+                              const editKey = `${groupKey}-thk-tape-val-lv-${idx}`;
+                              return (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">
+                                  <input
+                                    type="text"
+                                    value={specEdits[editKey] ?? "0.1"}
+                                    onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                    className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )}
+                        {(p.screenType === 'CWS') && (
+                          <tr>
+                            <td className="border border-slate-400 p-2 text-center"></td>
+                            <td className="border border-slate-400 p-2 pl-4">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cross-area-label-lv`] ?? "- Size"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-label-lv`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                              />
+                            </td>
+                            <td className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cross-area-unit-lv`] ?? "mm²"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-unit-lv`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                            {items.map((_, idx) => {
+                              const editKey = `${groupKey}-cross-area-val-lv-${idx}`;
+                              const defaultVal = p.screenSize;
+                              return (
+                                <td key={idx} className="border border-slate-400 p-2 text-center">
+                                  <input
+                                    type="text"
+                                    value={specEdits[editKey] ?? defaultVal}
+                                    onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                    className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )}
+                      </>
+                    )}
+
                     {/* Separator Sheath */}
                     {(p.standard === 'IEC 60502-1' && (p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored'))) && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Separator Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-sheath-label`] ?? "• Separator Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-sheath-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-sheath-unit`] ?? ""}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-sheath-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Material of Separator Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.separatorMaterial || 'Polyester Tape'}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-material-label`] ?? "- Material of Separator Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-material-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-material-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-material-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const editKey = `${groupKey}-separator-material-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? (p.separatorMaterial || 'Polyester Tape')}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Separator Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center">mm</td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              {item.result.spec.separatorThickness?.toFixed(1) || '0.1'}
-                            </td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-thickness-label`] ?? "- Thickness of Separator Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-thickness-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-separator-thickness-unit`] ?? "mm"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-separator-thickness-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-separator-thickness-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? (item.result.spec.separatorThickness?.toFixed(1) || '0.1')}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                       </>
                     )}
@@ -4835,29 +5395,95 @@ export default function CableDesigner() {
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={3}></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Armouring</td>
-                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-label`] ?? "• Armouring"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-unit`] ?? ""}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Material of Armour</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.armorType === 'Unarmored' ? '-' : p.armorType}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-material-label`] ?? "- Material of Armour"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-material-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-material-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-material-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const armorMapping: Record<string, string> = {
+                              'SWA': 'Steel Wire Armour (SWA)',
+                              'SFA': 'Steel Flat Wire & Tape Armour (SFA)',
+                              'RGB': 'Steel wire & Tape Armour (RGB)',
+                              'GSWB': 'Galvanized Steel Wire Braided (GSWB)',
+                              'STA': 'Steel Tape Armour (STA)',
+                              'AWA': 'Aluminium Wire Armour (AWA)'
+                            };
+                            const defaultVal = armorMapping[p.armorType] || (p.armorType === 'Unarmored' ? '-' : p.armorType);
+                            const editKey = `${groupKey}-armouring-material-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
                           <td className="border border-slate-400 p-2 pl-4">
-                            {p.standard === 'IEC 60092-353' ? '- Coverage' : '- Diameter of Armour (Approx.)'}
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-size-label`] ?? (p.standard === 'IEC 60092-353' ? '- Coverage' : '- Diameter of Armour (Approx.)')}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-size-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
                           </td>
                           <td className="border border-slate-400 p-2 text-center">
-                            {p.standard === 'IEC 60092-353' ? '%' : 'mm'}
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-armouring-size-unit`] ?? (p.standard === 'IEC 60092-353' ? '%' : 'mm')}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armouring-size-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
                           </td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              {p.armorType === 'Unarmored' ? '-' : (p.standard === 'IEC 60092-353' ? '90' : item.result.spec.armorThickness.toFixed(2))}
-                            </td>
-                          ))}
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-armouring-size-val-${idx}`;
+                            const defaultVal = p.armorType === 'Unarmored' ? '-' : (p.standard === 'IEC 60092-353' ? '90' : item.result.spec.armorThickness.toFixed(2));
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? defaultVal}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                       </>
                     )}
@@ -4867,27 +5493,103 @@ export default function CableDesigner() {
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={4}></td>
-                          <td className="border border-slate-400 p-2 font-bold">• Outer Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 font-bold">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-label`] ?? "• Outer Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-unit`] ?? ""}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Material of Outer Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
-                          {items.map((_, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{p.sheathMaterial}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-material-label`] ?? "- Material of Outer Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-material-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-material-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-material-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const editKey = `${groupKey}-outer-sheath-material-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? p.sheathMaterial}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Thickness of Outer Sheath (Nom.)</td>
-                          <td className="border border-slate-400 p-2 text-center">mm</td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.spec.sheathThickness.toFixed(1)}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-thickness-label`] ?? "- Thickness of Outer Sheath (Nom.)"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-thickness-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-thickness-unit`] ?? "mm"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-thickness-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-outer-sheath-thickness-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? item.result.spec.sheathThickness.toFixed(1)}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         <tr>
-                          <td className="border border-slate-400 p-2 pl-4">- Colour of Outer Sheath</td>
-                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-color-label`] ?? "- Colour of Outer Sheath"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-color-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-outer-sheath-color-unit`] ?? "-"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-sheath-color-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
                           {items.map((_, idx) => {
                             const defaultColor = p.standard.includes('(NYM)') ? 'White' : p.standard === 'IEC 60502-2' ? 'Red' : p.fireguard ? 'Orange' : 'Black';
                             const editKey = `${groupKey}-outer-sheath-color-${idx}`;
@@ -4910,16 +5612,54 @@ export default function CableDesigner() {
 
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 font-medium">Overall Diameter of Cable (Approx.)</td>
-                      <td className="border border-slate-400 p-2 text-center">mm</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center font-bold">{item.result.spec.overallDiameter.toFixed(1)}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-overall-dia-label`] ?? "Overall Diameter of Cable (Approx.)"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-dia-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-overall-dia-unit`] ?? "mm"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-dia-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-overall-dia-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? item.result.spec.overallDiameter.toFixed(1)}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 font-medium">Marking of Cable (e.g)</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-marking-label`] ?? "Marking of Cable (e.g)"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-marking-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
                         {(() => {
                           const firstItem = items[0];
@@ -4968,49 +5708,204 @@ export default function CableDesigner() {
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 font-medium">Weight of Cable (Approx.)</td>
-                      <td className="border border-slate-400 p-2 text-center">Kg/Km</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(item.result.bom.totalWeight).toLocaleString()}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-weight-label`] ?? "Weight of Cable (Approx.)"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-weight-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-weight-unit`] ?? "Kg/Km"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-weight-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-weight-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? Math.round(item.result.bom.totalWeight).toLocaleString()}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-400 p-2 text-center"></td>
+                      <td className="border border-slate-400 p-2 font-medium">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-bending-radius-label`] ?? "Minimum Bending Radius"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-bending-radius-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-medium"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-bending-radius-unit`] ?? "mm"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-bending-radius-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-bending-radius-val-${idx}`;
+                        let defaultVal = '18 x OD';
+                        if (isMV) defaultVal = '20 x OD';
+                        else if (isNYA) defaultVal = '12 x OD';
+                        else if (isNYAF) defaultVal = '8 x OD';
+                        else if (isInstrumentation) defaultVal = '18 x OD';
+                        
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? defaultVal}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
 
                     {/* 6. Packing */}
                     <tr className="bg-slate-50">
                       <td className="border border-slate-400 p-2 text-center font-bold">6</td>
-                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Packing :</td>
+                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-packing-label`] ?? "Packing :"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packing-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Standard Length</td>
-                      <td className="border border-slate-400 p-2 text-center">meter</td>
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-std-length-label`] ?? "- Standard Length"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-std-length-unit`] ?? "meter"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.standardLength}</td>;
+                        const editKey = `${groupKey}-std-length-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? packing.standardLength}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
                       })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Diameter of Drum</td>
-                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-dia-label`] ?? "- Diameter of Drum"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-dia-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-dia-unit`] ?? "mm"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-dia-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.diameterWithCover}</td>;
+                        const editKey = `${groupKey}-drum-dia-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? packing.selectedDrum.diameterWithCover}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
                       })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Width of Drum</td>
-                      <td className="border border-slate-400 p-2 text-center">mm</td>
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-width-label`] ?? "- Width of Drum"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-width-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-width-unit`] ?? "mm"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-width-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{packing.selectedDrum.innerWidth}</td>;
+                        const editKey = `${groupKey}-drum-width-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? packing.selectedDrum.innerWidth}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
                       })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Drum Type</td>
-                      <td className="border border-slate-400 p-2 text-center">-</td>
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-type-label`] ?? "- Drum Type"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-type-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-type-unit`] ?? "-"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-type-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         const editKey = `${groupKey}-drum-type-${idx}`;
                         return (
@@ -5027,45 +5922,136 @@ export default function CableDesigner() {
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Weight per Drum (Approx.)</td>
-                      <td className="border border-slate-400 p-2 text-center">Kg</td>
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-weight-label`] ?? "- Weight per Drum (Approx.)"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-weight-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-drum-weight-unit`] ?? "Kg"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-weight-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
                       {items.map((item, idx) => {
                         const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight);
                         const cableWeight = (item.result.bom.totalWeight * packing.standardLength) / 1000;
-                        return <td key={idx} className="border border-slate-400 p-2 text-center">{Math.round(cableWeight + packing.selectedDrum.weight)}</td>;
+                        const editKey = `${groupKey}-drum-weight-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? Math.round(cableWeight + packing.selectedDrum.weight)}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
                       })}
                     </tr>
 
                     {/* 7. Electrical Data */}
                     <tr className="bg-slate-50">
                       <td className="border border-slate-400 p-2 text-center font-bold">7</td>
-                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">Electrical Data :</td>
+                      <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-elec-data-label`] ?? "Electrical Data :"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-elec-data-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- AC Test Voltage</td>
-                      <td className="border border-slate-400 p-2 text-center">kV/5 Min</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.testVoltage}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-ac-test-label`] ?? "- AC Test Voltage"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-ac-test-unit`] ?? "kV/5 Min"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-ac-test-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? item.result.electrical.testVoltage}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
-                      <td className="border border-slate-400 p-2 pl-4">- Max. D.C Resistance of Conductor at 20°C</td>
-                      <td className="border border-slate-400 p-2 text-center">Ohm/Km</td>
-                      {items.map((item, idx) => (
-                        <td key={idx} className="border border-slate-400 p-2 text-center">{item.result.electrical.maxDcResistance}</td>
-                      ))}
+                      <td className="border border-slate-400 p-2 pl-4">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-max-dc-res-label`] ?? "- Max. D.C Resistance of Conductor at 20°C"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-max-dc-res-label`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                        />
+                      </td>
+                      <td className="border border-slate-400 p-2 text-center">
+                        <input
+                          type="text"
+                          value={specEdits[`${groupKey}-max-dc-res-unit`] ?? "Ohm/Km"}
+                          onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-max-dc-res-unit`]: e.target.value }))}
+                          className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                        />
+                      </td>
+                      {items.map((item, idx) => {
+                        const editKey = `${groupKey}-max-dc-res-val-${idx}`;
+                        return (
+                          <td key={idx} className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[editKey] ?? item.result.electrical.maxDcResistance}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center" rowSpan={p.standard.includes('(NYMHY)') ? 2 : (p.standard === 'IEC 60092-353' ? 2 : 3)}></td>
                         <td className="border border-slate-400 p-2 pl-4 font-bold">
-                          {p.standard === 'IEC 60092-353' 
-                            ? '- Max. Current Carrying Capacity at 45°C as per IEC 61892-4' 
-                            : `- Max. Current Carrying Capacity${(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}`}
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-current-cap-label`] ?? (p.standard === 'IEC 60092-353' 
+                              ? '- Max. Current Carrying Capacity at 45°C as per IEC 61892-4' 
+                              : `- Max. Current Carrying Capacity${(p.standard === 'IEC 60502-1' || p.standard === 'SNI 04-6629.3 (NYA)' || p.standard === 'SNI 04-6629.3 (NYAF)') ? ' at 30°C' : ''}`)}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-current-cap-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none font-bold"
+                          />
                         </td>
-                        <td className="border border-slate-400 p-2 text-center"></td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-current-cap-unit`] ?? ""}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-current-cap-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
                         {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2"></td>)}
                       </tr>
                     )}
@@ -5074,54 +6060,172 @@ export default function CableDesigner() {
                         {p.standard !== 'IEC 60092-353' && (
                           <tr>
                             <td className="border border-slate-400 p-2 pl-8">
-                              {p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard.includes('(NYM)') ? 'In Air at 40°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`))}
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cap-ground-label`] ?? (p.standard.includes('(NYA)') || p.standard.includes('(NYAF)') ? 'In Pipe' : (p.standard.includes('(NYM)') ? 'In Air at 40°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Trefoil' : `In Ground${p.standard === 'IEC 60502-2' ? ' (at 20°C)' : ''}`))) }
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-ground-label`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                              />
                             </td>
-                            <td className="border border-slate-400 p-2 text-center">A</td>
-                            {items.map((item, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">{item.result.electrical.currentCapacityGround}</td>
-                            ))}
+                            <td className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[`${groupKey}-cap-ground-unit`] ?? "A"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-ground-unit`]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                            {items.map((item, idx) => {
+                              const editKey = `${groupKey}-cap-ground-val-${idx}`;
+                              return (
+                                <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-600">
+                                  <input
+                                    type="text"
+                                    value={specEdits[editKey] ?? item.result.electrical.currentCapacityGround}
+                                    onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                    className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold text-indigo-600"
+                                  />
+                                </td>
+                              );
+                            })}
                           </tr>
                         )}
                         <tr>
                           <td className="border border-slate-400 p-2 pl-8">
-                            {p.standard.includes('(NYM)') ? 'In Air at 30°C' : (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : (p.standard === 'IEC 60092-353' ? ' at 45°C' : '')}`)}
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-cap-air-label`] ?? (
+                                p.standard.includes('(NYM)') ? 'In Air at 30°C' : 
+                                (p.standard === 'IEC 60502-1' && p.cores === 1 ? 'Flat Touching' : 
+                                `In Air${p.standard === 'IEC 60502-2' ? ' (at 30°C)' : (p.standard === 'IEC 60092-353' ? ' at 45°C' : '')}`)
+                              )}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-air-label`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                            />
                           </td>
-                          <td className="border border-slate-400 p-2 text-center">A</td>
-                          {items.map((item, idx) => (
-                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
-                          ))}
+                          <td className="border border-slate-400 p-2 text-center">
+                            <input
+                              type="text"
+                              value={specEdits[`${groupKey}-cap-air-unit`] ?? "A"}
+                              onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-air-unit`]: e.target.value }))}
+                              className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-cap-air-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">
+                                <input
+                                  type="text"
+                                  value={specEdits[editKey] ?? item.result.electrical.currentCapacityAir}
+                                  onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                  className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold text-emerald-600"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                       </>
                     )}
                     {p.standard.includes('(NYMHY)') && (
                       <tr>
                         <td className="border border-slate-400 p-2 pl-8">
-                          Current Carrying Capacity In Air at 30° (A)
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-cap-air-nymhy-label`] ?? "Current Carrying Capacity In Air at 30° (A)"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-air-nymhy-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                          />
                         </td>
-                        <td className="border border-slate-400 p-2 text-center">A</td>
-                        {items.map((item, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">{item.result.electrical.currentCapacityAir}</td>
-                        ))}
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-cap-air-nymhy-unit`] ?? "A"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cap-air-nymhy-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((item, idx) => {
+                          const editKey = `${groupKey}-cap-air-nymhy-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-emerald-600">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? item.result.electrical.currentCapacityAir}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none font-bold text-emerald-600"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
                     {p.standard === 'IEC 60502-2' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 pl-4">- Max. Partial Discharge</td>
-                        <td className="border border-slate-400 p-2 text-center">pC</td>
-                        {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">5</td>)}
+                        <td className="border border-slate-400 p-2 pl-4">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-partial-discharge-label`] ?? "- Max. Partial Discharge"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-partial-discharge-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-partial-discharge-unit`] ?? "pC"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-partial-discharge-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((_, idx) => {
+                          const editKey = `${groupKey}-partial-discharge-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? "5"}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
                     {p.standard !== 'BS EN 50288-7' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center"></td>
-                        <td className="border border-slate-400 p-2 pl-4">- Max. Short Circuit Rating of Conductor</td>
-                        <td className="border border-slate-400 p-2 text-center">kA / sec</td>
-                        {items.map((item, idx) => (
-                          <td key={idx} className="border border-slate-400 p-2 text-center">
-                            {item.result.electrical.shortCircuitCapacity.toFixed(2)}
-                          </td>
-                        ))}
+                        <td className="border border-slate-400 p-2 pl-4">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-short-circuit-rating-label`] ?? "- Max. Short Circuit Rating of Conductor"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-short-circuit-rating-label`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
+                          />
+                        </td>
+                        <td className="border border-slate-400 p-2 text-center">
+                          <input
+                            type="text"
+                            value={specEdits[`${groupKey}-short-circuit-rating-unit`] ?? "kA / sec"}
+                            onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-short-circuit-rating-unit`]: e.target.value }))}
+                            className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                          />
+                        </td>
+                        {items.map((item, idx) => {
+                          const editKey = `${groupKey}-short-circuit-rating-val-${idx}`;
+                          return (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              <input
+                                type="text"
+                                value={specEdits[editKey] ?? item.result.electrical.shortCircuitCapacity.toFixed(2)}
+                                onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                                className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     )}
                       </>
