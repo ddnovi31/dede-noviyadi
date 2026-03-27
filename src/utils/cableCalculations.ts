@@ -1738,12 +1738,13 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.mvScreenType && effectiveParams.mvScreenType !== 'None') {
     if (effectiveParams.mvScreenType === 'CTS') {
       // Copper Tape Screen: typically 0.1mm thickness, overlapped
-      mvScreenThickness = effectiveParams.manualMvScreenThickness || 0.2; // Effective thickness with overlap
+      const tapeThk = effectiveParams.manualMvScreenThickness ? effectiveParams.manualMvScreenThickness / 2 : 0.1;
+      mvScreenThickness = tapeThk * 2; // Effective thickness for diameter
       diameterOverScreen = coreDiameter + (2 * mvScreenThickness);
       const meanDiameter = coreDiameter + mvScreenThickness;
       // Area = pi * D * t * overlap_factor
-      const area = Math.PI * meanDiameter * (effectiveParams.manualMvScreenThickness ? effectiveParams.manualMvScreenThickness / 2 : 0.1) * 1.25; // 0.1mm tape, 25% overlap
-      mvScreenWeightPerCore = area * densities.Cu;
+      const area = Math.PI * meanDiameter * tapeThk * 1.25; // 0.1mm tape, 25% overlap
+      mvScreenWeightPerCore = area * densities.Cu * 1.003;
     } else if (effectiveParams.mvScreenType === 'CWS') {
       // Copper Wire Screen: specified by cross section (e.g., 16mm2)
       const screenSize = effectiveParams.mvScreenSize || 16;
@@ -1754,19 +1755,16 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       
       if (wireCount > 0 && wireDia > 0) {
           const area = wireCount * (Math.PI * wireDia * wireDia / 4);
-          mvScreenWeightPerCore = area * densities.Cu * 1.05;
+          mvScreenWeightPerCore = area * densities.Cu * 1.05 * 1.003;
           mvScreenThickness = wireDia;
       } else {
-          mvScreenWeightPerCore = screenSize * densities.Cu * 1.05; // 5% lay factor
+          // MV CWS Diameter logic: size <= 35 -> 0.66, > 35 -> 1.35
+          wireDia = screenSize <= 35 ? 0.66 : 1.35;
+          const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
+          wireCount = Math.ceil(screenSize / wireArea);
           
-          // Approximate thickness based on wire diameter for that size
-          if (effectiveParams.manualMvScreenThickness) {
-            mvScreenThickness = effectiveParams.manualMvScreenThickness;
-          } else {
-            if (screenSize <= 16) mvScreenThickness = 1.0;
-            else if (screenSize <= 25) mvScreenThickness = 1.2;
-            else mvScreenThickness = 1.5;
-          }
+          mvScreenWeightPerCore = wireCount * wireArea * densities.Cu * 1.05 * 1.003;
+          mvScreenThickness = wireDia;
       }
       
       diameterOverScreen = coreDiameter + (2 * mvScreenThickness);
@@ -2183,7 +2181,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
     const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
-    armorWireWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
+    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    armorWireWeight = numWires * wireArea * armorDensity * 1.05 * mvFactor; // 5% lay factor
     armorWeight = armorWireWeight;
     armorWireDiameter = armorThickness;
   } else if (effectiveParams.armorType === 'STA') {
@@ -2203,8 +2202,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t * (1 + overlap/100)
     const overlapMultiplier = 1 + (overlap / 100);
+    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
-    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
+    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02 * mvFactor; // 2% lay factor
     armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
@@ -2224,10 +2224,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanFlatDiameter = diameterUnderArmor + flatThickness;
     const flatArea = Math.PI * meanFlatDiameter * flatThickness * 0.9; // 90% coverage
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
-    const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2; // Overlap
+    const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel); // 2% lay factor
-    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel);
+    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor; // 2% lay factor
+    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor;
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
@@ -2258,10 +2259,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanWireDiameter) / (wireDia * 1.1));
     const wireArea = numWires * Math.PI * Math.pow(wireDia / 2, 2);
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
-    const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 1.2;
+    const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel); // 5% lay factor for wire
-    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel); // 2% for tape
+    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel) * mvFactor; // 5% lay factor for wire
+    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel) * mvFactor; // 2% for tape
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB' || effectiveParams.armorType === 'CWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
