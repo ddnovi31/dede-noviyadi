@@ -2053,38 +2053,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   const isIEC60502_1 = effectiveParams.standard === 'IEC 60502-1';
 
-  if (isIEC60502_1 && effectiveParams.hasScreen && effectiveParams.screenType && effectiveParams.screenType !== 'None') {
-    if (effectiveParams.screenType === 'CTS') {
-      if (!effectiveParams.manualScreenThickness) screenThickness = 0.2; // Effective thickness with overlap
-      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
-      const meanDiameter = diameterUnderArmor + screenThickness;
-      const area = Math.PI * meanDiameter * (effectiveParams.manualScreenThickness ? effectiveParams.manualScreenThickness / 2 : 0.1) * 1.25; // 0.1mm tape, 25% overlap
-      screenWeight = area * (densities.CTS || densities.Cu);
-    } else if (effectiveParams.screenType === 'CWS') {
-      const cwsSize = effectiveParams.screenSize || 16;
-      
-      // New logic for n x d
-      let wireCount = effectiveParams.manualScreenWireCount || 0;
-      let wireDia = effectiveParams.manualScreenWireDiameter || 0;
-      
-      if (wireCount > 0 && wireDia > 0) {
-          const area = wireCount * (Math.PI * wireDia * wireDia / 4);
-          screenWeight = area * (densities.CWS || densities.Cu) * 1.1;
-          screenThickness = wireDia;
-      } else {
-          // Copper Wire Screen weight calculation
-          // Weight (kg/km) = Area (mm2) * Density (kg/dm3) * Lay Factor (approx 1.1)
-          screenWeight = cwsSize * (densities.CWS || densities.Cu) * 1.1;
-          
-          // Approximate thickness based on wire diameter for that size
-          // 16mm2 -> ~0.7mm, 25mm2 -> ~0.9mm, 35mm2 -> ~1.1mm
-          if (!effectiveParams.manualScreenThickness) screenThickness = Math.sqrt(cwsSize / 16) * 0.7;
-      }
-      
-      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
-    }
-  } else if (effectiveParams.standard === 'SPLN 43-4 (NYCY)' && effectiveParams.hasScreen) {
-    const cwsSize = effectiveParams.screenSize || (nycyData ? nycyData.screenSize : Number(effectiveParams.size));
+  if ((isIEC60502_1 || effectiveParams.standard === 'SPLN 43-4 (NYCY)') && effectiveParams.hasScreen) {
+    const cwsSize = effectiveParams.screenSize || (effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? (nycyData ? nycyData.screenSize : Number(effectiveParams.size)) : 16);
     
     // Use wire diameter from CWS_WIRE_DIAMETERS if available
     const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;

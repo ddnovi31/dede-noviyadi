@@ -6,6 +6,7 @@ import {
   CableDesignParams,
   CalculationResult,
   CABLE_SIZES,
+  CWS_WIRE_DIAMETERS,
   AAC_SIZES,
   AAC_DATA,
   ConductorMaterial,
@@ -177,6 +178,9 @@ export default function CableDesigner() {
     }
     return DEFAULT_PARAMS;
   });
+
+  const isMV = params.standard === 'IEC 60502-2';
+  const isInstrumentation = params.standard === 'BS EN 50288-7';
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
@@ -578,12 +582,8 @@ export default function CableDesigner() {
       const hasBinderTape = sampleItem.params.conductorType === 'sm' && sampleItem.params.cores > 1;
       if (hasBinderTape) addGroup('Binder Tape', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasInnerSheath) addGroup('Inner Sheath', hInSh, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-      if (!isMV && hasScreen) {
-          if (sampleItem.params.standard === 'SPLN 43-4 (NYCY)') {
-          addGroup('Met Screen (NYCY)', hMScr, ['Dia Wire Screen (mm)', 'Cu Tape Thk (mm)', 'PET Tape Thk (mm)', 'OD (mm)', 'Cu Wire Wt (kg/km)', 'Cu Tape Wt (kg/km)', 'PET Tape Wt (kg/km)',  'Total Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-        } else {
-          addGroup('Met Screen', hMScr, ['Thk/Size', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
-        }
+      if (!isMV && !isInstrumentation && hasScreen) {
+        addGroup('Met Screen', hMScr, ['Dia Wire Screen (mm)', 'Cu Tape Thk (mm)', 'PET Tape Thk (mm)', 'OD (mm)', 'Cu Wire Wt (kg/km)', 'Cu Tape Wt (kg/km)', 'PET Tape Wt (kg/km)',  'Total Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       }
       if (hasSeparator) addGroup('Separator', hSep, ['Thk (mm)', 'OD (mm)', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
       if (hasArmor) {
@@ -945,29 +945,28 @@ export default function CableDesigner() {
         }
 
         // Met Screen (LV)
-        if (!isMV && hasScreen) {
-          mScrThkCol = pushCol(item.result.spec.screenThickness || item.params.screenSize || 0, fmtNum);
-          // Add tape thicknesses
-            pushCol(0.1, fmtNum); // Copper Tape Thickness (mm)
-            pushCol(0.05, fmtNum); // Polyester Tape Thickness (mm)
+        if (!isMV && !isInstrumentation && hasScreen) {
+          const cwsSize = item.params.screenSize || (item.params.standard === 'SPLN 43-4 (NYCY)' ? Number(item.params.size) : 16);
+          const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
+          mScrThkCol = pushCol(wireDia, fmtNum); // Dia Wire Screen (mm)
           
-          currentDiaFormula = `(${currentDiaFormula}+2*${mScrThkCol}${r})`;
+          pushCol(0.1, fmtNum); // Copper Tape Thickness (mm)
+          pushCol(0.05, fmtNum); // Polyester Tape Thickness (mm)
+          
+          const totalRadialThk = wireDia + 0.1 + (2 * 0.05);
+          currentDiaFormula = `(${currentDiaFormula}+2*${totalRadialThk})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
           
-          let mScrWtFormula = `${item.result.bom.screenWeight || 0}`;
-          if (item.params.standard === 'SPLN 43-4 (NYCY)') {
-            const cuWireWtCol = pushCol(item.result.bom.copperWireWeight || 0, fmtNum);
-            const cuTapeWtCol = pushCol(item.result.bom.copperTapeWeight || 0, fmtNum);
-            const petTapeWtCol = pushCol(item.result.bom.polyesterTapeWeight || 0, fmtNum);
-            
-        
-            mScrWtCol = pushCol(null, fmtNum, `${cuWireWtCol}${r}+${cuTapeWtCol}${r}+${petTapeWtCol}${r}`);
-            
-            const mScrPrcCol = pushCol(metScreenPrice, fmtRp); // Using CWS price for the wire
-            const ctsPrc = getPrice('CTS', getPrice('Cu', 0));
-            const petPrc = getPrice('Polyester Tape', 10000);
-            mScrCstCol = pushCol(null, fmtRp, `(${cuWireWtCol}${r}*${mScrPrcCol}${r} + ${cuTapeWtCol}${r}*${ctsPrc} + ${petTapeWtCol}${r}*${petPrc})/1000`);
-          }
+          const cuWireWtCol = pushCol(item.result.bom.copperWireWeight || 0, fmtNum);
+          const cuTapeWtCol = pushCol(item.result.bom.copperTapeWeight || 0, fmtNum);
+          const petTapeWtCol = pushCol(item.result.bom.polyesterTapeWeight || 0, fmtNum);
+          
+          mScrWtCol = pushCol(null, fmtNum, `${cuWireWtCol}${r}+${cuTapeWtCol}${r}+${petTapeWtCol}${r}`);
+          
+          const mScrPrcCol = pushCol(metScreenPrice, fmtRp); // Using CWS price for the wire
+          const ctsPrc = getPrice('CTS', getPrice('Cu', 0));
+          const petPrc = getPrice('Polyester Tape', 10000);
+          mScrCstCol = pushCol(null, fmtRp, `(${cuWireWtCol}${r}*${mScrPrcCol}${r} + ${cuTapeWtCol}${r}*${ctsPrc} + ${petTapeWtCol}${r}*${petPrc})/1000`);
         }
 
         // Separator
@@ -2314,7 +2313,7 @@ export default function CableDesigner() {
       armorTape: bom.armorTapeWeight ? (bom.armorTapeWeight * armorTapePrice) / 1000 : 0,
       sheath: (bom.sheathWeight * sheathPrice) / 1000,
       innerCovering: (bom.innerCoveringWeight * innerPrice) / 1000,
-      screen: params.standard === 'SPLN 43-4 (NYCY)' 
+      screen: (!isMV && !isInstrumentation && params.hasScreen) 
         ? (((bom.copperWireWeight || 0) * getPrice('CWS', getPrice('Cu', 0))) + ((bom.copperTapeWeight || 0) * getPrice('CTS', getPrice('Cu', 0))) + ((bom.polyesterTapeWeight || 0) * getPrice('Polyester Tape', 10000))) / 1000
         : (bom.screenWeight * screenPrice) / 1000,
       separator: (bom.separatorWeight * separatorPrice) / 1000,
@@ -3745,6 +3744,7 @@ export default function CableDesigner() {
             const p = firstItem.params;
             
             const isMV = p.standard === 'IEC 60502-2';
+            const isInstrumentation = p.standard === 'BS EN 50288-7';
             const isABC = p.standard.includes('NFA2X');
             const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC';
 
@@ -4705,27 +4705,56 @@ export default function CableDesigner() {
                             </td>
                           ))}
                         </tr>
-                        {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
-                          <tr>
-                            <td className="border border-slate-400 p-2 text-center"></td>
-                            <td className="border border-slate-400 p-2 pl-4">- Thickness of Tape</td>
-                            <td className="border border-slate-400 p-2 text-center">mm</td>
-                            {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>
-                            ))}
-                          </tr>
-                        )}
-                        {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
-                          <tr>
-                            <td className="border border-slate-400 p-2 text-center"></td>
-                            <td className="border border-slate-400 p-2 pl-4">- Cross-sectional Area</td>
-                            <td className="border border-slate-400 p-2 text-center">mm²</td>
-                            {items.map((_, idx) => (
-                              <td key={idx} className="border border-slate-400 p-2 text-center">
-                                {isMV ? p.mvScreenSize : p.screenSize}
-                              </td>
-                            ))}
-                          </tr>
+                        {(!isMV && !isInstrumentation && p.hasScreen) ? (
+                          <>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- Dia Wire Screen</td>
+                              <td className="border border-slate-400 p-2 text-center">mm</td>
+                              {items.map((item, idx) => {
+                                const cwsSize = item.params.screenSize || (item.params.standard === 'SPLN 43-4 (NYCY)' ? Number(item.params.size) : 16);
+                                const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
+                                return <td key={idx} className="border border-slate-400 p-2 text-center">{wireDia}</td>;
+                              })}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- Thickness of Copper Tape</td>
+                              <td className="border border-slate-400 p-2 text-center">mm</td>
+                              {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>)}
+                            </tr>
+                            <tr>
+                              <td className="border border-slate-400 p-2 text-center"></td>
+                              <td className="border border-slate-400 p-2 pl-4">- Thickness of Polyester Tape</td>
+                              <td className="border border-slate-400 p-2 text-center">mm</td>
+                              {items.map((_, idx) => <td key={idx} className="border border-slate-400 p-2 text-center">0.05</td>)}
+                            </tr>
+                          </>
+                        ) : (
+                          <>
+                            {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
+                              <tr>
+                                <td className="border border-slate-400 p-2 text-center"></td>
+                                <td className="border border-slate-400 p-2 pl-4">- Thickness of Tape</td>
+                                <td className="border border-slate-400 p-2 text-center">mm</td>
+                                {items.map((_, idx) => (
+                                  <td key={idx} className="border border-slate-400 p-2 text-center">0.1</td>
+                                ))}
+                              </tr>
+                            )}
+                            {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
+                              <tr>
+                                <td className="border border-slate-400 p-2 text-center"></td>
+                                <td className="border border-slate-400 p-2 pl-4">- Cross-sectional Area</td>
+                                <td className="border border-slate-400 p-2 text-center">mm²</td>
+                                {items.map((_, idx) => (
+                                  <td key={idx} className="border border-slate-400 p-2 text-center">
+                                    {isMV ? p.mvScreenSize : p.screenSize}
+                                  </td>
+                                ))}
+                              </tr>
+                            )}
+                          </>
                         )}
                       </>
                     )}
@@ -6871,20 +6900,20 @@ export default function CableDesigner() {
                                 onChange={(e) => handleParamChange('screenType', e.target.value as any)}
                                 className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                               >
-                                <option value="CTS">CTS (Copper Tape Screen)</option>
-                                <option value="CWS">CWS (Copper Wire Screen)</option>
+                                <option value="CTS" disabled={isLV}>CTS (Copper Tape Screen)</option>
+                                <option value="CWS">CWS (Copper Wire + Tape + Polyester)</option>
                               </select>
                             </div>
                             {params.screenType === 'CWS' && (
                               <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Size (mm²)</label>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Screen Size (mm²)</label>
                                 <select
                                   value={params.screenSize || 16}
                                   onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
                                   className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                                 >
                                   {[1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240].map(s => (
-                                    <option key={s} value={s}>{s} mm²</option>
+                                    <option key={s} value={s}>{s} mm² (Wire Dia: {CWS_WIRE_DIAMETERS[s] || 0.8}mm)</option>
                                   ))}
                                 </select>
                               </div>
@@ -8137,7 +8166,16 @@ export default function CableDesigner() {
                     )}
                     
                     {result.spec.screenThickness && (
-                      <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.spec.screenThickness} unit="mm" />
+                      (!isMV && !isInstrumentation) ? (
+                        <>
+                          <SpecRow label="Dia Wire Screen" value={CWS_WIRE_DIAMETERS[params.screenSize || (params.standard === 'SPLN 43-4 (NYCY)' ? params.size : 16)] || 0.8} unit="mm" />
+                          <SpecRow label="Copper Tape Thickness" value={0.1} unit="mm" />
+                          <SpecRow label="Polyester Tape Thickness" value={0.05} unit="mm" />
+                          <SpecRow label="Overall Screen Thickness" value={result.spec.screenThickness} unit="mm" />
+                        </>
+                      ) : (
+                        <SpecRow label={`Overall Screen (${params.screenType}${params.screenType === 'CWS' ? ` ${params.screenSize}mm²` : ''})`} value={result.spec.screenThickness} unit="mm" />
+                      )
                     )}
                     {result.spec.separatorThickness && (
                       <SpecRow label={params.standard === 'LiYCY' ? "Inner Tape Thickness" : "Separator Sheath Thickness"} value={result.spec.separatorThickness} unit="mm" />
@@ -8327,10 +8365,10 @@ export default function CableDesigner() {
                   )}
                   
                   {result.bom.screenWeight > 0 && (
-                    params.standard === 'SPLN 43-4 (NYCY)' ? (
+                    (!isMV && !isInstrumentation) ? (
                       <>
-                        <SpecRow label={`Overall Screen (Copper Wire ${params.screenSize}mm²)`} value={result.bom.copperWireWeight} unit="kg/km" />
-                        <SpecRow label="Overall Screen (Copper Tape Gap 300%)" value={result.bom.copperTapeWeight} unit="kg/km" />
+                        <SpecRow label={`Overall Screen (Copper Wire ${params.screenSize || (params.standard === 'SPLN 43-4 (NYCY)' ? params.size : 16)}mm²)`} value={result.bom.copperWireWeight} unit="kg/km" />
+                        <SpecRow label="Overall Screen (Copper Tape)" value={result.bom.copperTapeWeight} unit="kg/km" />
                         <SpecRow label="Overall Screen (Polyester Tape)" value={result.bom.polyesterTapeWeight} unit="kg/km" />
                         <SpecRow label="Total Screen Weight" value={result.bom.screenWeight} unit="kg/km" />
                       </>
