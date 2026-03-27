@@ -188,7 +188,8 @@ export interface MaterialDensities {
   LSZH: number;
   Steel: number;
   SteelWire: number;
-  SemiCond: number;
+  'Inner Semi Conductive': number;
+  'Outer Semi Conductive': number;
   MGT: number;
   TCu: number;
   'PVC-FR': number;
@@ -220,7 +221,8 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   LSZH: 1.5,
   Steel: 7.85,
   SteelWire: 7.85,
-  SemiCond: 1.15,
+  'Inner Semi Conductive': 1.15,
+  'Outer Semi Conductive': 1.15,
   MGT: 2.2,
   TCu: 9.2,
   'PVC-FR': 1.55,
@@ -769,6 +771,8 @@ export interface CalculationResult {
     armorWireWeight?: number;
     armorTapeWeight?: number;
     sheathWeight: number;
+    innerSemiCondWeight: number;
+    outerSemiCondWeight: number;
     semiCondWeight: number;
     mvScreenWeight: number;
     mgtWeight: number;
@@ -1804,8 +1808,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : (insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores);
   const totalEarthingInsulationWeight = earthingInsulationWeightPerCore * earthingCores;
   
-  const semiCondWeightPerCore = semiCondArea * densities.SemiCond; // Density for semi-cond
-  const totalSemiCondWeight = semiCondWeightPerCore * effectiveParams.cores;
+  const innerSemiCondWeightPerCore = (conductorScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness) ** 2 - rCond ** 2) * densities['Inner Semi Conductive']) : 0;
+  const outerSemiCondWeightPerCore = (insulationScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness + insulationThickness + insulationScreenThickness) ** 2 - (rCond + conductorScreenThickness + insulationThickness) ** 2) * densities['Outer Semi Conductive']) : 0;
+  const totalInnerSemiCondWeight = innerSemiCondWeightPerCore * effectiveParams.cores;
+  const totalOuterSemiCondWeight = outerSemiCondWeightPerCore * effectiveParams.cores;
+  const totalSemiCondWeight = totalInnerSemiCondWeight + totalOuterSemiCondWeight;
 
   // 3. Laying up
   const totalCores = effectiveParams.cores + earthingCores;
@@ -2440,7 +2447,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     densityLSZH: densities.LSZH,
     densitySteel: densities.Steel,
     densitySteelWire: densities.SteelWire,
-    densitySemiCond: densities.SemiCond,
+    densityInnerSemiCond: densities['Inner Semi Conductive'],
+    densityOuterSemiCond: densities['Outer Semi Conductive'],
     densityMGT: densities.MGT,
     densityTCu: densities.TCu,
     densityCTS: densities.CTS || densities.Cu,
@@ -2487,8 +2495,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   if (totalSemiCondWeight > 0) {
-    weightDetails.conductorScreen = evalFormula(totalSemiCondWeight / 2, `${effectiveParams.cores} cores * π * ((${ (conductorDiameter/2 + conductorScreenThickness).toFixed(2) })² - (${(conductorDiameter/2).toFixed(2)})²) * ${densities.SemiCond}`, 'conductorScreen');
-    weightDetails.insulationScreen = evalFormula(totalSemiCondWeight / 2, `${effectiveParams.cores} cores * π * ((${ (coreDiameter/2).toFixed(2) })² - (${(coreDiameter/2 - insulationScreenThickness).toFixed(2)})²) * ${densities.SemiCond}`, 'insulationScreen');
+    weightDetails.conductorScreen = evalFormula(totalInnerSemiCondWeight, `${effectiveParams.cores} cores * π * ((${ (conductorDiameter/2 + conductorScreenThickness).toFixed(2) })² - (${(conductorDiameter/2).toFixed(2)})²) * ${densities['Inner Semi Conductive']}`, 'conductorScreen');
+    weightDetails.insulationScreen = evalFormula(totalOuterSemiCondWeight, `${effectiveParams.cores} cores * π * ((${ (coreDiameter/2).toFixed(2) })² - (${(coreDiameter/2 - insulationScreenThickness).toFixed(2)})²) * ${densities['Outer Semi Conductive']}`, 'insulationScreen');
   }
 
   if (totalMvScreenWeight > 0 || screenWeight > 0) {
@@ -2721,7 +2729,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       armorWireWeight: Number(applyScrap(armorWireWeight || 0, 'SteelWire').toFixed(1)),
       armorTapeWeight: Number(applyScrap(armorTapeWeight || 0, 'Steel').toFixed(1)),
       sheathWeight: Number(applyScrap(weightDetails.outerSheath?.weight || sheathWeight || 0, effectiveParams.sheathMaterial).toFixed(1)),
-      semiCondWeight: Number(applyScrap((weightDetails.conductorScreen?.weight || 0) + (weightDetails.insulationScreen?.weight || 0), 'SemiCond').toFixed(1)),
+      innerSemiCondWeight: Number(applyScrap(totalInnerSemiCondWeight || 0, 'Inner Semi Conductive').toFixed(1)),
+      outerSemiCondWeight: Number(applyScrap(totalOuterSemiCondWeight || 0, 'Outer Semi Conductive').toFixed(1)),
+      semiCondWeight: Number(applyScrap((weightDetails.conductorScreen?.weight || 0) + (weightDetails.insulationScreen?.weight || 0), 'Inner Semi Conductive').toFixed(1)),
       mvScreenWeight: Number(applyScrap(weightDetails.metallicScreen?.weight || totalMvScreenWeight || 0, 'Cu').toFixed(1)),
       mgtWeight: Number(applyScrap(weightDetails.mgt?.weight || totalMgtWeight || 0, 'MGT').toFixed(1)),
       earthingConductorWeight: Number(applyScrap((earthingConductorWeightPerCore || 0) * (earthingCores || 0), effectiveParams.conductorMaterial).toFixed(1)),

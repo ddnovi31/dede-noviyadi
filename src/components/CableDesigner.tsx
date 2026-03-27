@@ -37,12 +37,14 @@ const DEFAULT_MATERIAL_PRICES = {
   Cu: 155000,
   Al: 45000,
   XLPE: 35000,
+  'XLPE MV': 35000,
   PVC: 25000,
   PE: 30000,
   LSZH: 45000,
   Steel: 18000,
   SteelWire: 50000,
-  SemiCond: 65000,
+  'Inner Semi Conductive': 30000,
+  'Outer Semi Conductive': 30000,
   MGT: 120000,
   TCu: 165000,
   'PVC-FR Cat.A': 35000,
@@ -71,12 +73,14 @@ const DEFAULT_MATERIAL_DENSITIES = {
   Cu: 8.89,
   Al: 2.7,
   XLPE: 0.92,
+  'XLPE MV': 9.3,
   PVC: 1.45,
   PE: 0.95,
   LSZH: 1.5,
   Steel: 7.85,
   SteelWire: 7.85,
-  SemiCond: 1.15,
+  'Inner Semi Conductive': 1.2,
+  'Outer Semi Conductive': 1.2,
   MGT: 2.2,
   TCu: 8.89,
   'PVC-FR Cat.A': 1.45,
@@ -105,12 +109,14 @@ const DEFAULT_MATERIAL_SCRAP = {
   Cu: 2.5,
   Al: 2.5,
   XLPE: 5,
+  'XLPE MV': 5,
   PVC: 5,
   PE: 5,
   LSZH: 5,
   Steel: 2.5,
   SteelWire: 2.5,
-  SemiCond: 5,
+  'Inner Semi Conductive': 5,
+  'Outer Semi Conductive': 5,
   MGT: 5,
   TCu: 2.5,
   'PVC-FR Cat.A': 5,
@@ -512,7 +518,7 @@ export default function CableDesigner() {
     let sheetCounter = 1;
 
     const getDensity = (material: string) => {
-      const d: Record<string, number> = { Cu: 8.89, Al: 2.7, TCu: 8.89, XLPE: 0.922, PVC: 1.44, PE: 0.93, LSZH: 1.48, 'PVC-FR': 1.44, SHF1: 1.48, SHF2: 1.48, EPR: 1.25, HEPR: 1.25, Steel: 7.85, SteelWire: 7.85, SemiCond: 1.15, MGT: 1.4 };
+      const d: Record<string, number> = { Cu: 8.89, Al: 2.7, TCu: 8.89, XLPE: 0.922, PVC: 1.44, PE: 0.93, LSZH: 1.48, 'PVC-FR': 1.44, SHF1: 1.48, SHF2: 1.48, EPR: 1.25, HEPR: 1.25, Steel: 7.85, SteelWire: 7.85, 'Inner Semi Conductive': 1.15, 'Outer Semi Conductive': 1.15, MGT: 1.4 };
       return d[material] || 1.44;
     };
 
@@ -643,7 +649,8 @@ export default function CableDesigner() {
         const armorTapePrice = getPrice('STA', getPrice('Steel', 0));
 
         const sheathPrice = getPrice(item.params.sheathMaterial, getPrice('PVC', 0));
-        const semiPrice = getPrice('SemiCond', 65000);
+        const innerSemiPrice = getPrice('Inner Semi Conductive', 65000);
+        const outerSemiPrice = getPrice('Outer Semi Conductive', 65000);
         const metScreenMat = item.params.screenType === 'CTS' ? 'CTS' : (item.params.screenType === 'CWS' ? 'CWS' : 'Steel');
         const metScreenPrice = item.params.screenType === 'CTS' ? getPrice('CTS', getPrice('Cu', 0)) : getPrice('Cu', 0);
         const separatorPrice = getPrice(item.params.separatorMaterial || 'PVC', getPrice('PVC', 0));
@@ -730,8 +737,8 @@ export default function CableDesigner() {
           cScrThkCol = pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}*(1+${materialScrap['SemiCond'] || 0}/100)`);
-          const cScrPrcCol = pushCol(semiPrice, fmtRp);
+          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('Inner Semi Conductive')}*${coreCol}${r}*(1+${materialScrap['Inner Semi Conductive'] || 0}/100)`);
+          const cScrPrcCol = pushCol(innerSemiPrice, fmtRp);
           cScrCstCol = pushCol(null, fmtRp, `${cScrWtCol}${r}*${cScrPrcCol}${r}/1000`);
         }
 
@@ -761,8 +768,8 @@ export default function CableDesigner() {
           iScrThkCol = pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('SemiCond')}*${coreCol}${r}*(1+${materialScrap['SemiCond'] || 0}/100)`);
-          const iScrPrcCol = pushCol(semiPrice, fmtRp);
+          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('Outer Semi Conductive')}*${coreCol}${r}*(1+${materialScrap['Outer Semi Conductive'] || 0}/100)`);
+          const iScrPrcCol = pushCol(outerSemiPrice, fmtRp);
           iScrCstCol = pushCol(null, fmtRp, `${iScrWtCol}${r}*${iScrPrcCol}${r}/1000`);
         }
 
@@ -1961,7 +1968,7 @@ export default function CableDesigner() {
       // Standard specific overrides
       if (newParams.standard === 'IEC 60502-2') {
         newParams.conductorType = 'cm';
-        newParams.insulationMaterial = 'XLPE';
+        newParams.insulationMaterial = 'XLPE MV';
         if (newParams.cores !== 1 && newParams.cores !== 3) {
           newParams.cores = 3;
         }
@@ -2300,7 +2307,8 @@ export default function CableDesigner() {
     const sheathPrice = getPrice(params.sheathMaterial, getPrice('PVC', 0));
     const innerPrice = getPrice(params.innerSheathMaterial || 'PVC', getPrice('PVC', 0));
     const separatorPrice = getPrice(params.separatorMaterial || 'PVC', getPrice('PVC', 0));
-    const semiPrice = getPrice('SemiCond', 65000);
+    const innerSemiPrice = getPrice('Inner Semi Conductive', 65000);
+    const outerSemiPrice = getPrice('Outer Semi Conductive', 65000);
     const screenPrice = params.screenType === 'CTS' ? getPrice('CTS', getPrice('Cu', 0)) : (params.screenType === 'CWS' ? getPrice('CWS', getPrice('Cu', 0)) : getPrice('Steel', 0));
     const mvScreenPrice = getPrice('Cu', 0);
     const mgtPrice = getPrice('MGT', 120000);
@@ -2317,7 +2325,7 @@ export default function CableDesigner() {
         ? (((bom.copperWireWeight || 0) * getPrice('CWS', getPrice('Cu', 0))) + ((bom.copperTapeWeight || 0) * getPrice('CTS', getPrice('Cu', 0))) + ((bom.polyesterTapeWeight || 0) * getPrice('Polyester Tape', 10000))) / 1000
         : (bom.screenWeight * screenPrice) / 1000,
       separator: (bom.separatorWeight * separatorPrice) / 1000,
-      semiCond: (bom.semiCondWeight * semiPrice) / 1000,
+      semiCond: ((bom.innerSemiCondWeight * innerSemiPrice) + (bom.outerSemiCondWeight * outerSemiPrice)) / 1000,
       mvScreen: (bom.mvScreenWeight * mvScreenPrice) / 1000,
       mgt: (bom.mgtWeight * mgtPrice) / 1000,
       isAl: bom.isAlWeight ? (bom.isAlWeight * getPrice('Aluminium Foil', getPrice('Al', 0))) / 1000 : 0,
@@ -7755,14 +7763,14 @@ export default function CableDesigner() {
                             className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
                           >
                             {(() => {
-                              const compoundMaterials = ['XLPE', 'PVC', 'EPR'];
+                              const compoundMaterials = ['XLPE', 'XLPE MV', 'PVC', 'EPR'];
                               const customCompounds = Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation');
                               const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
                               
                               return availableCompounds.map((mat) => {
                                 let isDisabled = false;
                                 if (params.standard.includes('SNI 04-6629')) isDisabled = mat !== 'PVC';
-                                if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE';
+                                if (params.standard === 'IEC 60502-2') isDisabled = mat !== 'XLPE MV' && mat !== 'XLPE';
                                 if (params.standard === 'LiYCY') isDisabled = mat !== 'PVC';
                                 if (isNYCY) isDisabled = mat !== 'PVC';
                                 
@@ -8833,11 +8841,11 @@ export default function CableDesigner() {
                       <div className="space-y-6 pr-2">
                         {[
                           { title: 'Conductor', items: Array.from(new Set(['Cu', 'Al', 'TCu', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Conductor')])) },
-                          { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'PVC', 'EPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
+                          { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'XLPE MV', 'PVC', 'EPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
                           { title: 'Compound (Filler/Sheath)', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Filler' || materialCategories[m] === 'Compound Sheath' || materialCategories[m] === 'Compound (Filler/Sheath)')])) },
                           { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
-                          { title: 'Screen', items: Array.from(new Set(['SemiCond', 'MGT', 'CTS', 'CWS', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
-                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'SemiCond', 'MGT', 'CTS', 'CWS'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
+                          { title: 'Screen', items: Array.from(new Set(['Inner Semi Conductive', 'Outer Semi Conductive', 'MGT', 'CTS', 'CWS', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
+                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'XLPE MV', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'Inner Semi Conductive', 'Outer Semi Conductive', 'MGT', 'CTS', 'CWS'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
                         ].map(category => {
                           const categoryMaterials = category.items.filter(mat => materialPrices[mat] !== undefined).sort();
                           if (categoryMaterials.length === 0) return null;
