@@ -1808,15 +1808,16 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   // 1.01 adalah faktor toleransi/cabling skala industri
-  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * 1.01; // kg/km
+  const insulationFactor = (effectiveParams.standard === 'IEC 60502-2') ? 1.003 : 1.01;
+  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * insulationFactor; // kg/km
   
-  const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : (insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores);
-  const totalEarthingInsulationWeight = earthingInsulationWeightPerCore * earthingCores;
+  const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : applyScrap((insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores), effectiveParams.insulationMaterial);
+  const totalEarthingInsulationWeight = applyScrap(earthingInsulationWeightPerCore * earthingCores, effectiveParams.insulationMaterial);
   
-  const innerSemiCondWeightPerCore = (conductorScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness) ** 2 - rCond ** 2) * densities['Inner Semi Conductive']) : 0;
-  const outerSemiCondWeightPerCore = (insulationScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness + insulationThickness + insulationScreenThickness) ** 2 - (rCond + conductorScreenThickness + insulationThickness) ** 2) * densities['Outer Semi Conductive']) : 0;
-  const totalInnerSemiCondWeight = innerSemiCondWeightPerCore * effectiveParams.cores;
-  const totalOuterSemiCondWeight = outerSemiCondWeightPerCore * effectiveParams.cores;
+  const innerSemiCondWeightPerCore = (conductorScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness) ** 2 - rCond ** 2) * densities['Inner Semi Conductive'] * 1.1 * 1.003) : 0;
+  const outerSemiCondWeightPerCore = (insulationScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness + insulationThickness + insulationScreenThickness) ** 2 - (rCond + conductorScreenThickness + insulationThickness) ** 2) * densities['Outer Semi Conductive'] * 1.003) : 0;
+  const totalInnerSemiCondWeight = applyScrap(innerSemiCondWeightPerCore * effectiveParams.cores, 'Inner Semi Conductive');
+  const totalOuterSemiCondWeight = applyScrap(outerSemiCondWeightPerCore * effectiveParams.cores, 'Outer Semi Conductive');
   const totalSemiCondWeight = totalInnerSemiCondWeight + totalOuterSemiCondWeight;
 
   // 3. Laying up

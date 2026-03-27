@@ -742,7 +742,7 @@ export default function CableDesigner() {
           cScrThkCol = pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('Inner Semi Conductive')}*${coreCol}${r}*(1+${materialScrap['Inner Semi Conductive'] || 0}/100)`);
+          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('Inner Semi Conductive')}*${coreCol}${r}*1.1*1.003*(1+${materialScrap['Inner Semi Conductive'] || 0}/100)`);
           const cScrPrcCol = pushCol(innerSemiPrice, fmtRp);
           cScrCstCol = pushCol(null, fmtRp, `${cScrWtCol}${r}*${cScrPrcCol}${r}/1000`);
         }
@@ -762,7 +762,8 @@ export default function CableDesigner() {
           // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
           const insFormula = `(${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))`;
 
-          insWtCol = pushCol(null, fmtNum, `ROUND(${insFormula}*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
+          const insFactor = isMV ? 1.003 : 1.01;
+          insWtCol = pushCol(null, fmtNum, `ROUND(${insFormula}*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*${insFactor}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
           insPrcCol = pushCol(insPrice, fmtRp);
           insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
         }
@@ -773,7 +774,7 @@ export default function CableDesigner() {
           iScrThkCol = pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('Outer Semi Conductive')}*${coreCol}${r}*(1+${materialScrap['Outer Semi Conductive'] || 0}/100)`);
+          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('Outer Semi Conductive')}*${coreCol}${r}*1.003*(1+${materialScrap['Outer Semi Conductive'] || 0}/100)`);
           const iScrPrcCol = pushCol(outerSemiPrice, fmtRp);
           iScrCstCol = pushCol(null, fmtRp, `${iScrWtCol}${r}*${iScrPrcCol}${r}/1000`);
         }
