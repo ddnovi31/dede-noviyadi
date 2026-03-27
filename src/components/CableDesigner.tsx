@@ -5827,7 +5827,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 pl-4">
                         <input
                           type="text"
-                          value={specEdits[`${groupKey}-drum-dia-label`] ?? "- Diameter of Drum"}
+                          value={specEdits[`${groupKey}-drum-dia-label`] ?? "- Diameter of Drum (Flange)"}
                           onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-dia-label`]: e.target.value }))}
                           className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
                         />
@@ -5860,7 +5860,7 @@ export default function CableDesigner() {
                       <td className="border border-slate-400 p-2 pl-4">
                         <input
                           type="text"
-                          value={specEdits[`${groupKey}-drum-width-label`] ?? "- Width of Drum"}
+                          value={specEdits[`${groupKey}-drum-width-label`] ?? "- Width of Drum (Outer)"}
                           onChange={(e) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-drum-width-label`]: e.target.value }))}
                           className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-left font-inherit outline-none"
                         />
@@ -5880,7 +5880,7 @@ export default function CableDesigner() {
                           <td key={idx} className="border border-slate-400 p-2 text-center">
                             <input
                               type="text"
-                              value={specEdits[editKey] ?? packing.selectedDrum.innerWidth}
+                              value={specEdits[editKey] ?? packing.selectedDrum.outerWidth}
                               onChange={(e) => setSpecEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
                               className="bg-transparent border-none focus:ring-0 p-0 m-0 w-full text-center font-inherit outline-none"
                             />
