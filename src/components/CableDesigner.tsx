@@ -699,8 +699,13 @@ export default function CableDesigner() {
         let calcAreaFormula = `${wiresCol}${r}*PI()/4*POWER(${wireDiaCol}${r},2)`;
         let condOdFormula: string | null = null;
         if ((item.params.conductorType === 'sm' || item.params.conductorType === 'cm') && item.result.electrical.maxDcResistance > 0) {
-          calcAreaFormula = `${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.01`;
-          condOdFormula = `POWER((${rhoCol}${r}/((${dcResCol}${r}/1.003)*1.01)*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
+          if (isMV) {
+            calcAreaFormula = `${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.02`;
+            condOdFormula = `POWER((${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.02)/((PI()/4)*0.89), 0.5)`;
+          } else {
+            calcAreaFormula = `${rhoCol}${r}/(${dcResCol}${r}/1.003)*1.01`;
+            condOdFormula = `POWER((${rhoCol}${r}/((${dcResCol}${r}/1.003)*1.01)*${coreCol}${r})/((PI()/4)*0.9), 0.5)/2*0.99`;
+          }
         } else if (item.params.conductorType === 'sm' || item.params.conductorType === 'cm') {
           const compactionFactor = item.params.conductorType === 'cm' ? 0.92 : 0.95;
           condOdFormula = `POWER((4*${getColName(colIdx)}${r})/(PI()*${compactionFactor}), 0.5)`;
