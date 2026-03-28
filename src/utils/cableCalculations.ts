@@ -1742,8 +1742,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       mvScreenThickness = tapeThk * 2; // Effective thickness for diameter
       diameterOverScreen = coreDiameter + (2 * mvScreenThickness);
       const meanDiameter = coreDiameter + mvScreenThickness;
-      // Area = pi * D * t * overlap_factor
-      const area = Math.PI * meanDiameter * tapeThk * 1.25; // 0.1mm tape, 25% overlap
+      // Area = pi * D * t * overlap_factor (25% overlap = 1.25)
+      const area = Math.PI * meanDiameter * tapeThk * 1.25; 
       mvScreenWeightPerCore = area * densities.Cu * 1.003;
     } else if (effectiveParams.mvScreenType === 'CWS') {
       // Copper Wire Screen: specified by cross section (e.g., 16mm2)
@@ -1758,8 +1758,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
           mvScreenWeightPerCore = area * densities.Cu * 1.05 * 1.003;
           mvScreenThickness = wireDia;
       } else {
-          // MV CWS Diameter logic: size <= 35 -> 0.66, > 35 -> 1.35
-          wireDia = screenSize <= 35 ? 0.66 : 1.35;
+          // MV CWS Diameter logic: size (conductor size) sampai 35mm2 = 0.66, diatas 35mm2 = 1.35
+          const condSize = Number(effectiveParams.size);
+          wireDia = condSize <= 35 ? 0.66 : 1.35;
           const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
           wireCount = Math.ceil(screenSize / wireArea);
           
@@ -1807,13 +1808,36 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 1.01 adalah faktor toleransi/cabling skala industri
   const insulationFactor = (effectiveParams.standard === 'IEC 60502-2') ? 1.003 : 1.01;
-  const insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * insulationFactor; // kg/km
+  
+  // Explicit MV weight formulas as requested
+  let insulationWeightPerCore = 0;
+  let innerSemiCondWeightPerCore = 0;
+  let outerSemiCondWeightPerCore = 0;
+
+  if (effectiveParams.standard === 'IEC 60502-2') {
+    // MV Formulas: Weight = (D_outer - t) * t * PI * density * factors
+    const dInnerSemicon = conductorDiameter + (2 * conductorScreenThickness);
+    innerSemiCondWeightPerCore = (conductorScreenThickness > 0) 
+      ? ((dInnerSemicon - conductorScreenThickness) * conductorScreenThickness * Math.PI * densities['Inner Semi Conductive'] * 1.1 * 1.003) 
+      : 0;
+
+    const dInsul = dInnerSemicon + (2 * insulationThickness);
+    insulationWeightPerCore = (insulationThickness > 0)
+      ? ((dInsul - insulationThickness) * insulationThickness * Math.PI * densities[effectiveParams.insulationMaterial] * 1.003)
+      : 0;
+
+    const dOuterSemicon = dInsul + (2 * insulationScreenThickness);
+    outerSemiCondWeightPerCore = (insulationScreenThickness > 0)
+      ? ((dOuterSemicon - insulationScreenThickness) * insulationScreenThickness * Math.PI * densities['Outer Semi Conductive'] * 1.003)
+      : 0;
+  } else {
+    // LV and others
+    insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * insulationFactor;
+  }
   
   const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : applyScrap((insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores), effectiveParams.insulationMaterial);
   const totalEarthingInsulationWeight = applyScrap(earthingInsulationWeightPerCore * earthingCores, effectiveParams.insulationMaterial);
   
-  const innerSemiCondWeightPerCore = (conductorScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness) ** 2 - rCond ** 2) * densities['Inner Semi Conductive'] * 1.1 * 1.003) : 0;
-  const outerSemiCondWeightPerCore = (insulationScreenThickness > 0) ? (Math.PI * ((rCond + conductorScreenThickness + insulationThickness + insulationScreenThickness) ** 2 - (rCond + conductorScreenThickness + insulationThickness) ** 2) * densities['Outer Semi Conductive'] * 1.003) : 0;
   const totalInnerSemiCondWeight = applyScrap(innerSemiCondWeightPerCore * effectiveParams.cores, 'Inner Semi Conductive');
   const totalOuterSemiCondWeight = applyScrap(outerSemiCondWeightPerCore * effectiveParams.cores, 'Outer Semi Conductive');
   const totalSemiCondWeight = totalInnerSemiCondWeight + totalOuterSemiCondWeight;
