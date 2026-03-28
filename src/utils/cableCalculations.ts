@@ -1169,6 +1169,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   const data = CABLE_DATA.find((d) => d.size === effectiveParams.size) || CABLE_DATA[0];
 
+  let copperWireWeight = 0;
+  let copperTapeWeight = 0;
+  let polyesterTapeWeight = 0;
+
   // 1. Conductor
   let conductorDiameter = effectiveParams.manualConductorDiameter || data.diameter;
   let wireCount = effectiveParams.manualWireCount || (effectiveParams.conductorType === 're' ? 1 : 7);
@@ -1184,6 +1188,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   let maxDcResistance = 0;
+  const mvCablingFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
+  const lvCablingFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
+  
   if (effectiveParams.conductorMaterial === 'Cu') {
     if (effectiveParams.conductorType === 'f') {
       maxDcResistance = RESISTANCE_CU_CLASS5[effectiveParams.size] || (RESISTANCE_CU[effectiveParams.size] || 0);
@@ -1204,7 +1211,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let calculatedSectionalArea = wireCount * (Math.PI / 4) * Math.pow(wireDiameter, 2);
   if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && maxDcResistance > 0) {
     const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
-    calculatedSectionalArea = (rho / (maxDcResistance / 1.003)) * 1.01;
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    calculatedSectionalArea = (rho / (maxDcResistance / cabFactor)) * 1.01;
   }
   let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
 
@@ -1356,11 +1364,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       if (maxDcResistance > 0) {
         if (effectiveParams.standard === 'IEC 60502-2') {
           // Formula baru sesuai instruksi: =((([resistyvity]/([dc resistant]/[1,003])*[1,02])/([PI()]/[4]*[0,89]))^[0,5])
-          conductorDiameter = Math.pow(((rho / (maxDcResistance / 1.003)) * 1.02) / ((Math.PI / 4) * 0.89), 0.5);
+          conductorDiameter = Math.pow(((rho / (maxDcResistance / mvCablingFactor)) * 1.02) / ((Math.PI / 4) * 0.89), 0.5);
         } else {
           // Menggunakan rumus yang sama persis untuk sm dan cm sesuai instruksi sebelumnya:
           // Diameter = ( (Resistivity / ((Resistance_at_20 / 1.003) * 1.01) * Cores) / ((PI / 4) * 0.9) ) ^ 0.5 / 2 * 0.99
-          const area_total = (rho / ((maxDcResistance / 1.003) * 1.01)) * effectiveParams.cores;
+          const area_total = (rho / ((maxDcResistance / lvCablingFactor) * 1.01)) * effectiveParams.cores;
           conductorDiameter = Math.pow(area_total / ((Math.PI / 4) * 0.9), 0.5) / 2 * 0.99;
         }
       } else {
@@ -1446,7 +1454,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let earthingCalculatedSectionalArea = earthingWireCount * (Math.PI / 4) * Math.pow(earthingWireDiameter, 2);
   if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && earthingMaxDcResistance > 0) {
     const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
-    earthingCalculatedSectionalArea = (rho / (earthingMaxDcResistance / 1.003)) * 1.01;
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    earthingCalculatedSectionalArea = (rho / (earthingMaxDcResistance / cabFactor)) * 1.01;
   }
   let earthingConductorWeightPerCore = abcTData 
     ? abcTData.messenger.condWeight
@@ -1738,36 +1747,67 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.mvScreenType && effectiveParams.mvScreenType !== 'None') {
     if (effectiveParams.mvScreenType === 'CTS') {
       // Copper Tape Screen: typically 0.1mm thickness, overlapped
-      const tapeThk = effectiveParams.manualMvScreenThickness ? effectiveParams.manualMvScreenThickness / 2 : 0.1;
-      mvScreenThickness = tapeThk * 2; // Effective thickness for diameter
+      const tapeThk = effectiveParams.manualMvScreenThickness || 0.1;
+      const petThk = effectiveParams.cores === 1 ? 0.05 : 0;
+      
+      const tapeThkContribution = 2 * tapeThk; // overlapped
+      const petThkContribution = petThk > 0 ? 2 * petThk : 0; // overlapped
+      
+      mvScreenThickness = tapeThkContribution + petThkContribution; 
       diameterOverScreen = coreDiameter + (2 * mvScreenThickness);
-      const meanDiameter = coreDiameter + mvScreenThickness;
-      // Area = pi * D * t * overlap_factor (25% overlap = 1.25)
-      const area = Math.PI * meanDiameter * tapeThk * 1.25; 
-      mvScreenWeightPerCore = area * densities.Cu * 1.003;
+      
+      const meanDiameterCu = coreDiameter + tapeThk;
+      const cuArea = Math.PI * meanDiameterCu * tapeThk * 1.25; // 25% overlap
+      copperTapeWeight = cuArea * densities.Cu * mvCablingFactor * effectiveParams.cores;
+      
+      if (petThk > 0) {
+        const meanDiameterPet = coreDiameter + (4 * tapeThk) + petThk;
+        const petArea = Math.PI * meanDiameterPet * petThk * 1.25; // assuming 25% overlap for PET tape too
+        polyesterTapeWeight = petArea * (densities['Polyester Tape'] || 1.38) * mvCablingFactor * effectiveParams.cores;
+      } else {
+        polyesterTapeWeight = 0;
+      }
+      
+      mvScreenWeightPerCore = (copperTapeWeight + polyesterTapeWeight) / effectiveParams.cores;
     } else if (effectiveParams.mvScreenType === 'CWS') {
       // Copper Wire Screen: specified by cross section (e.g., 16mm2)
       const screenSize = effectiveParams.mvScreenSize || 16;
       
-      // New logic for n x d
       let wireCount = effectiveParams.manualMvScreenWireCount || 0;
       let wireDia = effectiveParams.manualMvScreenWireDiameter || 0;
       
-      if (wireCount > 0 && wireDia > 0) {
-          const area = wireCount * (Math.PI * wireDia * wireDia / 4);
-          mvScreenWeightPerCore = area * densities.Cu * 1.05 * 1.003;
-          mvScreenThickness = wireDia;
-      } else {
-          // MV CWS Diameter logic: size (conductor size) sampai 35mm2 = 0.66, diatas 35mm2 = 1.35
+      if (!(wireCount > 0 && wireDia > 0)) {
           const condSize = Number(effectiveParams.size);
           wireDia = condSize <= 35 ? 0.66 : 1.35;
           const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
           wireCount = Math.ceil(screenSize / wireArea);
-          
-          mvScreenWeightPerCore = wireCount * wireArea * densities.Cu * 1.05 * 1.003;
-          mvScreenThickness = wireDia;
       }
       
+      const wireArea = wireCount * (Math.PI * wireDia * wireDia / 4);
+      copperWireWeight = wireArea * densities.Cu * 1.05 * mvCablingFactor * effectiveParams.cores;
+      
+      // Copper tape 0.1mm gap 300% (coverage 25%)
+      const tapeThk = 0.1;
+      const tapeThkContribution = tapeThk; // gap, not overlapped
+      const diameterOverWire = coreDiameter + (2 * wireDia);
+      const meanDiameterTape = diameterOverWire + tapeThk;
+      const cuTapeArea = Math.PI * meanDiameterTape * tapeThk * 0.25; // 25% coverage
+      copperTapeWeight = cuTapeArea * densities.Cu * 1.05 * mvCablingFactor * effectiveParams.cores;
+      
+      // Polyester tape 0.05mm (only for 1 core)
+      const petThk = effectiveParams.cores === 1 ? 0.05 : 0;
+      const petThkContribution = petThk > 0 ? 2 * petThk : 0; // overlapped
+      if (petThk > 0) {
+        const diameterOverCuTape = diameterOverWire + (2 * tapeThk);
+        const meanDiameterPet = diameterOverCuTape + petThk;
+        const petArea = Math.PI * meanDiameterPet * petThk * 1.25; // assuming 25% overlap
+        polyesterTapeWeight = petArea * (densities['Polyester Tape'] || 1.38) * mvCablingFactor * effectiveParams.cores;
+      } else {
+        polyesterTapeWeight = 0;
+      }
+      
+      mvScreenThickness = wireDia + tapeThkContribution + petThkContribution;
+      mvScreenWeightPerCore = (copperWireWeight + copperTapeWeight + polyesterTapeWeight) / effectiveParams.cores;
       diameterOverScreen = coreDiameter + (2 * mvScreenThickness);
     }
   }
@@ -1807,7 +1847,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   // 1.01 adalah faktor toleransi/cabling skala industri
-  const insulationFactor = (effectiveParams.standard === 'IEC 60502-2') ? 1.003 : 1.01;
+  const insulationFactor = (effectiveParams.standard === 'IEC 60502-2') ? mvCablingFactor : lvCablingFactor;
   
   // Explicit MV weight formulas as requested
   let insulationWeightPerCore = 0;
@@ -1818,17 +1858,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // MV Formulas: Weight = (D_outer - t) * t * PI * density * factors
     const dInnerSemicon = conductorDiameter + (2 * conductorScreenThickness);
     innerSemiCondWeightPerCore = (conductorScreenThickness > 0) 
-      ? ((dInnerSemicon - conductorScreenThickness) * conductorScreenThickness * Math.PI * densities['Inner Semi Conductive'] * 1.1 * 1.003) 
+      ? ((dInnerSemicon - conductorScreenThickness) * conductorScreenThickness * Math.PI * densities['Inner Semi Conductive'] * 1.1 * mvCablingFactor) 
       : 0;
 
     const dInsul = dInnerSemicon + (2 * insulationThickness);
     insulationWeightPerCore = (insulationThickness > 0)
-      ? ((dInsul - insulationThickness) * insulationThickness * Math.PI * densities[effectiveParams.insulationMaterial] * 1.003)
+      ? ((dInsul - insulationThickness) * insulationThickness * Math.PI * densities[effectiveParams.insulationMaterial] * mvCablingFactor)
       : 0;
 
     const dOuterSemicon = dInsul + (2 * insulationScreenThickness);
     outerSemiCondWeightPerCore = (insulationScreenThickness > 0)
-      ? ((dOuterSemicon - insulationScreenThickness) * insulationScreenThickness * Math.PI * densities['Outer Semi Conductive'] * 1.003)
+      ? ((dOuterSemicon - insulationScreenThickness) * insulationScreenThickness * Math.PI * densities['Outer Semi Conductive'] * mvCablingFactor)
       : 0;
   } else {
     // LV and others
@@ -1903,7 +1943,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const drainWireDia = effectiveParams.manualIsDrainWireDiameter || 0.2;
       const drainWireSize = effectiveParams.manualIsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
       
-      const isThk = (2 * petThk) + alThk; // Estimated thickness contribution
+      const isPetThkContribution = petOverlap > 0 ? 2 * petThk : petThk;
+      const isAlThkContribution = alOverlap > 0 ? 2 * alThk : alThk;
+      const isThk = isPetThkContribution + isAlThkContribution; // Radial thickness contribution
       const diaBeforeIS = formationDiameter;
       formationDiameter += 2 * isThk;
       
@@ -1972,7 +2014,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const drainWireDia = effectiveParams.manualOsDrainWireDiameter || 0.2;
       const drainWireSize = effectiveParams.manualOsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
 
-      const osThk = (2 * petThk) + alThk; // Estimated thickness contribution
+      const osPetThkContribution = petOverlap > 0 ? 2 * petThk : petThk;
+      const osAlThkContribution = alOverlap > 0 ? 2 * alThk : alThk;
+      const osThk = osPetThkContribution + osAlThkContribution; // Radial thickness contribution
       const diaBeforeOS = laidUpDiameter;
       laidUpDiameter += 2 * osThk;
 
@@ -2014,7 +2058,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const petDensity = densities['Polyester Tape'] || 1.38;
     // Area = PI * (D + t) * t * (1 + overlap/100)
     binderTapeWeight = Math.PI * (laidUpDiameter + binderTapeThickness) * binderTapeThickness * petDensity * (1 + binderTapeOverlap/100);
-    laidUpDiameter += 2 * binderTapeThickness;
+    const binderTapeContribution = binderTapeOverlap > 0 ? 2 * binderTapeThickness : binderTapeThickness;
+    laidUpDiameter += 2 * binderTapeContribution;
   }
 
   // 4. Inner Covering (Extruded)
@@ -2080,41 +2125,65 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 4.5 Screen (CTS, SWS) - New Feature
   let screenWeight = 0;
-  let copperWireWeight = 0;
-  let copperTapeWeight = 0;
-  let polyesterTapeWeight = 0;
   let screenThickness = effectiveParams.manualScreenThickness || 0;
   let diameterOverOverallScreen = diameterUnderArmor;
 
   const isIEC60502_1 = effectiveParams.standard === 'IEC 60502-1';
 
   if ((isIEC60502_1 || effectiveParams.standard === 'SPLN 43-4 (NYCY)') && effectiveParams.hasScreen) {
-    const cwsSize = effectiveParams.screenSize || (effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? (nycyData ? nycyData.screenSize : Number(effectiveParams.size)) : 16);
-    
-    // Use wire diameter from CWS_WIRE_DIAMETERS if available
-    const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
-    const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
-    // Number of wires = Area / WireArea
-    const wireCount = Math.round(cwsSize / wireArea);
-    
-    copperWireWeight = wireCount * wireArea * densities.Cu * 1.1; // 10% lay factor for concentric wires
-    
-    // Copper tape gap 300% weight (coverage 25%)
-    // Assuming tape thickness 0.1mm
-    copperTapeWeight = Math.PI * diameterUnderArmor * 0.1 * densities.Cu * 0.25 * 1.1; 
-    
-    // Polyester tape weight
-    // Assuming thickness 0.05mm, 25% overlap
-    polyesterTapeWeight = Math.PI * diameterUnderArmor * 0.05 * (densities['Polyester Tape'] || 1.38) * 1.25;
-    
-    screenWeight = copperWireWeight + copperTapeWeight + polyesterTapeWeight;
-    
-    if (!effectiveParams.manualScreenThickness) {
-      // diameter = diameterUnderArmor + (2 * wireDia) + (2 * thickness Copper Tape) + (4 * thickness Polyester)
-      // screenThickness is the radial thickness added to diameterUnderArmor
-      screenThickness = wireDia + 0.1 + (2 * 0.05); 
+    if (effectiveParams.screenType === 'CWS' || effectiveParams.standard === 'SPLN 43-4 (NYCY)') {
+      const cwsSize = effectiveParams.screenSize || (effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? (nycyData ? nycyData.screenSize : Number(effectiveParams.size)) : 16);
+      
+      // Use wire diameter from CWS_WIRE_DIAMETERS if available
+      const wireDia = CWS_WIRE_DIAMETERS[cwsSize] || 0.8;
+      const wireArea = Math.PI * Math.pow(wireDia / 2, 2);
+      // Number of wires = Area / WireArea
+      const wireCount = Math.round(cwsSize / wireArea);
+      
+      const lvCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
+      copperWireWeight = wireCount * wireArea * densities.Cu * 1.05 * lvCabFactor; 
+      
+      // Copper tape gap 300% weight (coverage 25%)
+      // Assuming tape thickness 0.1mm
+      const tapeThk = 0.1;
+      const meanDiameterTape = diameterUnderArmor + (2 * wireDia) + tapeThk;
+      copperTapeWeight = Math.PI * meanDiameterTape * tapeThk * densities.Cu * 0.25 * 1.05 * lvCabFactor; 
+      
+      // Polyester tape weight
+      // Assuming thickness 0.05mm, 25% overlap
+      const petThk = 0.05;
+      const meanDiameterPet = diameterUnderArmor + (2 * wireDia) + (2 * tapeThk) + petThk;
+      polyesterTapeWeight = Math.PI * meanDiameterPet * petThk * (densities['Polyester Tape'] || 1.38) * 1.25 * lvCabFactor;
+      
+      screenWeight = copperWireWeight + copperTapeWeight + polyesterTapeWeight;
+      
+      if (!effectiveParams.manualScreenThickness) {
+        // screenThickness is the radial thickness added to diameterUnderArmor
+        const tapeThkContribution = tapeThk; // gap, not overlapped
+        const petThkContribution = 2 * petThk; // overlapped
+        screenThickness = wireDia + tapeThkContribution + petThkContribution; 
+      }
+      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
+    } else if (effectiveParams.screenType === 'CTS') {
+      // CTS: Copper tape 0.1mm overlap 25% and polyester tape 0.05mm
+      const tapeThk = 0.1;
+      const overlap = 1.25; // 25% overlap
+      
+      const lvCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
+      copperTapeWeight = Math.PI * (diameterUnderArmor + tapeThk) * tapeThk * densities.Cu * overlap * lvCabFactor;
+      
+      // Polyester tape weight
+      polyesterTapeWeight = Math.PI * (diameterUnderArmor + (4*tapeThk) + 0.05) * 0.05 * (densities['Polyester Tape'] || 1.38) * 1.25 * lvCabFactor;
+      
+      screenWeight = copperTapeWeight + polyesterTapeWeight;
+      
+      if (!effectiveParams.manualScreenThickness) {
+        const tapeThkContribution = 2 * tapeThk; // overlapped
+        const petThkContribution = 2 * 0.05; // overlapped
+        screenThickness = tapeThkContribution + petThkContribution;
+      }
+      diameterOverOverallScreen = diameterUnderArmor + (2 * screenThickness);
     }
-    diameterOverOverallScreen = diameterUnderArmor + (2 * wireDia) + (2 * 0.1) + (4 * 0.05);
   }
 
   // 4.6 Separator Sheath - New Feature
@@ -2132,10 +2201,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       if (!effectiveParams.manualSeparatorThickness) {
         separatorThickness = 0.05; // Typical PET tape thickness
       }
-      diameterOverSeparator = diameterOverOverallScreen + (2 * separatorThickness);
+      const overlap = 25; // 25% overlap
+      const separatorContribution = overlap > 0 ? 2 * separatorThickness : separatorThickness;
+      diameterOverSeparator = diameterOverOverallScreen + (2 * separatorContribution);
       
       const petDensity = 1.38; // Density for Polyester
-      const overlap = 25; // 25% overlap
       // Weight = PI * (D + t) * t * density * (1 + overlap/100)
       separatorWeight = Math.PI * (diameterOverOverallScreen + separatorThickness) * separatorThickness * petDensity * (1 + overlap/100);
     } else {
@@ -2205,7 +2275,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
     const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
-    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
     armorWireWeight = numWires * wireArea * armorDensity * 1.05 * mvFactor; // 5% lay factor
     armorWeight = armorWireWeight;
     armorWireDiameter = armorThickness;
@@ -2226,7 +2296,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t * (1 + overlap/100)
     const overlapMultiplier = 1 + (overlap / 100);
-    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
     armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02 * mvFactor; // 2% lay factor
     armorWeight = armorTapeWeight;
@@ -2250,7 +2320,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
     armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor; // 2% lay factor
     armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor;
     armorWeight = armorWireWeight + armorTapeWeight;
@@ -2285,7 +2355,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    const mvFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.003 : 1.0;
+    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
     armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel) * mvFactor; // 5% lay factor for wire
     armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel) * mvFactor; // 2% for tape
     armorWeight = armorWireWeight + armorTapeWeight;
@@ -2660,11 +2730,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     k = 115;
   }
 
-  // Formula: K * (Resistivity / (maxDcResistance / 1.003) * 1.01) / 1000
-  // Based on Excel: k * (resistivity / (maxDcResistance / 1.003) * 1.01) / 1000 / sqrt(time)
+  // Formula: K * (Resistivity / (maxDcResistance / cabFactor) * 1.01) / 1000
+  // Based on Excel: k * (resistivity / (maxDcResistance / cabFactor) * 1.01) / 1000 / sqrt(time)
   // time = 1s
   if (maxDcResistance > 0) {
-    shortCircuitCapacity = k * (resistivity / (maxDcResistance / 1.003) * 1.01) / 1000;
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    shortCircuitCapacity = k * (resistivity / (maxDcResistance / cabFactor) * 1.01) / 1000;
   }
 
   // General
