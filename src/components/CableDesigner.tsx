@@ -1121,7 +1121,8 @@ export default function CableDesigner() {
         let armCstCol, armThkCol, armWtCol;
         if (hasArmor) {
           if (item.params.armorType === 'STA') {
-            armThkCol = pushCol(item.result.spec.armorTapeThickness || 0, fmtNum);
+            const diaBeforeArmorFormula = currentDiaFormula;
+            armThkCol = pushCol(null, fmtNum, `IF(${diaBeforeArmorFormula}<=30,0.3,IF(${diaBeforeArmorFormula}<=70,0.5,0.8))`);
             const overlapCol = pushCol(item.result.spec.staOverlap || 25, fmtNum);
             currentDiaFormula = `(${currentDiaFormula}+4*${armThkCol}${r})`;
             pushCol(null, fmtNum, currentDiaFormula); // OD

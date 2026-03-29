@@ -2285,7 +2285,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else if (effectiveParams.armorType === 'STA') {
     if (!effectiveParams.manualArmorThickness) {
       // STA Tape thickness
-      if (diameterUnderArmor <= 30) armorThickness = 0.5;
+      if (diameterUnderArmor <= 30) armorThickness = 0.3;
       else if (diameterUnderArmor <= 70) armorThickness = 0.5;
       else armorThickness = 0.8;
     }
