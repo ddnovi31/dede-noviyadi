@@ -255,10 +255,10 @@ export const CONDUCTOR_RESISTIVITY: Record<string, number> = {
 };
 
 // Laying up factors for multi-core cables (approximate)
-const LAYING_UP_FACTORS: Record<number, number> = {
+export const LAYING_UP_FACTORS: Record<number, number> = {
   1: 1.0,
   2: 2.0,
-  3: 2.15,
+  3: 2.16,
   4: 2.41,
   5: 2.7,
   7: 3.0,
@@ -575,7 +575,12 @@ export const NYA_NYAF_DATA: Record<string, NYA_NYAFData> = {
 
 };
 
-function getLayingUpFactor(cores: number): number {
+export const INSTRUMENT_FACTORS: Record<number, number> = {
+  1: 1.0, 2: 2.0, 3: 2.15, 4: 2.41, 5: 2.7, 6: 3.0, 7: 3.0, 
+  8: 3.45, 10: 3.8, 12: 4.15, 16: 4.7, 20: 5.33, 24: 5.77, 30: 6.41, 36: 7.0
+};
+
+export function getLayingUpFactor(cores: number): number {
   if (cores <= 1) return 1;
   if (LAYING_UP_FACTORS[cores]) return LAYING_UP_FACTORS[cores];
   
@@ -1700,6 +1705,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
   }
 
+  const isMV = effectiveParams.standard === 'IEC 60502-2';
+
   // NYCY Specific Data Overrides
   const nycyKey = `${effectiveParams.cores}x${effectiveParams.size}/${effectiveParams.screenSize || effectiveParams.size}`;
   const nycyData = effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? NYCY_DATA[nycyKey] : null;
@@ -1893,13 +1900,6 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else {
       let laidUpFactor = getLayingUpFactor(totalCores);
       
-      // Special handling for sector conductors (sm)
-      // For sector conductors, the coreDiameter is the height (radius of the circle)
-      // The assembly diameter is roughly 2 * height for 3 or 4 cores
-      if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && totalCores >= 2 && totalCores <= 4) {
-        laidUpFactor = 2.0;
-      }
-      
       laidUpDiameter = totalCores === 1 ? diameterOverScreen : diameterOverScreen * laidUpFactor;
     }
   }
@@ -1968,11 +1968,6 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     let factor = getLayingUpFactor(isMultiplier);
     
     // Industrial formulation for instrument cable laying up
-    const INSTRUMENT_FACTORS: Record<number, number> = {
-      1: 1.0, 2: 2.0, 3: 2.15, 4: 2.41, 5: 2.7, 6: 3.0, 7: 3.0, 
-      8: 3.45, 10: 3.8, 12: 4.15, 16: 4.7, 20: 5.33, 24: 5.77, 30: 6.41, 36: 7.0
-    };
-    
     if (INSTRUMENT_FACTORS[isMultiplier]) {
       factor = INSTRUMENT_FACTORS[isMultiplier];
     } else if (isMultiplier > 1) {
@@ -2034,20 +2029,22 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   }
 
-  // Sector shaped reduction
+  // Sector shaped reduction - REMOVED as per user request to use standard Laying_up_factor for all
+  /*
   if (!effectiveParams.manualLaidUpDiameter && effectiveParams.standard !== 'BS EN 50288-7') {
     if (effectiveParams.conductorType === 'sm' && totalCores >= 3) {
       if (totalCores === 3) {
-        laidUpDiameter = 2.14 * coreDiameter;
+        laidUpDiameter = (isMV ? 2.16 : 2.14) * (isMV ? diameterOverScreen : coreDiameter);
       } else if (totalCores === 4) {
-        laidUpDiameter = 2.29 * coreDiameter;
+        laidUpDiameter = 2.29 * (isMV ? diameterOverScreen : coreDiameter);
       } else {
-        laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+        laidUpDiameter = 2 * ((isMV ? diameterOverScreen : coreDiameter) - insulationThickness);
       }
     } else if (effectiveParams.conductorType === 'cm' && totalCores >= 3) {
-      laidUpDiameter = 2 * (coreDiameter - insulationThickness);
+      laidUpDiameter = 2 * ((isMV ? diameterOverScreen : coreDiameter) - insulationThickness);
     }
   }
+  */
 
   // 3.5. Binder Tape (Polyester Tape) before Inner Sheath
   let binderTapeWeight = 0;
@@ -2120,7 +2117,13 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const effectiveWeightAdditionFactor = (effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') ? 0 : weightAdditionFactor;
     const totalInnerSheathArea = (ringArea + (intersticeArea * fillerFactor)) * (1 + effectiveWeightAdditionFactor);
     
-    innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC);
+    if (isMV) {
+      const mvInShCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
+      innerCoveringWeight = applyScrap(ringArea * mvInShCabFactor * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC), effectiveParams.innerSheathMaterial || 'PVC');
+    } else {
+      const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
+      innerCoveringWeight = applyScrap(totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * cabFactor, effectiveParams.innerSheathMaterial || 'PVC');
+    }
   }
 
   // 4.5 Screen (CTS, SWS) - New Feature
@@ -2512,9 +2515,19 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const rOverArmor = diameterOverArmor / 2;
   const rOverall = overallDiameter / 2;
   const sheathArea = Math.PI * (rOverall * rOverall - rOverArmor * rOverArmor);
-  const sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') ? sheathArea * densities[effectiveParams.sheathMaterial] : 0;
+  
+  let sheathWeight = 0;
+  if (isMV) {
+    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') 
+      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial], effectiveParams.sheathMaterial) 
+      : 0;
+  } else {
+    const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
+    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') 
+      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
+      : 0;
+  }
 
-  const isMV = effectiveParams.standard === 'IEC 60502-2';
   const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
   
   const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + binderTapeOverArmorWeight + masterbatchWeight);

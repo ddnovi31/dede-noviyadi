@@ -21,6 +21,8 @@ import {
   NYCY_DATA,
   NFA2XT_DATA,
   getWeightAdditionFactor,
+  getLayingUpFactor,
+  INSTRUMENT_FACTORS,
   CONDUCTOR_RESISTIVITY,
   RESISTANCE_CU,
   RESISTANCE_TCU,
@@ -727,6 +729,7 @@ export default function CableDesigner() {
 
         const mvCabFactor = (isMV && item.params.cores > 1) ? 1.003 : 1.0;
         const lvCabFactor = item.params.cores > 1 ? 1.01 : 1.0;
+        const inShCabFactor = (isMV && item.params.cores > 1) ? 1.01 : (item.params.cores > 1 ? lvCabFactor : 1.0);
 
         // General
         pushCol(index + 1);
@@ -895,8 +898,22 @@ export default function CableDesigner() {
 
         // Now we have Core OD in currentDiaFormula. Let's set Laid-up Dia formula.
         const coreDiaFormula = currentDiaFormula;
-        const layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.mvScreenDiameter || item.result.spec.coreDiameter || 1); // Approximate factor
-        row[laidUpDiaColIdx] = { t: 'n', f: `${currentDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
+        const totalCores = item.params.cores + (item.params.earthingCores || 0);
+        let layUpFactor = getLayingUpFactor(totalCores);
+        
+        if (isInstrumentation) {
+          const isMultiplier = item.result.bom.isMultiplier || 1;
+          if (INSTRUMENT_FACTORS[isMultiplier]) {
+            layUpFactor = INSTRUMENT_FACTORS[isMultiplier];
+          } else {
+            // Fallback to calculated factor from result for complex instrumentation cases
+            layUpFactor = item.result.spec.laidUpDiameter / (item.result.spec.mvScreenDiameter || item.result.spec.coreDiameter || 1);
+          }
+        }
+        
+        // Use diameterOverScreen for MV cables in Excel formula if available
+        let baseDiaFormula = currentDiaFormula;
+        row[laidUpDiaColIdx] = { t: 'n', f: `${baseDiaFormula}*${layUpFactor.toFixed(3)}`, z: fmtNum };
         currentDiaFormula = `${laidUpDiaCol}${r}`;
 
         // Earth
@@ -1039,7 +1056,8 @@ export default function CableDesigner() {
           // We use the calculated values for interstice and ring area to keep the formula manageable
           const baseArea = ringArea + (intersticeArea * fillerFactor);
           
-          inShWtCol = pushCol(null, fmtNum, `${baseArea.toFixed(4)}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})`);
+          const inShAreaFormula = isMV ? ringArea.toFixed(4) : baseArea.toFixed(4);
+          inShWtCol = pushCol(null, fmtNum, `${inShAreaFormula}*${getDensity(item.params.innerSheathMaterial || 'PVC')}*(1+${materialScrap[item.params.innerSheathMaterial || 'PVC'] || 0}/100)*(1+${innerSheathFactor})*${inShCabFactor}`);
           const inShPrcCol = pushCol(innerPrice, fmtRp);
           inShCstCol = pushCol(null, fmtRp, `${inShWtCol}${r}*${inShPrcCol}${r}/1000`);
         }
@@ -1199,7 +1217,8 @@ export default function CableDesigner() {
         if (hasOuterSheath) {
           outShThkCol = pushCol(item.result.spec.sheathThickness || 0, fmtNum);
           overallDiaCol = pushCol(null, fmtNum, `${currentDiaFormula}+2*${outShThkCol}${r}`);
-          outShWtCol = pushCol(null, fmtNum, `PI()*${outShThkCol}${r}*(${currentDiaFormula}+${outShThkCol}${r})*${getDensity(item.params.sheathMaterial)}*(1+${materialScrap[item.params.sheathMaterial] || 0}/100)`);
+          const outShCabFactor = (isMV && item.params.cores > 1) ? 1.0 : (item.params.cores > 1 ? lvCabFactor : 1.0);
+          outShWtCol = pushCol(null, fmtNum, `PI()*${outShThkCol}${r}*(${currentDiaFormula}+${outShThkCol}${r})*${getDensity(item.params.sheathMaterial)}*(1+${materialScrap[item.params.sheathMaterial] || 0}/100)*${outShCabFactor}`);
           const outShPrcCol = pushCol(sheathPrice, fmtRp);
           outShCstCol = pushCol(null, fmtRp, `${outShWtCol}${r}*${outShPrcCol}${r}/1000`);
         }
