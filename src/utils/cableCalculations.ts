@@ -1678,8 +1678,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     // MV Specifics (IEC 60502-2)
     if (effectiveParams.standard === 'IEC 60502-2') {
-      if (!effectiveParams.manualConductorScreenThickness) conductorScreenThickness = 0.5; 
-      if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
+      if (!effectiveParams.manualConductorScreenThickness) {
+        conductorScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
+      }
+      if (!effectiveParams.manualInsulationScreenThickness) {
+        insulationScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
+      }
       if (effectiveParams.voltage.includes('3.6/6')) insulationThickness = 2.5;
       else if (effectiveParams.voltage.includes('6/10')) insulationThickness = 3.4;
       else if (effectiveParams.voltage.includes('8.7/15')) insulationThickness = 4.5;
@@ -1701,8 +1705,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   } else if (effectiveParams.standard === 'IEC 60502-2') {
     // Even if insulation is manual, screens might still be needed for MV
-    if (!effectiveParams.manualConductorScreenThickness) conductorScreenThickness = 0.5;
-    if (!effectiveParams.manualInsulationScreenThickness) insulationScreenThickness = 0.5;
+    if (!effectiveParams.manualConductorScreenThickness) {
+      conductorScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
+    }
+    if (!effectiveParams.manualInsulationScreenThickness) {
+      insulationScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
+    }
   }
 
   const isMV = effectiveParams.standard === 'IEC 60502-2';
