@@ -30,8 +30,8 @@ export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
 export type ScreenType = 'None' | 'CTS' | 'CWS';
-export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)' | 'LiYCY' | 'SPLN 41-6 : 1981 AAC';
-export type FormationType = 'Core' | 'Pair' | 'Triad';
+export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)' | 'LiYCY' | 'SPLN 41-6 : 1981 AAC' | 'Manufacturing Specification';
+export type FormationType = 'Core' | 'Pair' | 'Triad' | 'Quad';
 export type DesignMode = 'standard' | 'advance';
 
 export interface CableDesignParams {
@@ -68,6 +68,10 @@ export interface CableDesignParams {
   earthingCores?: number;
   earthingSize?: number;
   cablingModel?: 'Auto' | 'Single Circle' | 'Groove';
+  cablingFillerType?: 'Extruded' | 'PP Yarn' | 'Polyester Tape';
+  cablingFillerMaterial?: string;
+  fireProofMaterial?: string;
+  hasOuterSheath?: boolean;
   orderLength?: number; // In meters
   ambientTemperature?: number; // In degrees Celsius
   targetPrice?: number; // Target selling price per meter
@@ -209,6 +213,8 @@ export interface MaterialDensities {
   GSWB: number;
   SFA: number;
   RGB: number;
+  'Polyester Tape': number;
+  'PP Yarn': number;
   None: number;
 }
 
@@ -242,6 +248,8 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   GSWB: 7.85,
   SFA: 7.85,
   RGB: 7.85,
+  'Polyester Tape': 1.38,
+  'PP Yarn': 0.9,
   None: 0,
 };
 
@@ -770,6 +778,7 @@ export interface CalculationResult {
     conductorWeight: number;
     insulationWeight: number;
     innerCoveringWeight: number;
+    cablingFillerWeight?: number;
     screenWeight: number;
     separatorWeight: number;
     armorWeight: number;
@@ -1010,6 +1019,9 @@ const CURRENT_CAPACITY_GROUND_AL_MV: Record<number, number> = {
 export function calculateCable(params: CableDesignParams, customDensities?: MaterialDensities, scrapFactors?: Record<string, number>): CalculationResult {
   const densities = customDensities || DEFAULT_DENSITIES;
   
+  const isMV = params.standard === 'IEC 60502-2';
+  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+
   const applyScrap = (weight: number, material: string) => {
     if (!scrapFactors) return weight;
     const scrap = scrapFactors[material] || 0;
@@ -1020,12 +1032,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const effectiveParams = { ...params };
 
   // Instrumentation specific mapping
-  if (params.standard === 'BS EN 50288-7') {
+  if (isInstrumentation) {
     if (params.formationType === 'Pair') {
       effectiveParams.cores = (params.formationCount || 1) * 2;
       effectiveParams.size = params.instrumentationSize || params.size;
     } else if (params.formationType === 'Triad') {
       effectiveParams.cores = (params.formationCount || 1) * 3;
+      effectiveParams.size = params.instrumentationSize || params.size;
+    } else if (params.formationType === 'Quad') {
+      effectiveParams.cores = (params.formationCount || 1) * 4;
       effectiveParams.size = params.instrumentationSize || params.size;
     }
   }
@@ -1138,8 +1153,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     effectiveParams.manualInnerSheathThickness = 0;
     effectiveParams.manualConductorScreenThickness = 0;
     effectiveParams.manualInsulationScreenThickness = 0;
-  } else if (params.standard === 'BS EN 50288-7') {
-    effectiveParams.insulationMaterial = 'PE'; // Default for instrumentation
+  } else if (isInstrumentation) {
+    effectiveParams.insulationMaterial = params.insulationMaterial || 'PE'; // Default for instrumentation
     if (!['300 V', '300/500 V'].includes(params.voltage)) {
       effectiveParams.voltage = '300/500 V';
     }
@@ -1168,7 +1183,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   }
 
   // Instrumentation 300V constraint: max 1.5mm2
-  if (params.standard === 'BS EN 50288-7' && effectiveParams.voltage === '300 V' && typeof effectiveParams.size === 'number' && effectiveParams.size > 1.5) {
+  if (isInstrumentation && effectiveParams.voltage === '300 V' && typeof effectiveParams.size === 'number' && effectiveParams.size > 1.5) {
     effectiveParams.size = 1.5;
   }
 
@@ -1516,7 +1531,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       else if (Number(size) <= 4.00) insulationThickness = 0.50;
       else insulationThickness = 0.60; // Default for larger
     }
-  } else if (params.standard === 'BS EN 50288-7') {
+  } else if (isInstrumentation) {
     if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
       const is300V = effectiveParams.voltage === '300 V';
       const is300_500V = effectiveParams.voltage === '300/500 V';
@@ -1712,9 +1727,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       insulationScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
     }
   }
-
-  const isMV = effectiveParams.standard === 'IEC 60502-2';
-
+  
   // NYCY Specific Data Overrides
   const nycyKey = `${effectiveParams.cores}x${effectiveParams.size}/${effectiveParams.screenSize || effectiveParams.size}`;
   const nycyData = effectiveParams.standard === 'SPLN 43-4 (NYCY)' ? NYCY_DATA[nycyKey] : null;
@@ -1925,18 +1938,24 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let osDrainWeight = 0;
   let osPetWeight = 0;
 
-  if (effectiveParams.standard === 'BS EN 50288-7') {
+  if (isInstrumentation) {
     const formationType = effectiveParams.formationType || 'Pair';
-    const elementsPerFormation = formationType === 'Pair' ? 2 : (formationType === 'Triad' ? 3 : 1);
-    isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : effectiveParams.cores);
+    const elementsPerFormation = formationType === 'Pair' ? 2 : (formationType === 'Triad' ? 3 : (formationType === 'Quad' ? 4 : 1));
+    isMultiplier = formationType === 'Pair' ? effectiveParams.cores / 2 : (formationType === 'Triad' ? effectiveParams.cores / 3 : (formationType === 'Quad' ? effectiveParams.cores / 4 : effectiveParams.cores));
     
-    // Diameter of one pair or triad
+    // Diameter of one pair or triad or quad
     if (formationType === 'Pair') {
       formationDiameter = coreDiameter * 2;
       formationWeight = (conductorWeightPerCore + insulationWeightPerCore + mgtWeightPerCore) * 2;
     } else if (formationType === 'Triad') {
       formationDiameter = coreDiameter * 2.15;
       formationWeight = (conductorWeightPerCore + insulationWeightPerCore + mgtWeightPerCore) * 3;
+    } else if (formationType === 'Quad') {
+      formationDiameter = coreDiameter * 2.41;
+      formationWeight = (conductorWeightPerCore + insulationWeightPerCore + mgtWeightPerCore) * 4;
+    } else {
+      formationDiameter = coreDiameter;
+      formationWeight = conductorWeightPerCore + insulationWeightPerCore + mgtWeightPerCore;
     }
 
     // Individual Screen (IS)
@@ -1957,8 +1976,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const diaBeforeIS = formationDiameter;
       formationDiameter += 2 * isThk;
       
-      const petDensity = 1.38;
-      const alDensity = 2.7;
+      const petDensity = densities['Polyester Tape'] || 1.38;
+      const alDensity = densities['Aluminium Foil'] || 2.7;
       
       // Weight per formation
       const pWeight = Math.PI * (diaBeforeIS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2; // 2 layers
@@ -2023,8 +2042,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const diaBeforeOS = laidUpDiameter;
       laidUpDiameter += 2 * osThk;
 
-      const petDensity = 1.38;
-      const alDensity = 2.7;
+      const petDensity = densities['Polyester Tape'] || 1.38;
+      const alDensity = densities['Aluminium Foil'] || 2.7;
       
       const pWeight = Math.PI * (diaBeforeOS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2;
       const aWeight = Math.PI * (diaBeforeOS + 2 * petThk + alThk) * alThk * alDensity * (1 + alOverlap/100);
@@ -2069,6 +2088,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // 4. Inner Covering (Extruded)
   let innerCoveringWeight = 0;
+  let cablingFillerWeight = 0;
   let diameterUnderArmor = effectiveParams.manualDiameterUnderArmor || laidUpDiameter;
 
   if (effectiveParams.standard.includes('NFA2X') || effectiveParams.standard === 'LiYCY') {
@@ -2082,7 +2102,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       if (effectiveParams.standard === 'IEC 60092-353') {
         // Marine cable bedding formula: 0.04 * d + 0.8
         innerCoveringThickness = Math.round((0.04 * laidUpDiameter + 0.8) * 10) / 10;
-      } else if (effectiveParams.standard === 'BS EN 50288-7') {
+      } else if (isInstrumentation) {
         innerCoveringThickness = Math.max(0.8, Math.round((0.04 * laidUpDiameter + 0.7) * 10) / 10);
       } else {
         if (laidUpDiameter <= 25) innerCoveringThickness = 1.0;
@@ -2118,12 +2138,27 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
     
     // Filler Factor: Industrial cables often use 70-90% filling for extruded bedding
-    const fillerFactor = effectiveParams.standard === 'BS EN 50288-7' ? 0 : 0.85; 
+    const fillerFactor = isInstrumentation ? 0 : 0.85; 
     const totalCoresCount = effectiveParams.cores + earthingCores;
     const weightAdditionFactor = getWeightAdditionFactor(totalCoresCount);
     // For sector conductors (sm), the weight addition factor is not used for inner sheath as per user request
     const effectiveWeightAdditionFactor = (effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') ? 0 : weightAdditionFactor;
-    const totalInnerSheathArea = (ringArea + (intersticeArea * fillerFactor)) * (1 + effectiveWeightAdditionFactor);
+    
+    let fillerArea = intersticeArea * fillerFactor;
+    
+    if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType && effectiveParams.cablingFillerType !== 'Extruded') {
+      const fillerDensity = densities[effectiveParams.cablingFillerType] || 0.9;
+      const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
+      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor, effectiveParams.cablingFillerType);
+      fillerArea = 0; // Remove from inner sheath area
+    } else if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType === 'Extruded') {
+      const fillerDensity = densities[effectiveParams.cablingFillerMaterial || 'PVC'] || densities.PVC;
+      const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
+      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor, effectiveParams.cablingFillerMaterial || 'PVC');
+      fillerArea = 0; // Remove from inner sheath area
+    }
+    
+    const totalInnerSheathArea = (ringArea + fillerArea) * (1 + effectiveWeightAdditionFactor);
     
     if (isMV) {
       const mvInShCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
@@ -2203,8 +2238,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let diameterOverSeparator = diameterOverOverallScreen;
 
   // Auto-separator logic: if cable has screen and armor
-  const autoSeparator = isIEC60502_1 && effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
-  const needsSeparator = (isIEC60502_1 && (effectiveParams.hasSeparator || autoSeparator)) || effectiveParams.standard === 'LiYCY';
+  const autoSeparator = (isIEC60502_1 || effectiveParams.standard === 'Manufacturing Specification') && effectiveParams.hasScreen && effectiveParams.armorType !== 'Unarmored';
+  const needsSeparator = ((isIEC60502_1 || effectiveParams.standard === 'Manufacturing Specification') && (effectiveParams.hasSeparator || autoSeparator)) || effectiveParams.standard === 'LiYCY';
 
   if (needsSeparator) {
     if (effectiveParams.standard === 'LiYCY' || effectiveParams.separatorMaterial === 'Polyester Tape') {
@@ -2259,7 +2294,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     diameterOverArmor = effectiveParams.manualDiameterOverArmor || diameterUnderArmor;
   } else if (effectiveParams.armorType === 'SWA' || effectiveParams.armorType === 'AWA') {
     if (!effectiveParams.manualArmorThickness) {
-      if (effectiveParams.standard === 'BS EN 50288-7') {
+      if (isInstrumentation) {
         if (diameterUnderArmor <= 15) armorThickness = 0.9;
         else if (diameterUnderArmor <= 25) armorThickness = 1.25;
         else if (diameterUnderArmor <= 35) armorThickness = 1.6;
@@ -2482,7 +2517,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (effectiveParams.standard === 'LiYCY') {
       const nominalSheath = 0.08 * fictitiousDiameter + 0.8;
       sheathThickness = Math.round((0.85 * nominalSheath - 0.1) * 10) / 10;
-    } else if (effectiveParams.standard === 'BS EN 50288-7') {
+    } else if (isInstrumentation) {
       if (effectiveParams.armorType === 'Unarmored') {
         sheathThickness = Math.max(1.8, Math.round((0.04 * fictitiousDiameter + 0.7) * 10) / 10);
       } else {
@@ -2510,7 +2545,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   }
 
-  const finalSheathThickness = sheathThickness || 0;
+  const finalSheathThickness = (effectiveParams.hasOuterSheath !== false) ? (sheathThickness || 0) : 0;
   let overallDiameter = effectiveParams.manualOverallDiameter || (diameterOverArmor + 2 * finalSheathThickness);
 
   // SNI 04-6629.5 (NYMHY) specific overrides for OD
@@ -2536,9 +2571,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       : 0;
   }
 
-  const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
+  const masterbatchWeight = (totalInsulationWeight * (isMV ? 0 : 0.02)) + (innerCoveringWeight * 0.02) + (cablingFillerWeight * 0.02) + (separatorWeight * 0.02) + (sheathWeight * 0.02);
   
-  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + binderTapeOverArmorWeight + masterbatchWeight);
+  const totalWeight = abcTData ? abcTData.netWeight : (abcData ? abcData.netWeight : totalConductorWeight + totalInsulationWeight + totalSemiCondWeight + innerCoveringWeight + cablingFillerWeight + screenWeight + separatorWeight + armorWeight + sheathWeight + totalMvScreenWeight + totalMgtWeight + isWeight + osWeight + binderTapeWeight + binderTapeOverArmorWeight + masterbatchWeight);
 
   const scope = {
     PI: Math.PI,
@@ -2737,6 +2772,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     else testVoltage = '2.5 kV';
   } else if (effectiveParams.standard === 'BS EN 50288-7') {
     testVoltage = effectiveParams.voltage.includes('300/500') ? '2 kV' : '1.5 kV';
+  } else if (effectiveParams.standard === 'Manufacturing Specification') {
+    if (effectiveParams.voltage.includes('300/500')) testVoltage = '2 kV';
+    else if (effectiveParams.voltage.includes('450/750')) testVoltage = '2.5 kV';
+    else if (effectiveParams.voltage.includes('300 V')) testVoltage = '1.5 kV';
+    else testVoltage = '3.5 kV';
   }
 
   // Short Circuit Calculation
@@ -2847,6 +2887,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight || 0, effectiveParams.conductorMaterial).toFixed(1)),
       insulationWeight: Number(applyScrap(weightDetails.insulation?.weight || totalInsulationWeight || 0, effectiveParams.insulationMaterial).toFixed(1)),
       innerCoveringWeight: Number(applyScrap(weightDetails.innerSheath?.weight || innerCoveringWeight || 0, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
+      cablingFillerWeight: Number(cablingFillerWeight.toFixed(1)),
       screenWeight: Number(applyScrap(screenWeight || 0, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
       separatorWeight: Number(applyScrap(weightDetails.separator?.weight || separatorWeight || 0, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
       armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight || 0, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : (effectiveParams.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))))).toFixed(1)),

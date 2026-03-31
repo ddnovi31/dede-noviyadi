@@ -225,7 +225,7 @@ export default function CableDesigner() {
   };
 
   const isMV = params.standard === 'IEC 60502-2';
-  const isInstrumentation = params.standard === 'BS EN 50288-7';
+  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
@@ -572,10 +572,10 @@ export default function CableDesigner() {
       const isNoSheath = sampleItem.params.standard.includes('NYA') || sampleItem.params.standard.includes('NYAF') || sampleItem.params.standard.includes('NFA2X');
       const hasInnerSheath = !isNoSheath && (sampleItem.params.hasInnerSheath !== false) && ((sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None'));
       const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
-      const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X') && sampleItem.params.standard !== 'SPLN 41-6 : 1981 AAC';
+      const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X') && sampleItem.params.standard !== 'SPLN 41-6 : 1981 AAC' && sampleItem.params.hasOuterSheath !== false;
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
       const isNFA2X = sampleItem.params.standard.includes('NFA2X') && !isNFA2XT;
-      const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7';
+      const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7' || (sampleItem.params.standard === 'Manufacturing Specification' && sampleItem.params.hasScreen);
       const isAAC = sampleItem.params.standard === 'SPLN 41-6 : 1981 AAC';
       const hasPetTapeInGroup = isMV ? items.some(i => i.item.params.cores === 1) : true;
 
@@ -785,7 +785,7 @@ export default function CableDesigner() {
         if (item.params.fireguard) {
           const mgtThkCol = pushCol(item.result.spec.mgtThickness || 0.2, fmtNum);
           const mgtWtCol = pushCol(item.result.bom.mgtWeight || 0, fmtNum);
-          const mgtPrcCol = pushCol(getPrice('MGT', 120000), fmtRp);
+          const mgtPrcCol = pushCol(getPrice(item.params.fireProofMaterial || 'MGT', 120000), fmtRp);
           mgtCstCol = pushCol(null, fmtRp, `${mgtWtCol}${r}*${mgtPrcCol}${r}/1000`);
           currentDiaFormula = `(${currentDiaFormula}+2*${mgtThkCol}${r})`;
         }
@@ -1690,6 +1690,44 @@ export default function CableDesigner() {
     safeLocalStorage.setItem('cable_drum_data', JSON.stringify(drumData));
   }, [drumData]);
 
+  const handleExportDrums = () => {
+    const dataStr = JSON.stringify(drumData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `drum_data_${new Date().toISOString().split('T')[0]}.drums`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportDrums = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedData = JSON.parse(content);
+        if (Array.isArray(importedData)) {
+          setDrumData(importedData);
+          alert('Drum data imported successfully!');
+        } else {
+          alert('Invalid drum data format.');
+        }
+      } catch (err) {
+        console.error('Error importing drum data:', err);
+        alert('Error importing drum data. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input value to allow importing the same file again
+    event.target.value = '';
+  };
+
   const [lmeParams, setLmeParams] = useState(() => {
     const saved = safeLocalStorage.getItem('cable_lme_params');
     return saved ? JSON.parse(saved) : {
@@ -1850,7 +1888,7 @@ export default function CableDesigner() {
     });
   };
 
-  const isInstrumentationPairTriad = params.standard === 'BS EN 50288-7' && (params.formationType === 'Pair' || params.formationType === 'Triad');
+  const isInstrumentationPairTriad = (params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen)) && (params.formationType === 'Pair' || params.formationType === 'Triad' || params.formationType === 'Quad');
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [calcError, setCalcError] = useState<string | null>(null);
 
@@ -1986,11 +2024,13 @@ export default function CableDesigner() {
         const newFormation = key === 'formationType' ? value : prev.formationType;
         const newCount = key === 'formationCount' ? value : (prev.formationCount || 1);
         
-        if (newParams.standard === 'BS EN 50288-7') {
+        if (newParams.standard === 'BS EN 50288-7' || newParams.standard === 'Manufacturing Specification') {
           if (newFormation === 'Pair') {
             newParams.cores = newCount * 2;
           } else if (newFormation === 'Triad') {
             newParams.cores = newCount * 3;
+          } else if (newFormation === 'Quad') {
+            newParams.cores = newCount * 4;
           }
         }
       }
@@ -2288,7 +2328,8 @@ export default function CableDesigner() {
       const isOs = p.hasIndividualScreen && p.hasOverallScreen ? 'IS-OS' : (p.hasOverallScreen ? 'OS' : (p.hasIndividualScreen ? 'IS' : ''));
       const armor = p.armorType !== 'Unarmored' ? `/${p.armorType}` : '';
       const mgt = p.fireguard ? '/MGT' : '';
-      const construction = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}/${p.sheathMaterial}`.toUpperCase();
+      const sheath = p.hasOuterSheath !== false ? `/${p.sheathMaterial}` : '';
+      const construction = `${p.conductorMaterial}${mgt}/${p.insulationMaterial}${isOs ? '/' + isOs : ''}${armor}${sheath}`.toUpperCase();
       const elements = formation === 'Pair' ? '2' : (formation === 'Triad' ? '3' : '1');
       const sizeStr = formation === 'Core' ? `${p.cores} x ${p.size} mm²` : `${p.formationCount || 1} x ${elements} x ${p.instrumentationSize || p.size} mm²`;
       return `${p.standard} ${construction} ${sizeStr} ${p.voltage}`;
@@ -2310,6 +2351,7 @@ export default function CableDesigner() {
     const overallScreen = (p.hasScreen && p.screenType && p.screenType !== 'None') ? `/${p.screenType}` : '';
     const separator = (p.hasSeparator || (p.hasScreen && p.armorType !== 'Unarmored')) ? `/${p.separatorMaterial || 'PVC'}` : '';
     const armor = p.armorType === 'Unarmored' ? '' : `/${p.armorType}`;
+    const sheath = p.hasOuterSheath !== false ? `/${p.sheathMaterial}` : '';
     
     let sizeDesignation = `${p.cores} x ${p.size}`;
     if (p.hasEarthing && p.earthingCores && p.earthingCores > 0 && p.earthingSize && p.earthingSize > 0) {
@@ -2320,7 +2362,7 @@ export default function CableDesigner() {
       }
     }
 
-    return `${p.conductorMaterial}${fg}/${p.insulationMaterial}${mvScreen}${overallScreen}${separator}${armor}/${p.sheathMaterial} ${sizeDesignation} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
+    return `${p.conductorMaterial}${fg}/${p.insulationMaterial}${mvScreen}${overallScreen}${separator}${armor}${sheath} ${sizeDesignation} mm² (${p.conductorType}) ${r.electrical.voltageRating}`;
   };
 
   const getConstructionKey = (p: CableDesignParams) => {
@@ -2422,6 +2464,9 @@ export default function CableDesigner() {
     const prices = pricesOverride || { ...materialPrices, ...(params.customMaterialPrices || {}) };
     const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
     
+    const isMV = params.standard === 'IEC 60502-2';
+    const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+    
     const formationType = params.formationType || 'Pair';
     const multiplier = formationType === 'Pair' ? params.cores / 2 : (formationType === 'Triad' ? params.cores / 3 : params.cores);
     const condPrice = (params.conductorMaterial === 'Cu' ? getPrice('Cu', 0) : (params.conductorMaterial === 'Al' ? getPrice('Al', 0) : getPrice('TCu', 0)));
@@ -2443,7 +2488,7 @@ export default function CableDesigner() {
     const outerSemiPrice = getPrice('Outer Semi Conductive', 65000);
     const screenPrice = params.screenType === 'CTS' ? getPrice('CTS', getPrice('Cu', 0)) : (params.screenType === 'CWS' ? getPrice('Cu', 0) : getPrice('Steel', 0));
     const mvScreenPrice = getPrice('Cu', 0);
-    const mgtPrice = getPrice('MGT', 120000);
+    const mgtPrice = getPrice(params.fireProofMaterial || 'MGT', 120000);
     const steelWirePrice = getPrice('SteelWire', 50000);
 
     const breakdown: any = {
@@ -2453,6 +2498,7 @@ export default function CableDesigner() {
       armorTape: bom.armorTapeWeight ? (bom.armorTapeWeight * armorTapePrice) / 1000 : 0,
       sheath: (bom.sheathWeight * sheathPrice) / 1000,
       innerCovering: (bom.innerCoveringWeight * innerPrice) / 1000,
+      cablingFiller: (bom.cablingFillerWeight ? (bom.cablingFillerWeight * getPrice(params.cablingFillerType === 'Extruded' ? (params.cablingFillerMaterial || 'PVC') : (params.cablingFillerType || 'PP Yarn'), 0)) / 1000 : 0),
       screen: (!isMV && !isInstrumentation && params.hasScreen) 
         ? (params.screenType === 'CTS'
             ? (((bom.copperTapeWeight || 0) * getPrice('CTS', getPrice('Cu', 0))) + ((bom.polyesterTapeWeight || 0) * getPrice('Polyester Tape', 10000))) / 1000
@@ -2471,7 +2517,7 @@ export default function CableDesigner() {
       isPet: bom.isPetWeight ? (bom.isPetWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       binderTape: bom.binderTapeWeight ? (bom.binderTapeWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       binderTapeOverArmor: bom.binderTapeOverArmorWeight ? (bom.binderTapeOverArmorWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
-      osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Al', 0)) / 1000 : 0,
+      osAl: bom.osAlWeight ? (bom.osAlWeight * getPrice('Aluminium Foil', getPrice('Al', 0))) / 1000 : 0,
       osDrain: bom.osDrainWeight ? (bom.osDrainWeight * getPrice('TCu', getPrice('Cu', 0))) / 1000 : 0,
       osPet: bom.osPetWeight ? (bom.osPetWeight * getPrice('Polyester Tape', 10000)) / 1000 : 0,
       masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
@@ -2784,7 +2830,7 @@ export default function CableDesigner() {
                     
                     const isNY = item.params.standard.includes('(NYA)') || item.params.standard.includes('(NYAF)');
                     const isNFA = item.params.standard.includes('NFA2X');
-                    const hasOuterSheath = !isNY && !isNFA && item.params.standard !== 'SPLN 41-6 : 1981 AAC';
+                    const hasOuterSheath = !isNY && !isNFA && item.params.standard !== 'SPLN 41-6 : 1981 AAC' && item.params.hasOuterSheath !== false;
                     const hasAssembly = (item.params.cores > 1 && !isNFA) || item.params.hasInnerSheath || item.params.hasSeparator;
                     const hasArmor = item.params.armorType !== 'Unarmored';
                     const hasInstrumentation = item.params.formationType && item.params.formationType !== 'Core';
@@ -3890,11 +3936,11 @@ export default function CableDesigner() {
             const p = firstItem.params;
             
             const isMV = p.standard === 'IEC 60502-2';
-            const isInstrumentation = p.standard === 'BS EN 50288-7';
+            const isInstrumentation = p.standard === 'BS EN 50288-7' || (p.standard === 'Manufacturing Specification' && p.hasScreen);
             const isNYA = p.standard.includes('(NYA)');
             const isNYAF = p.standard.includes('(NYAF)');
             const isABC = p.standard.includes('NFA2X');
-            const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC';
+            const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC' && p.hasOuterSheath !== false;
 
             // Get construction name (material part of designation)
             const designation = getCableDesignation(p, firstItem.result);
@@ -6261,7 +6307,7 @@ export default function CableDesigner() {
                       </>
                     )}
 
-                    {p.standard === 'BS EN 50288-7' && (p.hasIndividualScreen || p.hasOverallScreen) && (
+                    {isInstrumentation && (p.hasIndividualScreen || p.hasOverallScreen) && (
                       <>
                         <tr className="bg-slate-50/50">
                           <td className="border border-slate-400 p-2 text-center"></td>
@@ -7500,7 +7546,7 @@ export default function CableDesigner() {
 
   const isIEC60502_1 = params.standard === 'IEC 60502-1';
   const isNYCY = params.standard === 'SPLN 43-4 (NYCY)';
-  const isLV = isIEC60502_1 || isNYCY;
+  const isLV = isIEC60502_1 || isNYCY || params.standard === 'Manufacturing Specification' || params.standard === 'LiYCY';
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
@@ -8000,6 +8046,7 @@ export default function CableDesigner() {
                         <option value="BS EN 50288-7">BS EN 50288-7 (Instrumentation)</option>
                         <option value="LiYCY">LiYCY (Flexible Screened)</option>
                         <option value="SPLN 41-6 : 1981 AAC">SPLN 41-6 : 1981 AAC</option>
+                        <option value="Manufacturing Specification">Manufacturing Specification</option>
                       </select>
                     </div>
 
@@ -8035,10 +8082,31 @@ export default function CableDesigner() {
                       </div>
                     )}
 
-                    {params.standard === 'BS EN 50288-7' && (
+                    {(params.standard === 'BS EN 50288-7' || params.standard === 'Manufacturing Specification') && (
                       <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-4">
-                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Instrumentation Options</label>
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                            {params.standard === 'Manufacturing Specification' ? 'Screen & Formation Options' : 'Instrumentation Options'}
+                          </label>
+                          {params.standard === 'Manufacturing Specification' && (
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                              <span className="text-xs font-bold text-slate-500 uppercase">Use Screen (OS/IS-OS)</span>
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={params.hasScreen || false}
+                                  onChange={(e) => handleParamChange('hasScreen', e.target.checked)}
+                                />
+                                <div className={`block w-8 h-5 rounded-full transition-colors ${params.hasScreen ? 'bg-indigo-500' : 'bg-slate-300'}`}></div>
+                                <div className={`absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition-transform ${params.hasScreen ? 'translate-x-3' : ''}`}></div>
+                              </div>
+                            </label>
+                          )}
+                        </div>
+                        
+                        {(params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen)) && (
+                          <div className="grid grid-cols-1 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-slate-500 mb-1">Formation Type</label>
                             <select
@@ -8049,6 +8117,7 @@ export default function CableDesigner() {
                               <option value="Core">Core</option>
                               <option value="Pair">Pair</option>
                               <option value="Triad">Triad</option>
+                              <option value="Quad">Quad</option>
                             </select>
                           </div>
 
@@ -8277,30 +8346,48 @@ export default function CableDesigner() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
 
                     {/* Features Section */}
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">1. Cable Features</label>
                       <div className="grid grid-cols-1 gap-3">
                         {/* Fireguard Toggle (Includes MGT) */}
-                        <label className="flex items-center justify-between cursor-pointer group">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-600 group-hover:text-red-600 transition-colors">Fireguard</span>
-                            <span className="text-[10px] text-slate-400 italic">Includes Mica Glass Tape (MGT)</span>
-                          </div>
-                          <div className="relative">
-                            <input
-                              type="checkbox"
-                              className="sr-only"
-                              checked={params.fireguard}
-                              onChange={(e) => handleParamChange('fireguard', e.target.checked)}
-                            />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${params.fireguard ? 'bg-red-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.fireguard ? 'translate-x-4' : ''}`}></div>
-                          </div>
-                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center justify-between cursor-pointer group">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-slate-600 group-hover:text-red-600 transition-colors">Fireguard</span>
+                              <span className="text-[10px] text-slate-400 italic">Includes Mica Glass Tape (MGT)</span>
+                            </div>
+                            <div className="relative">
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                checked={params.fireguard}
+                                onChange={(e) => handleParamChange('fireguard', e.target.checked)}
+                              />
+                              <div className={`block w-10 h-6 rounded-full transition-colors ${params.fireguard ? 'bg-red-500' : 'bg-slate-200'}`}></div>
+                              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.fireguard ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                          </label>
+                          {params.standard === 'Manufacturing Specification' && params.fireguard && (
+                            <div className="pl-4 border-l-2 border-red-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fire Proof Material</label>
+                              <select
+                                value={params.fireProofMaterial || 'MGT'}
+                                onChange={(e) => handleParamChange('fireProofMaterial', e.target.value)}
+                                className="w-full rounded-xl border-slate-200 shadow-sm focus:border-red-500 focus:ring-red-500 text-xs p-2 border bg-white"
+                              >
+                                <option value="MGT">MGT</option>
+                                {Object.keys(materialPrices).filter(m => materialCategories[m] === 'Tape' && m !== 'MGT').map(mat => (
+                                  <option key={mat} value={mat}>{mat}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Stopfire Toggle */}
                         <label className="flex items-center justify-between cursor-pointer group">
@@ -8357,6 +8444,14 @@ export default function CableDesigner() {
                               <option value="8.7/15 kV">8.7/15 kV</option>
                               <option value="12/20 kV">12/20 kV</option>
                               <option value="18/30 kV">18/30 kV</option>
+                            </>
+                          ) : params.standard === 'Manufacturing Specification' ? (
+                            <>
+                              <option value="300 V">300 V</option>
+                              <option value="300/500 V">300/500 V</option>
+                              <option value="450/750 V">450/750 V</option>
+                              <option value="600 V">600 V</option>
+                              <option value="0.6/1 (1.2) kV">0.6/1 (1.2) kV</option>
                             </>
                           ) : params.standard === 'BS EN 50288-7' ? (
                             <>
@@ -8870,6 +8965,11 @@ export default function CableDesigner() {
                         <div className="grid grid-cols-2 gap-2">
                           {(['re', 'rm', 'cm', 'sm', 'f'] as ConductorType[]).map((type) => {
                             let isDisabled = (type === 'sm' && (params.cores === 1 || params.size < 25));
+                            if (params.standard === 'Manufacturing Specification') {
+                              if (type === 'sm') {
+                                isDisabled = !((params.cores === 3 || params.cores === 4) && params.size >= 50);
+                              }
+                            }
                             if (params.standard.includes('SNI 04-6629')) {
                               if (params.standard.includes('(NYM)')) isDisabled = isDisabled || !['re', 'rm'].includes(type);
                               if (params.standard.includes('(NYAF)') || params.standard.includes('(NYMHY)')) isDisabled = isDisabled || type !== 'f';
@@ -9133,26 +9233,71 @@ export default function CableDesigner() {
                       </div>
                     )}
 
+                    {/* Cabling Filler Section */}
+                    {params.standard === 'Manufacturing Specification' && (
+                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3.3 Cabling Filler</label>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Filler Type</label>
+                            <select
+                              value={params.cablingFillerType || 'Extruded'}
+                              onChange={(e) => handleParamChange('cablingFillerType', e.target.value)}
+                              className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                            >
+                              <option value="Extruded">Extruded</option>
+                              <option value="PP Yarn">PP Yarn</option>
+                              <option value="Polyester Tape">Polyester Tape</option>
+                            </select>
+                          </div>
+                          
+                          {(!params.cablingFillerType || params.cablingFillerType === 'Extruded') && (
+                            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Extruded Material</label>
+                              <select
+                                value={params.cablingFillerMaterial || 'PVC'}
+                                onChange={(e) => handleParamChange('cablingFillerMaterial', e.target.value)}
+                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                              >
+                                {(() => {
+                                  const sheathMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                  const customSheaths = Object.keys(materialPrices).filter(m => 
+                                    materialCategories[m] === 'Compound Filler' || 
+                                    materialCategories[m] === 'Compound Sheath' || 
+                                    materialCategories[m] === 'Compound (Filler/Sheath)'
+                                  );
+                                  const availableSheaths = Array.from(new Set([...sheathMaterials, ...customSheaths])).filter(mat => materialPrices[mat] !== undefined);
+                                  return availableSheaths.map(mat => (
+                                    <option key={mat} value={mat}>{mat}</option>
+                                  ));
+                                })()}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Inner Sheath Section */}
                     {params.standard !== 'LiYCY' && params.standard !== 'SPLN 41-6 : 1981 AAC' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                            <label className={`flex items-center justify-between cursor-pointer group ${params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <label className={`flex items-center justify-between cursor-pointer group ${params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Inner Sheath</span>
                               <div className="relative">
                                 <input
                                   type="checkbox"
                                   className="sr-only"
-                                  disabled={params.armorType !== 'Unarmored'}
-                                  checked={params.hasInnerSheath !== false || params.armorType !== 'Unarmored'}
+                                  disabled={params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored'}
+                                  checked={params.hasInnerSheath !== false || (params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored')}
                                   onChange={(e) => handleParamChange('hasInnerSheath', e.target.checked)}
                                 />
-                                <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                                <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasInnerSheath !== false || params.armorType !== 'Unarmored') ? 'translate-x-4' : ''}`}></div>
+                                <div className={`block w-10 h-6 rounded-full transition-colors ${(params.hasInnerSheath !== false || (params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored')) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                                <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(params.hasInnerSheath !== false || (params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored')) ? 'translate-x-4' : ''}`}></div>
                               </div>
                             </label>
-                            {(params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                            {(params.hasInnerSheath !== false || (params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored')) && (
                               <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
                                 <select
@@ -9178,7 +9323,7 @@ export default function CableDesigner() {
                             )}
                           </div>
                           
-                          {params.mode === 'advance' && (params.hasInnerSheath || params.armorType !== 'Unarmored') && (
+                          {params.mode === 'advance' && (params.hasInnerSheath !== false || (params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored')) && (
                             <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                               <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Inner Sheath Thickness (mm)</label>
                               <input
@@ -9206,32 +9351,32 @@ export default function CableDesigner() {
                               type="checkbox"
                               className="sr-only"
                               disabled={!isLV || isNYCY}
-                              checked={isLV && (params.hasScreen || false)}
+                              checked={isNYCY || (isLV && (params.hasScreen || false))}
                               onChange={(e) => handleParamChange('hasScreen', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${isLV && params.hasScreen ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isLV && params.hasScreen ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${isNYCY || (isLV && params.hasScreen) ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isNYCY || (isLV && params.hasScreen) ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {isLV && params.hasScreen && (
+                        {isLV && (isNYCY || params.hasScreen) && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-3">
                             <div>
                               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
                               <select
-                                value={params.screenType || 'CTS'}
+                                value={isNYCY ? 'CWS' : (params.screenType || 'CTS')}
                                 disabled={isNYCY}
                                 onChange={(e) => handleParamChange('screenType', e.target.value as any)}
                                 className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                               >
-                                <option value="CTS" disabled={isLV}>CTS (Copper Tape Screen)</option>
+                                <option value="CTS">CTS (Copper Tape Screen)</option>
                                 <option value="CWS">CWS (Copper Wire + Tape + Polyester)</option>
                               </select>
                             </div>
-                            {params.screenType === 'CWS' && (
+                            {(isNYCY || params.screenType === 'CWS') && (
                               <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Screen Size (mm²)</label>
                                 <select
-                                  value={params.screenSize || 16}
+                                  value={params.screenSize || (isNYCY ? (NYCY_DATA[`${params.cores}x${params.size}/${params.screenSize || params.size}`]?.screenSize || Number(params.size)) : 16)}
                                   onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
                                   className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                                 >
@@ -9288,12 +9433,12 @@ export default function CableDesigner() {
                   )}
 
                     {/* Separator Section */}
-                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${(!isIEC60502_1 && params.standard !== 'LiYCY') ? 'opacity-50' : ''}`}>
+                    <div className={`space-y-4 border-t border-slate-100 pt-4 ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') ? 'opacity-50' : ''}`}>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        {params.standard === 'LiYCY' ? '4.2 Inner Tape (Polyester Tape)' : `4.2 Separator Sheath ${!isIEC60502_1 ? '(IEC 60502-1 Only)' : ''}`}
+                        {params.standard === 'LiYCY' ? '4.2 Inner Tape (Polyester Tape)' : `4.2 Separator Sheath ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification') ? '(IEC 60502-1 or Mfg Spec Only)' : ''}`}
                       </label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                        <label className={`flex items-center justify-between ${((!isIEC60502_1 && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY') ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
+                        <label className={`flex items-center justify-between ${((!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY') ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                           <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
                             {params.standard === 'LiYCY' ? 'Apply Inner Tape' : 'Apply Separator'}
                           </span>
@@ -9301,15 +9446,15 @@ export default function CableDesigner() {
                             <input
                               type="checkbox"
                               className="sr-only"
-                              disabled={(!isIEC60502_1 && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY'}
-                              checked={(isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY'}
+                              disabled={(!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY'}
+                              checked={((isIEC60502_1 || params.standard === 'Manufacturing Specification') && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY'}
                               onChange={(e) => handleParamChange('hasSeparator', e.target.checked)}
                             />
-                            <div className={`block w-10 h-6 rounded-full transition-colors ${((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'translate-x-4' : ''}`}></div>
+                            <div className={`block w-10 h-6 rounded-full transition-colors ${(((isIEC60502_1 || params.standard === 'Manufacturing Specification') && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${(((isIEC60502_1 || params.standard === 'Manufacturing Specification') && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') ? 'translate-x-4' : ''}`}></div>
                           </div>
                         </label>
-                        {((isIEC60502_1 && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') && (
+                        {(((isIEC60502_1 || params.standard === 'Manufacturing Specification') && (params.hasSeparator || (params.hasScreen && params.armorType !== 'Unarmored'))) || params.standard === 'LiYCY') && (
                           <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Material</label>
                             <select
@@ -9573,71 +9718,93 @@ export default function CableDesigner() {
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">6. Outer Sheath</label>
                         
-                        {/* Flame Retardant Category */}
-                        <div className={!params.stopfire ? 'opacity-50 pointer-events-none' : ''}>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Flame Retardant Category 
-                            {!params.stopfire && <span className="text-[10px] ml-2 text-slate-400 font-normal">(Enable StopFire first)</span>}
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {(['None', 'Cat.A', 'Cat.B', 'Cat.C'] as FlameRetardantCategory[]).map((cat) => (
-                              <button
-                                key={cat}
-                                disabled={!params.stopfire}
-                                onClick={() => {
-                                  handleParamChange('flameRetardantCategory', cat);
-                                }}
-                                className={`py-2 px-2 rounded-xl text-xs font-medium transition-colors ${
-                                  (params.flameRetardantCategory || 'None') === cat
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {cat === 'None' ? 'Non Category' : cat}
-                              </button>
-                            ))}
+                        {params.standard === 'Manufacturing Specification' && (
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3 mb-4">
+                            <label className="flex items-center justify-between cursor-pointer group">
+                              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Outer Sheath</span>
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={params.hasOuterSheath !== false}
+                                  onChange={(e) => handleParamChange('hasOuterSheath', e.target.checked)}
+                                />
+                                <div className={`block w-10 h-6 rounded-full transition-colors ${params.hasOuterSheath !== false ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                                <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${params.hasOuterSheath !== false ? 'translate-x-4' : ''}`}></div>
+                              </div>
+                            </label>
                           </div>
-                        </div>
+                        )}
 
-                        {/* Sheath Material */}
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
-                          <select
-                            value={params.sheathMaterial}
-                            onChange={(e) => handleParamChange('sheathMaterial', e.target.value as SheathMaterial)}
-                            className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
-                          >
-                            {(() => {
-                              const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
-                              const customCompounds = Object.keys(materialPrices).filter(m => 
-                                materialCategories[m] === 'Compound Filler' || 
-                                materialCategories[m] === 'Compound Sheath' || 
-                                materialCategories[m] === 'Compound (Filler/Sheath)'
-                              );
-                              const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
-                              return (
-                                <>
-                                  {availableCompounds.map(mat => (
-                                    <option key={mat} value={mat}>{mat}</option>
-                                  ))}
-                                  <option value="ADD_NEW_OUTER_SHEATH" className="text-indigo-600 font-bold">+ Add New Material</option>
-                                </>
-                              );
-                            })()}
-                          </select>
-                        </div>
+                        {(params.hasOuterSheath !== false) && (
+                          <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {/* Flame Retardant Category */}
+                            <div className={!params.stopfire ? 'opacity-50 pointer-events-none' : ''}>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Flame Retardant Category 
+                                {!params.stopfire && <span className="text-[10px] ml-2 text-slate-400 font-normal">(Enable StopFire first)</span>}
+                              </label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {(['None', 'Cat.A', 'Cat.B', 'Cat.C'] as FlameRetardantCategory[]).map((cat) => (
+                                  <button
+                                    key={cat}
+                                    disabled={!params.stopfire}
+                                    onClick={() => {
+                                      handleParamChange('flameRetardantCategory', cat);
+                                    }}
+                                    className={`py-2 px-2 rounded-xl text-xs font-medium transition-colors ${
+                                      (params.flameRetardantCategory || 'None') === cat
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    {cat === 'None' ? 'Non Category' : cat}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
 
-                        {params.mode === 'advance' && (
-                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Outer Sheath Thickness (mm)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={params.manualSheathThickness || ''}
-                              placeholder={result.spec.sheathThickness.toFixed(1)}
-                              onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
-                              className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
-                            />
+                            {/* Sheath Material */}
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+                              <select
+                                value={params.sheathMaterial}
+                                onChange={(e) => handleParamChange('sheathMaterial', e.target.value as SheathMaterial)}
+                                className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50"
+                              >
+                                {(() => {
+                                  const compoundMaterials = ['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR'];
+                                  const customCompounds = Object.keys(materialPrices).filter(m => 
+                                    materialCategories[m] === 'Compound Filler' || 
+                                    materialCategories[m] === 'Compound Sheath' || 
+                                    materialCategories[m] === 'Compound (Filler/Sheath)'
+                                  );
+                                  const availableCompounds = Array.from(new Set([...compoundMaterials, ...customCompounds])).filter(mat => materialPrices[mat] !== undefined);
+                                  return (
+                                    <>
+                                      {availableCompounds.map(mat => (
+                                        <option key={mat} value={mat}>{mat}</option>
+                                      ))}
+                                      <option value="ADD_NEW_OUTER_SHEATH" className="text-indigo-600 font-bold">+ Add New Material</option>
+                                    </>
+                                  );
+                                })()}
+                              </select>
+                            </div>
+
+                            {params.mode === 'advance' && (
+                              <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Outer Sheath Thickness (mm)</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={params.manualSheathThickness || ''}
+                                  placeholder={result.spec.sheathThickness.toFixed(1)}
+                                  onChange={(e) => handleParamChange('manualSheathThickness', e.target.value ? Number(e.target.value) : undefined)}
+                                  className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -10103,6 +10270,24 @@ export default function CableDesigner() {
                     <div className="flex items-center justify-between mb-2 px-1">
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Drum List</h4>
                       <div className="flex gap-2">
+                        <button 
+                          onClick={handleExportDrums}
+                          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 transition-all"
+                          title="Export Drum Data (.drums)"
+                        >
+                          <Download className="w-3 h-3" />
+                          Export
+                        </button>
+                        <label className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 transition-all cursor-pointer">
+                          <Upload className="w-3 h-3" />
+                          Import
+                          <input 
+                            type="file" 
+                            accept=".drums" 
+                            onChange={handleImportDrums} 
+                            className="hidden" 
+                          />
+                        </label>
                         <button 
                           onClick={() => {
                             const newDrum = {
@@ -10617,7 +10802,7 @@ export default function CableDesigner() {
                       </>
                     )}
                     
-                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC') && (
+                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC') && params.hasOuterSheath !== false && (
                       <SpecRow label={params.standard === 'LiYCY' ? "Min. Outer Sheath Thickness" : "Outer Sheath Thickness"} value={result.spec.sheathThickness} unit="mm" />
                     )}
                     <div className="pt-2 mt-2 border-t border-slate-100">
@@ -10747,7 +10932,11 @@ export default function CableDesigner() {
                   )}
                   
                   {result.bom.innerCoveringWeight > 0 && (
-                    <SpecRow label="Inner Covering (PVC)" value={result.bom.innerCoveringWeight} unit="kg/km" />
+                    <SpecRow label={`Inner Covering (${params.innerSheathMaterial || 'PVC'})`} value={result.bom.innerCoveringWeight} unit="kg/km" />
+                  )}
+                  
+                  {result.bom.cablingFillerWeight !== undefined && result.bom.cablingFillerWeight > 0 && (
+                    <SpecRow label={`Cabling Filler (${params.cablingFillerType === 'Extruded' ? (params.cablingFillerMaterial || 'PVC') : (params.cablingFillerType || 'PP Yarn')})`} value={result.bom.cablingFillerWeight} unit="kg/km" />
                   )}
                   
                   {result.bom.screenWeight > 0 && (
@@ -10785,7 +10974,7 @@ export default function CableDesigner() {
                     <SpecRow label="Binder Tape Over Armor (Polyester Tape)" value={result.bom.binderTapeOverArmorWeight} unit="kg/km" />
                   )}
 
-                  {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && (
+                  {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && params.hasOuterSheath !== false && (
                     <SpecRow label={`Outer Sheath (${params.sheathMaterial})`} value={result.bom.sheathWeight} unit="kg/km" />
                   )}
                   
@@ -10925,6 +11114,7 @@ export default function CableDesigner() {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Cost Breakdown (per Meter)</span>
                     <div className="space-y-2">
                       {(() => {
+                        const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
                         const breakdown = calculateCostBreakdown(result.bom, params);
                         const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight);
                         const items = [
@@ -10938,7 +11128,7 @@ export default function CableDesigner() {
                           { label: `Mica Glass Tape (MGT)`, cost: breakdown.mgt },
                           { label: `Semi-conductive Layers`, cost: breakdown.semiCond },
                           { label: `Phase Insulation (${params.insulationMaterial})`, cost: breakdown.insulation },
-                          ...(params.standard === 'BS EN 50288-7' ? [
+                          ...(isInstrumentation ? [
                             { label: `Individual Screen (Al Foil) (Unit)`, cost: breakdown.isAl / (result.bom.isMultiplier || 1), isInformational: true },
                             { label: `Individual Screen (Al Foil) x ${result.bom.isMultiplier} ${params.formationType || 'Pair'}`, cost: breakdown.isAl },
                             { label: `Individual Screen (Drain Wire) (Unit)`, cost: breakdown.isDrain / (result.bom.isMultiplier || 1), isInformational: true },
@@ -10953,6 +11143,7 @@ export default function CableDesigner() {
                           { label: `Metallic Screen (${params.mvScreenType})`, cost: breakdown.mvScreen },
                           { label: `Binder Tape (Polyester Tape)`, cost: breakdown.binderTape },
                           { label: `Inner Sheath (${params.innerSheathMaterial || 'PVC'})`, cost: breakdown.innerCovering },
+                          { label: `Cabling Filler (${params.cablingFillerType === 'Extruded' ? (params.cablingFillerMaterial || 'PVC') : (params.cablingFillerType || 'PP Yarn')})`, cost: breakdown.cablingFiller },
                           ...(params.standard === 'SPLN 43-4 (NYCY)' ? (() => {
                             const prices = { ...materialPrices, ...(params.customMaterialPrices || {}) };
                             const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
