@@ -4,6 +4,7 @@ import {
   calculateCable,
   CABLE_DATA,
   CableDesignParams,
+  OtherItem,
   CalculationResult,
   CABLE_SIZES,
   CWS_WIRE_DIAMETERS,
@@ -2523,6 +2524,13 @@ export default function CableDesigner() {
       masterbatch: bom.masterbatchWeight ? (bom.masterbatchWeight * getPrice('Masterbatch', 50000)) / 1000 : 0,
     };
 
+    // Add other items to breakdown
+    if (params.otherItems && params.otherItems.length > 0) {
+      const totalOtherCost = params.otherItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+      const orderLength = params.orderLength || 1000; // Default to 1000 if not set for HPP calculation
+      breakdown.otherItems = totalOtherCost / orderLength;
+    }
+
     if (params.standard.includes('NFA2X-T') && bom.earthingAlWeight !== undefined && bom.earthingSteelWeight !== undefined) {
       breakdown.earthingAl = (bom.earthingAlWeight * getPrice('Al', 0)) / 1000;
       breakdown.earthingSteel = (bom.earthingSteelWeight * steelWirePrice) / 1000;
@@ -3761,6 +3769,88 @@ export default function CableDesigner() {
                                         />
                                       </div>
                                     </div>
+
+                                    {/* 9. Other Costs */}
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Other Costs</h5>
+                                        <button 
+                                          onClick={() => {
+                                            const newItem: OtherItem = {
+                                              id: Math.random().toString(36).substr(2, 9),
+                                              description: '',
+                                              unitPrice: 0,
+                                              quantity: 1
+                                            };
+                                            const currentOther = item.params.otherItems || [];
+                                            updateProjectItemParam(idx, 'otherItems', [...currentOther, newItem]);
+                                          }}
+                                          className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded hover:bg-emerald-100 transition-colors flex items-center gap-1"
+                                        >
+                                          <Plus className="w-3 h-3" /> Add Item
+                                        </button>
+                                      </div>
+                                      <div className="space-y-2">
+                                        {(item.params.otherItems || []).map((other, oIdx) => (
+                                          <div key={other.id} className="grid grid-cols-12 gap-2 items-end bg-slate-50 p-2 rounded border border-slate-100">
+                                            <div className="col-span-5">
+                                              <label className="block text-[9px] text-slate-400 mb-1">Description</label>
+                                              <input 
+                                                type="text"
+                                                className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded"
+                                                value={other.description}
+                                                onChange={e => {
+                                                  const newOther = [...(item.params.otherItems || [])];
+                                                  newOther[oIdx] = { ...newOther[oIdx], description: e.target.value };
+                                                  updateProjectItemParam(idx, 'otherItems', newOther);
+                                                }}
+                                                placeholder="e.g. Special Test"
+                                              />
+                                            </div>
+                                            <div className="col-span-3">
+                                              <label className="block text-[9px] text-slate-400 mb-1">Unit Price</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded text-right font-mono"
+                                                value={other.unitPrice || ''}
+                                                onChange={e => {
+                                                  const newOther = [...(item.params.otherItems || [])];
+                                                  newOther[oIdx] = { ...newOther[oIdx], unitPrice: Number(e.target.value) };
+                                                  updateProjectItemParam(idx, 'otherItems', newOther);
+                                                }}
+                                              />
+                                            </div>
+                                            <div className="col-span-2">
+                                              <label className="block text-[9px] text-slate-400 mb-1">Qty</label>
+                                              <input 
+                                                type="number"
+                                                className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded text-center"
+                                                value={other.quantity || ''}
+                                                onChange={e => {
+                                                  const newOther = [...(item.params.otherItems || [])];
+                                                  newOther[oIdx] = { ...newOther[oIdx], quantity: Number(e.target.value) };
+                                                  updateProjectItemParam(idx, 'otherItems', newOther);
+                                                }}
+                                              />
+                                            </div>
+                                            <div className="col-span-2 flex justify-end">
+                                              <button 
+                                                onClick={() => {
+                                                  const newOther = (item.params.otherItems || []).filter((_, i) => i !== oIdx);
+                                                  updateProjectItemParam(idx, 'otherItems', newOther);
+                                                }}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                        {(item.params.otherItems || []).length === 0 && (
+                                          <div className="text-[10px] text-slate-400 italic text-center py-2">No other items added</div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -3878,6 +3968,25 @@ export default function CableDesigner() {
                   </div>
                 ))}
               </div>
+
+              {/* Other Items */}
+              {projectItems.some(item => item.params.otherItems && item.params.otherItems.length > 0) && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Other Items</h3>
+                  {Object.entries(projectItems.reduce((acc, item) => {
+                    (item.params.otherItems || []).forEach(other => {
+                      const key = other.description || 'Other Item';
+                      acc[key] = (acc[key] || 0) + (other.unitPrice * other.quantity);
+                    });
+                    return acc;
+                  }, {} as Record<string, number>)).map(([desc, cost]) => (
+                    <div key={desc} className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">{desc}</span>
+                      <span className="text-sm font-bold font-mono">Rp {Math.round(cost as number).toLocaleString('id-ID')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -10977,6 +11086,21 @@ export default function CableDesigner() {
                   {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) && params.hasOuterSheath !== false && (
                     <SpecRow label={`Outer Sheath (${params.sheathMaterial})`} value={result.bom.sheathWeight} unit="kg/km" />
                   )}
+
+                  {/* Other Items */}
+                  {(params.otherItems || []).length > 0 && (
+                    <div className="pt-2 mt-2 border-t border-slate-100">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Other Items</h4>
+                      {(params.otherItems || []).map((other) => (
+                        <div key={other.id} className="flex justify-between items-center py-1">
+                          <span className="text-xs text-slate-600">{other.description}</span>
+                          <span className="text-xs font-bold font-mono">
+                            {other.quantity} x Rp {other.unitPrice.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   <div className="pt-2 mt-2 border-t border-slate-100">
                     <SpecRow label="Total Cable Weight (Approx)" value={result.bom.totalWeight} unit="kg/km" isBold />
@@ -11162,6 +11286,10 @@ export default function CableDesigner() {
                           { label: `Outer Sheath (${params.sheathMaterial})`, cost: breakdown.sheath },
                           { label: `Masterbatch`, cost: breakdown.masterbatch },
                           { label: `Packing Cost (${packing.selectedDrum.type})`, cost: packing.packingCostPerMeter },
+                          ...(params.otherItems || []).map(other => ({
+                            label: `${other.description} (${other.quantity}x)`,
+                            cost: (other.unitPrice * other.quantity) / (params.orderLength || 1000)
+                          })),
                         ].filter(item => item.cost > 0);
 
                         const totalMaterialCost = items.reduce((acc, item) => acc + (item.isInformational ? 0 : item.cost), 0);

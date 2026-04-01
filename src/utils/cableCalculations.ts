@@ -1238,7 +1238,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Helper function to find KHA
   const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
-    const type = `${cores} Core`;
+    const lookupCores = cores > 4 ? 4 : cores;
+    const type = `${lookupCores} Core`;
     const khaEntry = KHA_DATA.find(entry => entry.type === type && entry.size === size);
     if (!khaEntry) return 0;
 
@@ -1294,10 +1295,15 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   } else if (effectiveParams.standard.includes('SNI 04-6629.4 (NYM)')) {
     const nymEntry = NYM_KHA_DATA.find(e => e.size === Number(effectiveParams.size));
     if (nymEntry) {
-      const key30 = `cores${effectiveParams.cores}_30` as keyof typeof nymEntry;
-      const key40 = `cores${effectiveParams.cores}_40` as keyof typeof nymEntry;
-      currentCapacityAir = (nymEntry as any)[key30] || 0;
-      currentCapacityGround = (nymEntry as any)[key40] || 0;
+      const lookupCores = effectiveParams.cores > 4 ? 4 : effectiveParams.cores;
+      const key30 = `cores${lookupCores}_30` as keyof typeof nymEntry;
+      const key40 = `cores${lookupCores}_40` as keyof typeof nymEntry;
+      const baseAir = (nymEntry as any)[key30] || 0;
+      const baseGround = (nymEntry as any)[key40] || 0;
+      const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+      const correctionGround = getCorrectionFactor(effectiveParams.cores, 'ground');
+      currentCapacityAir = baseAir * correctionAir;
+      currentCapacityGround = baseGround * correctionGround;
     } else {
       const baseKhaAir = getKhaValue(effectiveParams.cores, Number(effectiveParams.size), effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
       const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
@@ -1305,9 +1311,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       currentCapacityGround = baseKhaAir * correctionAir * 0.82; // Approx for 40°C
     }
   } else if (effectiveParams.standard.includes('SNI 04-6629.5 (NYMHY)')) {
-    const nymhyEntry = NYMHY_DATA.find(e => e.size === Number(effectiveParams.size) && e.cores === effectiveParams.cores);
+    const lookupCores = effectiveParams.cores > 4 ? 4 : effectiveParams.cores;
+    const nymhyEntry = NYMHY_DATA.find(e => e.size === Number(effectiveParams.size) && e.cores === lookupCores);
     if (nymhyEntry) {
-      currentCapacityAir = nymhyEntry.kha;
+      const baseAir = nymhyEntry.kha;
+      const correctionAir = getCorrectionFactor(effectiveParams.cores, 'air');
+      currentCapacityAir = baseAir * correctionAir;
       currentCapacityGround = 0;
     } else {
       const baseKhaAir = getKhaValue(effectiveParams.cores, Number(effectiveParams.size), effectiveParams.conductorMaterial, effectiveParams.insulationMaterial, 'air');
