@@ -34,6 +34,13 @@ export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'S
 export type FormationType = 'Core' | 'Pair' | 'Triad' | 'Quad';
 export type DesignMode = 'standard' | 'advance';
 
+export interface OtherItem {
+  id: string;
+  description: string;
+  unitPrice: number;
+  quantity: number;
+}
+
 export interface CableDesignParams {
   id?: string;
   projectName?: string;
@@ -146,6 +153,7 @@ export interface CableDesignParams {
   manualDiameterOverArmor?: number;
   manualOverallDiameter?: number;
   manualTotalWeight?: number;
+  otherItems?: OtherItem[];
 
   // Custom Formulas for Material Weights
   customFormulas?: Record<string, string>;

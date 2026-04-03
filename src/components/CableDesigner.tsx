@@ -248,6 +248,43 @@ export default function CableDesigner() {
   const [loadedProjectConfig, setLoadedProjectConfig] = useState<{lmeParams?: any, materialPrices?: any, exchangeRate?: number} | null>(null);
   const [projectName, setProjectName] = useState('New Project');
   const [projectNumber, setProjectNumber] = useState('');
+  const [showStandardPopup, setShowStandardPopup] = useState(false);
+  const [standardSearchQuery, setStandardSearchQuery] = useState('');
+  const standardPopupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (standardPopupRef.current && !standardPopupRef.current.contains(event.target as Node)) {
+        setShowStandardPopup(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [standardPopupRef]);
+
+  const CABLE_STANDARDS: { value: CableStandard; label: string }[] = [
+    { value: "IEC 60502-1", label: "IEC 60502-1 (Low Voltage)" },
+    { value: "IEC 60502-2", label: "IEC 60502-2 (Medium Voltage)" },
+    { value: "SPLN 43-4 (NYCY)", label: "SPLN 43-4 (NYCY)" },
+    { value: "IEC 60092-353", label: "IEC 60092-353 (Marine Cable)" },
+    { value: "SNI 04-6629.4 (NYM)", label: "SNI 04-6629.4 (NYM)" },
+    { value: "SNI 04-6629.3 (NYA)", label: "SNI 04-6629.3 (NYA)" },
+    { value: "SNI 04-6629.3 (NYAF)", label: "SNI 04-6629.3 (NYAF)" },
+    { value: "SNI 04-6629.5 (NYMHY)", label: "SNI 04-6629.5 (NYMHY)" },
+    { value: "SPLN D3. 010-1 : 2014 (NFA2X)", label: "SPLN D3. 010-1 : 2014 (NFA2X)" },
+    { value: "SPLN D3. 010-1 : 2015 (NFA2X-T)", label: "SPLN D3. 010-1 : 2015 (NFA2X-T)" },
+    { value: "BS EN 50288-7", label: "BS EN 50288-7 (Instrumentation)" },
+    { value: "LiYCY", label: "LiYCY (Flexible Screened)" },
+    { value: "SPLN 41-6 : 1981 AAC", label: "SPLN 41-6 : 1981 AAC" },
+    { value: "Manufacturing Specification", label: "Manufacturing Specification" },
+  ];
+
+  const filteredStandards = CABLE_STANDARDS.filter(s => 
+    s.label.toLowerCase().includes(standardSearchQuery.toLowerCase()) ||
+    s.value.toLowerCase().includes(standardSearchQuery.toLowerCase())
+  );
   const [projectItems, setProjectItems] = useState<{params: CableDesignParams, result: CalculationResult}[]>([]);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   
@@ -8135,28 +8172,64 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Standard Selection */}
-                    <div>
+                    <div className="relative" ref={standardPopupRef}>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Standard Reference</label>
-                      <select
-                        value={params.standard}
-                        onChange={(e) => handleParamChange('standard', e.target.value as CableStandard)}
-                        className="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 border bg-slate-50 font-medium"
+                      <button
+                        onClick={() => setShowStandardPopup(!showStandardPopup)}
+                        className="w-full flex items-center justify-between rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 border bg-slate-50 font-medium text-left"
                       >
-                        <option value="IEC 60502-1">IEC 60502-1 (Low Voltage)</option>
-                        <option value="IEC 60502-2">IEC 60502-2 (Medium Voltage)</option>
-                        <option value="SPLN 43-4 (NYCY)">SPLN 43-4 (NYCY)</option>
-                        <option value="IEC 60092-353">IEC 60092-353 (Marine Cable)</option>
-                        <option value="SNI 04-6629.4 (NYM)">SNI 04-6629.4 (NYM)</option>
-                        <option value="SNI 04-6629.3 (NYA)">SNI 04-6629.3 (NYA)</option>
-                        <option value="SNI 04-6629.3 (NYAF)">SNI 04-6629.3 (NYAF)</option>
-                        <option value="SNI 04-6629.5 (NYMHY)">SNI 04-6629.5 (NYMHY)</option>
-                        <option value="SPLN D3. 010-1 : 2014 (NFA2X)">SPLN D3. 010-1 : 2014 (NFA2X)</option>
-                        <option value="SPLN D3. 010-1 : 2015 (NFA2X-T)">SPLN D3. 010-1 : 2015 (NFA2X-T)</option>
-                        <option value="BS EN 50288-7">BS EN 50288-7 (Instrumentation)</option>
-                        <option value="LiYCY">LiYCY (Flexible Screened)</option>
-                        <option value="SPLN 41-6 : 1981 AAC">SPLN 41-6 : 1981 AAC</option>
-                        <option value="Manufacturing Specification">Manufacturing Specification</option>
-                      </select>
+                        <span className="truncate">
+                          {CABLE_STANDARDS.find(s => s.value === params.standard)?.label || params.standard}
+                        </span>
+                        <Search className="w-4 h-4 text-slate-400 ml-2 flex-shrink-0" />
+                      </button>
+
+                      {showStandardPopup && (
+                        <div className="absolute z-50 mt-2 w-full bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                          <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <input
+                                autoFocus
+                                type="text"
+                                placeholder="Search standard..."
+                                value={standardSearchQuery}
+                                onChange={(e) => setStandardSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-[300px] overflow-y-auto p-2 custom-scrollbar">
+                            {filteredStandards.length > 0 ? (
+                              filteredStandards.map((std) => (
+                                <button
+                                  key={std.value}
+                                  onClick={() => {
+                                    handleParamChange('standard', std.value);
+                                    setShowStandardPopup(false);
+                                    setStandardSearchQuery('');
+                                  }}
+                                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all mb-1 last:mb-0 flex items-center justify-between group ${
+                                    params.standard === std.value
+                                      ? 'bg-indigo-50 text-indigo-700'
+                                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                                  }`}
+                                >
+                                  <span>{std.label}</span>
+                                  {params.standard === std.value && (
+                                    <CheckCircle2 className="w-4 h-4 text-indigo-500" />
+                                  )}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-8 text-center">
+                                <Search className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                                <p className="text-sm text-slate-400">No standards found</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Ambient Temperature for NYMHY - Hidden as per request */}
