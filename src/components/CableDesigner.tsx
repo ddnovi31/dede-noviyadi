@@ -6033,34 +6033,6 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
-                    {isMV && (
-                      <tr>
-                        <td className="border border-slate-400 p-2 pl-4">
-                          <EditableCell
-                            value={specEdits[`${groupKey}-conductor-screen-label`] ?? "- Conductor Screen"}
-                            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-screen-label`]: val }))}
-                            align="left"
-                          />
-                        </td>
-                        <td className="border border-slate-400 p-2 text-center">
-                          <EditableCell
-                            value={specEdits[`${groupKey}-conductor-screen-unit`] ?? "-"}
-                            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-conductor-screen-unit`]: val }))}
-                          />
-                        </td>
-                        {items.map((_, idx) => {
-                          const editKey = `${groupKey}-conductor-screen-val-${idx}`;
-                          return (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              <EditableCell
-                                value={specEdits[editKey] ?? "Semi-conductive"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                              />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    )}
                     <tr>
                       <td className="border border-slate-400 p-2 text-center"></td>
                       <td className="border border-slate-400 p-2 pl-4">
@@ -6088,7 +6060,62 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
-
+                    {isMV && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-inner-semicon-mat-label`] ?? "- Material of Inner semicon"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-semicon-mat-label`]: val }))}
+                              align="left"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-inner-semicon-mat-unit`] ?? "-"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-semicon-mat-unit`]: val }))}
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const editKey = `${groupKey}-inner-semicon-mat-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <EditableCell
+                                  value={specEdits[editKey] ?? "Semi-conductive Compound"}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-inner-semicon-thick-label`] ?? "- Thickness of Inner semicon (Nom.)"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-semicon-thick-label`]: val }))}
+                              align="left"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-inner-semicon-thick-unit`] ?? "mm"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-semicon-thick-unit`]: val }))}
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-inner-semicon-thick-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <EditableCell
+                                  value={specEdits[editKey] ?? (item.result.spec.conductorScreenThickness || 0).toFixed(1)}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </>
+                    )}
                     {p.fireguard && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center"></td>
@@ -6167,34 +6194,6 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
-                    {isMV && (
-                      <tr>
-                        <td className="border border-slate-400 p-2 pl-4">
-                          <EditableCell
-                            value={specEdits[`${groupKey}-insulation-screen-label`] ?? "- Insulation Screen"}
-                            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-screen-label`]: val }))}
-                            align="left"
-                          />
-                        </td>
-                        <td className="border border-slate-400 p-2 text-center">
-                          <EditableCell
-                            value={specEdits[`${groupKey}-insulation-screen-unit`] ?? "-"}
-                            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insulation-screen-unit`]: val }))}
-                          />
-                        </td>
-                        {items.map((_, idx) => {
-                          const editKey = `${groupKey}-insulation-screen-val-${idx}`;
-                          return (
-                            <td key={idx} className="border border-slate-400 p-2 text-center">
-                              <EditableCell
-                                value={specEdits[editKey] ?? "Semi-conductive"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                              />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    )}
                     {!isMV && (
                       <tr>
                         <td className="border border-slate-400 p-2 pl-4">
@@ -6250,6 +6249,62 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
+                    {isMV && (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-outer-semicon-mat-label`] ?? "- Material of Outer semicon"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-semicon-mat-label`]: val }))}
+                              align="left"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-outer-semicon-mat-unit`] ?? "-"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-semicon-mat-unit`]: val }))}
+                            />
+                          </td>
+                          {items.map((_, idx) => {
+                            const editKey = `${groupKey}-outer-semicon-mat-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <EditableCell
+                                  value={specEdits[editKey] ?? "Semi-conductive Compound"}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 pl-4">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-outer-semicon-thick-label`] ?? "- Thickness of Outer semicon (Nom.)"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-semicon-thick-label`]: val }))}
+                              align="left"
+                            />
+                          </td>
+                          <td className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-outer-semicon-thick-unit`] ?? "mm"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-outer-semicon-thick-unit`]: val }))}
+                            />
+                          </td>
+                          {items.map((item, idx) => {
+                            const editKey = `${groupKey}-outer-semicon-thick-val-${idx}`;
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                <EditableCell
+                                  value={specEdits[editKey] ?? (item.result.spec.insulationScreenThickness || 0).toFixed(1)}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </>
+                    )}
 
                     {/* Conductor & Insulation (Earth) */}
                     {p.hasEarthing && (
@@ -10866,9 +10921,21 @@ export default function CableDesigner() {
                     </h3>
                     <SpecRow label="Conductor Construction" value={`${result.spec.phaseCore.wireCount} x ${result.spec.phaseCore.wireDiameter.toFixed(2)}`} unit="mm" />
                     <SpecRow label="Conductor Diameter" value={result.spec.phaseCore.conductorDiameter} unit="mm" />
+                    {isMV && (
+                      <>
+                        <SpecRow label="Material of Inner semicon" value="Semi-conductive Compound" unit="" />
+                        <SpecRow label="Thickness of Inner semicon (Nom.)" value={result.spec.conductorScreenThickness || 0} unit="mm" />
+                      </>
+                    )}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
                       <>
                         <SpecRow label="Insulation Thickness" value={result.spec.phaseCore.insulationThickness} unit="mm" />
+                        {isMV && (
+                          <>
+                            <SpecRow label="Material of Outer semicon" value="Semi-conductive Compound" unit="" />
+                            <SpecRow label="Thickness of Outer semicon (Nom.)" value={result.spec.insulationScreenThickness || 0} unit="mm" />
+                          </>
+                        )}
                         <SpecRow label="Core Diameter" value={result.spec.phaseCore.coreDiameter} unit="mm" />
                       </>
                     )}
@@ -10898,12 +10965,6 @@ export default function CableDesigner() {
                   <div className="space-y-3 pt-2">
                     {result.spec.mgtThickness && (
                       <SpecRow label="Mica Glass Tape (MGT)" value={result.spec.mgtThickness} unit="mm" />
-                    )}
-                    {result.spec.conductorScreenThickness && (
-                      <SpecRow label="Conductor Screen Thickness" value={result.spec.conductorScreenThickness} unit="mm" />
-                    )}
-                    {result.spec.insulationScreenThickness && (
-                      <SpecRow label="Insulation Screen Thickness" value={result.spec.insulationScreenThickness} unit="mm" />
                     )}
                     
                     {result.spec.mvScreenDiameter && (
