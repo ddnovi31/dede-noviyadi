@@ -1710,6 +1710,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
     // MV Specifics (IEC 60502-2)
     if (effectiveParams.standard === 'IEC 60502-2') {
+      if (!effectiveParams.mvScreenType || effectiveParams.mvScreenType === 'None') {
+        effectiveParams.mvScreenType = 'CTS';
+      }
+      if (!effectiveParams.mvScreenSize) {
+        effectiveParams.mvScreenSize = 16;
+      }
       if (!effectiveParams.manualConductorScreenThickness) {
         conductorScreenThickness = effectiveParams.voltage.includes('18/30') ? 0.7 : 0.5;
       }

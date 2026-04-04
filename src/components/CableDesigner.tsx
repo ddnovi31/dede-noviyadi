@@ -6163,7 +6163,7 @@ export default function CableDesigner() {
                     {p.standard !== 'SPLN 41-6 : 1981 AAC' && (
                       <>
                         <tr>
-                          <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? 6 : 4}></td>
+                          <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? (p.mvScreenType !== 'None' ? 8 : 6) : 4}></td>
                           <td className="border border-slate-400 p-2 font-bold">
                             <EditableCell
                               value={specEdits[`${groupKey}-insulation-label`] ?? `• Insulation${p.hasEarthing ? ' (Phase)' : ''}`}
@@ -6327,6 +6327,104 @@ export default function CableDesigner() {
                             );
                           })}
                         </tr>
+
+                        {/* Metallic Screen (MV) - Moved here */}
+                        {isMV && p.mvScreenType !== 'None' && (
+                          <>
+                            <tr>
+                              <td className="border border-slate-400 p-2 font-bold">
+                                <EditableCell
+                                  value={specEdits[`${groupKey}-metallic-screen-label`] ?? "• Metallic Screen"}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-label`]: val }))}
+                                  align="left"
+                                  bold={true}
+                                />
+                              </td>
+                              <td className="border border-slate-400 p-2 text-center">
+                                <EditableCell
+                                  value={specEdits[`${groupKey}-metallic-screen-unit`] ?? "-"}
+                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-unit`]: val }))}
+                                />
+                              </td>
+                              {items.map((_, idx) => {
+                                const screenType = p.mvScreenType;
+                                const screenMapping: Record<string, string> = {
+                                  'CWS': 'Copper Wire Screen (CWS)',
+                                  'CTS': 'Copper Tape Screen (CTS)',
+                                  'CWB': 'Copper Wire Braided (CWB)',
+                                  'TCWB': 'Tinned Copper Wire Braided (TCWB)'
+                                };
+                                const defaultVal = screenMapping[screenType] || screenType;
+                                const editKey = `${groupKey}-metallic-screen-type-${idx}`;
+                                return (
+                                  <td key={idx} className="border border-slate-400 p-2 text-center">
+                                    <EditableCell
+                                      value={specEdits[editKey] ?? defaultVal}
+                                      onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            {(p.mvScreenType === 'CTS') && (
+                              <tr>
+                                <td className="border border-slate-400 p-2 pl-4">
+                                  <EditableCell
+                                    value={specEdits[`${groupKey}-thk-tape-label`] ?? "- Thickness of Tape"}
+                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-label`]: val }))}
+                                    align="left"
+                                  />
+                                </td>
+                                <td className="border border-slate-400 p-2 text-center">
+                                  <EditableCell
+                                    value={specEdits[`${groupKey}-thk-tape-unit`] ?? "mm"}
+                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-unit`]: val }))}
+                                  />
+                                </td>
+                                {items.map((_, idx) => {
+                                  const editKey = `${groupKey}-thk-tape-val-${idx}`;
+                                  return (
+                                    <td key={idx} className="border border-slate-400 p-2 text-center">
+                                      <EditableCell
+                                        value={specEdits[editKey] ?? "0.1"}
+                                        onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                      />
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            )}
+                            {(p.mvScreenType === 'CWS') && (
+                              <tr>
+                                <td className="border border-slate-400 p-2 pl-4">
+                                  <EditableCell
+                                    value={specEdits[`${groupKey}-cross-area-label`] ?? "- Size"}
+                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-label`]: val }))}
+                                    align="left"
+                                  />
+                                </td>
+                                <td className="border border-slate-400 p-2 text-center">
+                                  <EditableCell
+                                    value={specEdits[`${groupKey}-cross-area-unit`] ?? "mm²"}
+                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-unit`]: val }))}
+                                  />
+                                </td>
+                                {items.map((_, idx) => {
+                                  const editKey = `${groupKey}-cross-area-val-${idx}`;
+                                  const defaultVal = p.mvScreenSize;
+                                  return (
+                                    <td key={idx} className="border border-slate-400 p-2 text-center">
+                                      <EditableCell
+                                        value={specEdits[editKey] ?? defaultVal}
+                                        onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
+                                      />
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            )}
+                          </>
+                        )}
                       </>
                     )}
 
@@ -6701,107 +6799,6 @@ export default function CableDesigner() {
                             );
                           })}
                         </tr>
-                      </>
-                    )}
-
-                    {/* Metallic Screen (MV) */}
-                    {isMV && p.hasScreen && (
-                      <>
-                        <tr>
-                          <td className="border border-slate-400 p-2 text-center"></td>
-                          <td className="border border-slate-400 p-2 font-bold">
-                            <EditableCell
-                              value={specEdits[`${groupKey}-metallic-screen-label`] ?? "• Metallic Screen"}
-                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-label`]: val }))}
-                              align="left"
-                              bold={true}
-                            />
-                          </td>
-                          <td className="border border-slate-400 p-2 text-center">
-                            <EditableCell
-                              value={specEdits[`${groupKey}-metallic-screen-unit`] ?? "-"}
-                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-metallic-screen-unit`]: val }))}
-                            />
-                          </td>
-                          {items.map((_, idx) => {
-                            const screenType = isMV ? p.mvScreenType : p.screenType;
-                            const screenMapping: Record<string, string> = {
-                              'CWS': 'Copper Wire Screen (CWS)',
-                              'CTS': 'Copper Tape Screen (CTS)',
-                              'CWB': 'Copper Wire Braided (CWB)',
-                              'TCWB': 'Tinned Copper Wire Braided (TCWB)'
-                            };
-                            const defaultVal = screenMapping[screenType] || screenType;
-                            const editKey = `${groupKey}-metallic-screen-type-${idx}`;
-                            return (
-                              <td key={idx} className="border border-slate-400 p-2 text-center">
-                                <EditableCell
-                                  value={specEdits[editKey] ?? defaultVal}
-                                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
-                        {((isMV ? p.mvScreenType : p.screenType) === 'CTS') && (
-                          <tr>
-                            <td className="border border-slate-400 p-2 text-center"></td>
-                            <td className="border border-slate-400 p-2 pl-4">
-                              <EditableCell
-                                value={specEdits[`${groupKey}-thk-tape-label`] ?? "- Thickness of Tape"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-label`]: val }))}
-                                align="left"
-                              />
-                            </td>
-                            <td className="border border-slate-400 p-2 text-center">
-                              <EditableCell
-                                value={specEdits[`${groupKey}-thk-tape-unit`] ?? "mm"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-thk-tape-unit`]: val }))}
-                              />
-                            </td>
-                            {items.map((_, idx) => {
-                              const editKey = `${groupKey}-thk-tape-val-${idx}`;
-                              return (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">
-                                  <EditableCell
-                                    value={specEdits[editKey] ?? "0.1"}
-                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                                  />
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        )}
-                        {((isMV ? p.mvScreenType : p.screenType) === 'CWS') && (
-                          <tr>
-                            <td className="border border-slate-400 p-2 text-center"></td>
-                            <td className="border border-slate-400 p-2 pl-4">
-                              <EditableCell
-                                value={specEdits[`${groupKey}-cross-area-label`] ?? "- Size"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-label`]: val }))}
-                                align="left"
-                              />
-                            </td>
-                            <td className="border border-slate-400 p-2 text-center">
-                              <EditableCell
-                                value={specEdits[`${groupKey}-cross-area-unit`] ?? "mm²"}
-                                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cross-area-unit`]: val }))}
-                              />
-                            </td>
-                            {items.map((_, idx) => {
-                              const editKey = `${groupKey}-cross-area-val-${idx}`;
-                              const defaultVal = isMV ? p.mvScreenSize : p.screenSize;
-                              return (
-                                <td key={idx} className="border border-slate-400 p-2 text-center">
-                                  <EditableCell
-                                    value={specEdits[editKey] ?? defaultVal}
-                                    onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                                  />
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        )}
                       </>
                     )}
 
