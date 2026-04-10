@@ -10929,7 +10929,7 @@ export default function CableDesigner() {
                   </div>
                 </div>
                 
-                <h2 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-10 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.1] px-4">
+                <h2 className="text-[37px] font-black tracking-tighter mb-10 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.1] px-4">
                   {getCableDesignation(params, result)}
                 </h2>
                 
