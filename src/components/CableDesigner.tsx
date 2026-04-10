@@ -8191,8 +8191,6 @@ export default function CableDesigner() {
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">PT. Multi Kencana Niagatama</span>
-                  <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                  <span className="text-[10px] font-bold text-indigo-500/70 uppercase tracking-widest">Pro Version</span>
                 </div>
               </div>
             </div>

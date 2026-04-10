@@ -1240,9 +1240,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
   if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && maxDcResistance > 0) {
     const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
-    calculatedSectionalArea = (rho / (maxDcResistance / cabFactor)) * 1.01;
+    const areaFactor = effectiveParams.standard === 'IEC 60502-2' ? 1.02 : 1.01;
+    calculatedSectionalArea = (rho / (maxDcResistance / cabFactor)) * areaFactor;
   }
-  let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * cabFactor;
+  let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
 
   // Helper function to find KHA
   const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
@@ -1497,8 +1498,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let earthingConductorWeightPerCore = abcTData 
     ? abcTData.messenger.condWeight
     : (effectiveParams.standard.includes('NFA2X-T') 
-      ? (earthingCalculatedSectionalArea * (6/7) * densities.Al + earthingCalculatedSectionalArea * (1/7) * densities.Steel) * 1.05 // 6 Al + 1 Steel mix with lay factor
-      : earthingCalculatedSectionalArea * densities[effectiveParams.conductorMaterial] * cabFactor);
+      ? (earthingCalculatedSectionalArea * (6/7) * densities.Al + earthingCalculatedSectionalArea * (1/7) * densities.Steel) * 1.05 * STRANDING_FACTOR * CABLING_FACTOR
+      : earthingCalculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR);
   
   let earthingAlWeight = 0;
   let earthingSteelWeight = 0;
@@ -1507,8 +1508,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // Calculate split weights based on wire counts
     const alArea = earthingAlWireCount! * (Math.PI * Math.pow(earthingAlWireDiameter! / 2, 2));
     const steelArea = earthingSteelWireCount! * (Math.PI * Math.pow(earthingSteelWireDiameter! / 2, 2));
-    const alWeightPerCore = alArea * densities.Al * 1.05; // 5% lay factor
-    const steelWeightPerCore = steelArea * densities.Steel * 1.05;
+    const alWeightPerCore = alArea * densities.Al * 1.05 * STRANDING_FACTOR * CABLING_FACTOR; // 5% lay factor
+    const steelWeightPerCore = steelArea * densities.SteelWire * 1.05 * STRANDING_FACTOR * CABLING_FACTOR;
     earthingAlWeight = alWeightPerCore * earthingCores;
     earthingSteelWeight = steelWeightPerCore * earthingCores;
     earthingConductorWeightPerCore = alWeightPerCore + steelWeightPerCore;
@@ -2187,7 +2188,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     if (isMV) {
       const mvInShCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
-      innerCoveringWeight = applyScrap(ringArea * mvInShCabFactor * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC), effectiveParams.innerSheathMaterial || 'PVC');
+      innerCoveringWeight = applyScrap(ringArea * mvInShCabFactor * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * (1 + effectiveWeightAdditionFactor), effectiveParams.innerSheathMaterial || 'PVC');
     } else {
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
       innerCoveringWeight = applyScrap(totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * cabFactor, effectiveParams.innerSheathMaterial || 'PVC');
@@ -2346,7 +2347,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
     const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
-    armorWireWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    armorWireWeight = numWires * wireArea * armorDensity * 1.05 * cabFactor; // 5% lay factor
     armorWeight = armorWireWeight;
     armorWireDiameter = armorThickness;
   } else if (effectiveParams.armorType === 'STA') {
@@ -2367,7 +2369,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // Area of tape approx = pi * D * 2 * t * (1 + overlap/100)
     const overlapMultiplier = 1 + (overlap / 100);
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
-    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02 * cabFactor; // 2% lay factor
     armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
@@ -2389,8 +2392,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel); // 2% lay factor
-    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel);
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel) * cabFactor; // 2% lay factor
+    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel) * cabFactor;
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
@@ -2423,8 +2427,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel); // 5% lay factor for wire
-    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel); // 2% for tape
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel) * cabFactor; // 5% lay factor for wire
+    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel) * cabFactor; // 2% for tape
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB' || effectiveParams.armorType === 'CWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
@@ -2510,7 +2515,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const wireArea = (Math.PI * wireDia * wireDia) / 4;
     const armorDensity = effectiveParams.armorType === 'TCWB' ? densities.TCu : (effectiveParams.armorType === 'CWB' ? densities.Cu : (densities.GSWB || densities.Steel));
     
-    armorWireWeight = (n * carriers) * wireArea * armorDensity * layFactor;
+    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
+    armorWireWeight = (n * carriers) * wireArea * armorDensity * layFactor * cabFactor;
     armorWeight = armorWireWeight;
     
     armorThickness = (effectiveParams.standard === 'LiYCY') ? wireDia : wireDia * 2; // For LiYCY, thickness is the wire diameter
@@ -2582,8 +2588,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   
   let sheathWeight = 0;
   if (isMV) {
+    const cabFactor = (effectiveParams.cores > 1 ? 1.01 : 1.0);
     sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') 
-      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial], effectiveParams.sheathMaterial) 
+      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
       : 0;
   } else {
     const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
