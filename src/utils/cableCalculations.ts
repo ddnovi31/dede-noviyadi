@@ -1237,12 +1237,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     maxDcResistance = (RESISTANCE_CU[effectiveParams.size] || 0) * 1.61;
   }
   let calculatedSectionalArea = wireCount * (Math.PI / 4) * Math.pow(wireDiameter, 2);
+  const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
   if ((effectiveParams.conductorType === 'sm' || effectiveParams.conductorType === 'cm') && maxDcResistance > 0) {
     const rho = CONDUCTOR_RESISTIVITY[effectiveParams.conductorMaterial] || 17.241;
-    const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
     calculatedSectionalArea = (rho / (maxDcResistance / cabFactor)) * 1.01;
   }
-  let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR;
+  let conductorWeightPerCore = calculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * cabFactor;
 
   // Helper function to find KHA
   const getKhaValue = (cores: number, size: number, material: string, insulation: string, installation: 'air' | 'ground') => {
@@ -1498,7 +1498,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     ? abcTData.messenger.condWeight
     : (effectiveParams.standard.includes('NFA2X-T') 
       ? (earthingCalculatedSectionalArea * (6/7) * densities.Al + earthingCalculatedSectionalArea * (1/7) * densities.Steel) * 1.05 // 6 Al + 1 Steel mix with lay factor
-      : earthingCalculatedSectionalArea * densities[effectiveParams.conductorMaterial] * STRANDING_FACTOR * CABLING_FACTOR);
+      : earthingCalculatedSectionalArea * densities[effectiveParams.conductorMaterial] * cabFactor);
   
   let earthingAlWeight = 0;
   let earthingSteelWeight = 0;
@@ -1507,8 +1507,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     // Calculate split weights based on wire counts
     const alArea = earthingAlWireCount! * (Math.PI * Math.pow(earthingAlWireDiameter! / 2, 2));
     const steelArea = earthingSteelWireCount! * (Math.PI * Math.pow(earthingSteelWireDiameter! / 2, 2));
-    const alWeightPerCore = alArea * densities.Al * 1.05 * STRANDING_FACTOR; // 5% lay factor + stranding factor
-    const steelWeightPerCore = steelArea * densities.Steel * 1.05 * STRANDING_FACTOR;
+    const alWeightPerCore = alArea * densities.Al * 1.05; // 5% lay factor
+    const steelWeightPerCore = steelArea * densities.Steel * 1.05;
     earthingAlWeight = alWeightPerCore * earthingCores;
     earthingSteelWeight = steelWeightPerCore * earthingCores;
     earthingConductorWeightPerCore = alWeightPerCore + steelWeightPerCore;
@@ -1877,7 +1877,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const rSemi2 = rIns + insulationScreenThickness;
     
     const condScreenArea = Math.PI * (rSemi1 * rSemi1 - rCond * rCond);
-    const insArea = Math.PI * (rIns * rIns - rSemi1 * rSemi1);
+    const factor = effectiveParams.conductorType !== 're' ? getWeightAdditionFactor(wireCount) : 0;
+    const diaBeforeIns = conductorDiameter + 2 * conductorScreenThickness;
+    const insArea = (diaBeforeIns + insulationThickness) * Math.PI * (insulationThickness + (diaBeforeIns * factor));
     const insScreenArea = Math.PI * (rSemi2 * rSemi2 - rIns * rIns);
     
     semiCondArea = condScreenArea + insScreenArea;
@@ -1912,11 +1914,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       ? ((dInnerSemicon - conductorScreenThickness) * conductorScreenThickness * Math.PI * densities['Inner Semi Conductive'] * 1.1 * mvCablingFactor) 
       : 0;
 
-    const dInsul = dInnerSemicon + (2 * insulationThickness);
     insulationWeightPerCore = (insulationThickness > 0)
-      ? ((dInsul - insulationThickness) * insulationThickness * Math.PI * densities[effectiveParams.insulationMaterial] * mvCablingFactor)
+      ? (insulationArea * densities[effectiveParams.insulationMaterial] * mvCablingFactor)
       : 0;
 
+    const dInsul = dInnerSemicon + (2 * insulationThickness);
     const dOuterSemicon = dInsul + (2 * insulationScreenThickness);
     outerSemiCondWeightPerCore = (insulationScreenThickness > 0)
       ? ((dOuterSemicon - insulationScreenThickness) * insulationScreenThickness * Math.PI * densities['Outer Semi Conductive'] * mvCablingFactor)
@@ -2172,12 +2174,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType && effectiveParams.cablingFillerType !== 'Extruded') {
       const fillerDensity = densities[effectiveParams.cablingFillerType] || 0.9;
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor, effectiveParams.cablingFillerType);
+      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor), effectiveParams.cablingFillerType);
       fillerArea = 0; // Remove from inner sheath area
     } else if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType === 'Extruded') {
       const fillerDensity = densities[effectiveParams.cablingFillerMaterial || 'PVC'] || densities.PVC;
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor, effectiveParams.cablingFillerMaterial || 'PVC');
+      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor), effectiveParams.cablingFillerMaterial || 'PVC');
       fillerArea = 0; // Remove from inner sheath area
     }
     
@@ -2344,8 +2346,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const numWires = Math.floor((Math.PI * meanArmorDiameter) / (armorThickness * 1.05)); // 5% gap
     const wireArea = Math.PI * Math.pow(armorThickness / 2, 2);
     const armorDensity = effectiveParams.armorType === 'AWA' ? (densities.AWA || densities.Al) : (densities.SWA || densities.SteelWire || densities.Steel);
-    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
-    armorWireWeight = numWires * wireArea * armorDensity * 1.05 * mvFactor; // 5% lay factor
+    armorWireWeight = numWires * wireArea * armorDensity * 1.05; // 5% lay factor
     armorWeight = armorWireWeight;
     armorWireDiameter = armorThickness;
   } else if (effectiveParams.armorType === 'STA') {
@@ -2365,9 +2366,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanArmorDiameter = diameterUnderArmor + 2 * armorThickness;
     // Area of tape approx = pi * D * 2 * t * (1 + overlap/100)
     const overlapMultiplier = 1 + (overlap / 100);
-    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
-    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02 * mvFactor; // 2% lay factor
+    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02; // 2% lay factor
     armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
@@ -2389,9 +2389,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * flatThickness + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
-    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor; // 2% lay factor
-    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel) * mvFactor;
+    armorWireWeight = flatArea * 1.02 * (densities.SFA || densities.Steel); // 2% lay factor
+    armorTapeWeight = tapeArea * 1.02 * (densities.SFA || densities.Steel);
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'RGB') {
     // Steel Wire & Tape Armour
@@ -2424,9 +2423,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const meanTapeDiameter = diameterUnderArmor + 2 * wireDia + tapeThickness;
     const tapeArea = Math.PI * meanTapeDiameter * tapeThickness * 0.333; // Gap 200% (1/3 coverage)
     
-    const mvFactor = (effectiveParams.standard === 'IEC 60502-2' && effectiveParams.cores > 1) ? 1.003 : 1.0;
-    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel) * mvFactor; // 5% lay factor for wire
-    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel) * mvFactor; // 2% for tape
+    armorWireWeight = wireArea * 1.05 * (densities.RGB || densities.Steel); // 5% lay factor for wire
+    armorTapeWeight = tapeArea * 1.02 * (densities.RGB || densities.Steel); // 2% for tape
     armorWeight = armorWireWeight + armorTapeWeight;
   } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB' || effectiveParams.armorType === 'CWB') {
     // Industrial Level Braid Calculation (GSWB/TCWB)
@@ -2659,7 +2657,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   // Weight Details with Formulas
   const weightDetails = {
-    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${calculatedSectionalArea.toFixed(4)} mm² * ${densities[effectiveParams.conductorMaterial]} * ${STRANDING_FACTOR} (stranding) * ${CABLING_FACTOR} (cabling)`, 'conductor'),
+    conductor: evalFormula(totalConductorWeight, `${effectiveParams.cores} cores * ${calculatedSectionalArea.toFixed(4)} mm² * ${densities[effectiveParams.conductorMaterial]} * ${effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor} (cabling)`, 'conductor'),
     insulation: evalFormula(totalInsulationWeight, `${effectiveParams.cores} cores * π * ((${coreDiameter.toFixed(2)}/2)² - (${(conductorDiameter + 2 * conductorScreenThickness).toFixed(2)}/2)²) * ${densities[effectiveParams.insulationMaterial]}`, 'insulation'),
     outerSheath: evalFormula(sheathWeight, `π * ((${overallDiameter.toFixed(2)}/2)² - (${diameterOverArmor.toFixed(2)}/2)²) * ${densities[effectiveParams.sheathMaterial]}`, 'outerSheath')
   } as any;
