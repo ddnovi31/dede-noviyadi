@@ -2283,10 +2283,24 @@ export default function CableDesigner() {
           newParams.innerSheathMaterial = 'PVC';
           
           // Auto-set screen size based on NYCY_DATA or SPLN 43-4 rules
-          const nycyPrefix = `${newParams.cores}x${newParams.size}/`;
-          const matchingKey = Object.keys(NYCY_DATA).find(k => k.startsWith(nycyPrefix));
-          if (matchingKey) {
-            newParams.screenSize = NYCY_DATA[matchingKey].screenSize;
+          let nycyPrefix = `${newParams.cores}x${newParams.size}/`;
+          let validKeys = Object.keys(NYCY_DATA).filter(k => k.startsWith(nycyPrefix));
+          
+          if (validKeys.length === 0) {
+            // Find a valid size for the current cores
+            const validSizesForCores = Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${newParams.cores}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).sort((a, b) => a - b);
+            if (validSizesForCores.length > 0) {
+              newParams.size = validSizesForCores[0];
+              nycyPrefix = `${newParams.cores}x${newParams.size}/`;
+              validKeys = Object.keys(NYCY_DATA).filter(k => k.startsWith(nycyPrefix));
+            }
+          }
+          
+          if (validKeys.length > 0) {
+            const validScreenSizes = validKeys.map(k => NYCY_DATA[k].screenSize);
+            if (!validScreenSizes.includes(newParams.screenSize)) {
+              newParams.screenSize = validScreenSizes[0];
+            }
           } else {
             // Fallback / Control Cable Logic based on SPLN 43-4
             if (newParams.cores > 4) {
@@ -8891,7 +8905,7 @@ export default function CableDesigner() {
                                     const availableSizes = CABLE_SIZES.filter(s => {
                                       if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
                                       if (params.standard === 'IEC 60502-2') return s >= 25;
-                                      if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                      if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
                                       if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
                                       if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
                                       if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
@@ -8918,7 +8932,7 @@ export default function CableDesigner() {
                               {CABLE_SIZES.filter(s => {
                                 if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
                                 if (params.standard === 'IEC 60502-2') return s >= 25;
-                                if (params.standard === 'SPLN 43-4 (NYCY)') return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
                                 if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
                                 if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
                                 if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
@@ -9020,7 +9034,7 @@ export default function CableDesigner() {
                             let cores = [1, 2, 3, 4, 5];
                             if (params.standard === 'IEC 60502-2') cores = [1, 3];
                             else if (params.standard === 'SPLN 41-6 : 1981 AAC') cores = [1];
-                            else if (params.standard === 'SPLN 43-4 (NYCY)') cores = [1, 2, 3, 4, 5, 7, 10, 12, 14, 19, 24, 30, 37, 48, 61];
+                            else if (params.standard === 'SPLN 43-4 (NYCY)') cores = Array.from(new Set(Object.keys(NYCY_DATA).map(k => Number(k.split('x')[0])))).sort((a, b) => a - b);
                             else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
                             else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
                             else if (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) cores = [1];
@@ -9073,7 +9087,7 @@ export default function CableDesigner() {
                                 return s >= 25;
                               }
                               if (params.standard === 'SPLN 43-4 (NYCY)') {
-                                return [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500].includes(s);
+                                return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${params.cores}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
                               }
                               if (params.standard.includes('(NYMHY)')) {
                                 return [0.75, 1, 1.5, 2.5].includes(s);
@@ -9728,9 +9742,15 @@ export default function CableDesigner() {
                                   onChange={(e) => handleParamChange('screenSize', Number(e.target.value))}
                                   className="w-full rounded-xl border-slate-200 text-xs p-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold bg-slate-50 disabled:bg-slate-100"
                                 >
-                                  {[1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240].map(s => (
-                                    <option key={s} value={s}>{s} mm² (Wire Dia: {CWS_WIRE_DIAMETERS[s] || 0.8}mm)</option>
-                                  ))}
+                                  {isNYCY ? (
+                                    Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${params.cores}x${params.size}/`)).map(k => Number(k.split('/')[1])))).map(s => (
+                                      <option key={s} value={s}>{s} mm² (Wire Dia: {CWS_WIRE_DIAMETERS[s] || 0.8}mm)</option>
+                                    ))
+                                  ) : (
+                                    [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240].map(s => (
+                                      <option key={s} value={s}>{s} mm² (Wire Dia: {CWS_WIRE_DIAMETERS[s] || 0.8}mm)</option>
+                                    ))
+                                  )}
                                 </select>
                               </div>
                             )}
