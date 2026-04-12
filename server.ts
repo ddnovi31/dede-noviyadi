@@ -116,30 +116,26 @@ app.get("/api/health", (req, res) => {
 // LME Prices Scraper Route
 app.get("/api/lme-prices", async (req, res) => {
   try {
-    const https = await import('https');
-    
-    const fetchHtml = () => new Promise<string>((resolve, reject) => {
-      https.get('https://www.westmetall.com/en/markdaten.php', (response) => {
-        let data = '';
-        response.on('data', (chunk) => data += chunk);
-        response.on('end', () => resolve(data));
-      }).on('error', reject);
-    });
+    const fetchHtml = async () => {
+      const response = await fetch('https://www.westmetall.com/en/markdaten.php', {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.text();
+    };
 
-    const fetchExchangeRate = () => new Promise<number | null>((resolve) => {
-      https.get('https://open.er-api.com/v6/latest/USD', (response) => {
-        let data = '';
-        response.on('data', (chunk) => data += chunk);
-        response.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            resolve(parsed.rates.IDR);
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      }).on('error', () => resolve(null));
-    });
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.rates.IDR;
+      } catch (e) {
+        return null;
+      }
+    };
 
     const [html, exchangeRate] = await Promise.all([fetchHtml(), fetchExchangeRate()]);
     
@@ -164,7 +160,7 @@ app.get("/api/lme-prices", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching LME prices:", error);
-    res.status(500).json({ success: false, error: "Failed to fetch LME prices" });
+    res.status(500).json({ success: false, error: "Failed to fetch LME prices", details: error instanceof Error ? error.message : String(error) });
   }
 });
 
