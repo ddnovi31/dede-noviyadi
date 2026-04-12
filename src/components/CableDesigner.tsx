@@ -10966,6 +10966,14 @@ export default function CableDesigner() {
                       <span className="text-sm font-bold opacity-40 uppercase tracking-widest">kg/km</span>
                     </div>
                   </div>
+                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
+                    <span className="text-emerald-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-emerald-300 transition-colors">Selling Price</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest mr-1">Rp</span>
+                      <span className="text-4xl font-black tracking-tighter">{currentSellingPrice.toLocaleString('id-ID')}</span>
+                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">/m</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
