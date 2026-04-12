@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cable-designer-v2';
+const CACHE_NAME = 'cable-designer-v3';
 const ASSETS = [
   './',
   './index.html',
