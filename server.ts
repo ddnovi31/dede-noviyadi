@@ -113,6 +113,61 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Server is alive" });
 });
 
+// LME Prices Scraper Route
+app.get("/api/lme-prices", async (req, res) => {
+  try {
+    const https = await import('https');
+    
+    const fetchHtml = () => new Promise<string>((resolve, reject) => {
+      https.get('https://www.westmetall.com/en/markdaten.php', (response) => {
+        let data = '';
+        response.on('data', (chunk) => data += chunk);
+        response.on('end', () => resolve(data));
+      }).on('error', reject);
+    });
+
+    const fetchExchangeRate = () => new Promise<number | null>((resolve) => {
+      https.get('https://open.er-api.com/v6/latest/USD', (response) => {
+        let data = '';
+        response.on('data', (chunk) => data += chunk);
+        response.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.rates.IDR);
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      }).on('error', () => resolve(null));
+    });
+
+    const [html, exchangeRate] = await Promise.all([fetchHtml(), fetchExchangeRate()]);
+    
+    // Extract Date
+    const dateMatch = html.match(/<th class="number">([^<]+)<\/th>/);
+    const date = dateMatch ? dateMatch[1].trim() : 'Unknown Date';
+
+    // Extract Copper Price (Settlement Kasse)
+    const cuMatch = html.match(/Copper\s*<\/a>\s*<\/td>\s*<td>\s*<a[^>]+>\s*([\d,.]+)\s*<\/a>/);
+    const cuPrice = cuMatch ? parseFloat(cuMatch[1].replace(/,/g, '')) : null;
+
+    // Extract Aluminium Price (Settlement Kasse)
+    const alMatch = html.match(/Aluminium\s*<\/a>\s*<\/td>\s*<td>\s*<a[^>]+>\s*([\d,.]+)\s*<\/a>/);
+    const alPrice = alMatch ? parseFloat(alMatch[1].replace(/,/g, '')) : null;
+
+    res.json({
+      success: true,
+      date,
+      copper: cuPrice,
+      aluminium: alPrice,
+      exchangeRate
+    });
+  } catch (error) {
+    console.error("Error fetching LME prices:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch LME prices" });
+  }
+});
+
 // Database Management Routes
 app.get("/api/databases", (req, res) => {
   const files = fs.readdirSync(DB_DIR).filter(f => f.endsWith('.db'));

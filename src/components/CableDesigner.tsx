@@ -228,6 +228,19 @@ export default function CableDesigner() {
   const isMV = params.standard === 'IEC 60502-2';
   const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
 
+  const [lmeData, setLmeData] = useState<{date: string, copper: number | null, aluminium: number | null, exchangeRate?: number | null} | null>(null);
+
+  useEffect(() => {
+    fetch('/api/lme-prices')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setLmeData(data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch LME data:", err));
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -8224,6 +8237,50 @@ export default function CableDesigner() {
             </div>
           </div>
         </header>
+
+        {/* LME Data Banner */}
+        {lmeData && (
+          <div className="bg-white rounded-2xl p-4 shadow-md border border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-50 rounded-xl">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">LME Market Data</h3>
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Source: westmetall.com • {lmeData.date}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Copper (Settlement)</span>
+                <span className="text-sm font-black text-orange-600 flex items-center gap-1">
+                  ${lmeData.copper?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || 'N/A'}
+                  <span className="text-[10px] text-slate-400 font-medium">/ ton</span>
+                </span>
+              </div>
+              <div className="w-px h-8 bg-slate-200"></div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aluminium (Settlement)</span>
+                <span className="text-sm font-black text-slate-700 flex items-center gap-1">
+                  ${lmeData.aluminium?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || 'N/A'}
+                  <span className="text-[10px] text-slate-400 font-medium">/ ton</span>
+                </span>
+              </div>
+              {lmeData.exchangeRate && (
+                <>
+                  <div className="w-px h-8 bg-slate-200"></div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">USD to IDR</span>
+                    <span className="text-sm font-black text-emerald-600 flex items-center gap-1">
+                      Rp {lmeData.exchangeRate.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
