@@ -492,6 +492,10 @@ export interface AACData {
   wireCount: number;
   wireDiameter: number;
   overallDiameter: number;
+  resistance?: number;
+  breakingLoad?: number;
+  ampacity?: number;
+  weight?: number;
 }
 
 export interface AAACSData {
@@ -506,12 +510,12 @@ export interface AAACSData {
 export const AAC_DATA: Record<string, AACData> = {
   '16': { size: '16', wireCount: 7, wireDiameter: 1.75, overallDiameter: 5.25 },
   '25': { size: '25', wireCount: 7, wireDiameter: 2.25, overallDiameter: 6.75 },
-  '35': { size: '35', wireCount: 7, wireDiameter: 2.5, overallDiameter: 7.5 },
+  '35': { size: '35', wireCount: 7, wireDiameter: 2.5, overallDiameter: 7.5, resistance: 0.8332, breakingLoad: 590, ampacity: 180, weight: 94 },
   '50 A': { size: '50 A', wireCount: 7, wireDiameter: 3.0, overallDiameter: 9 },
   '50 B': { size: '50 B', wireCount: 19, wireDiameter: 1.75, overallDiameter: 8.75 },
   '55': { size: '55', wireCount: 7, wireDiameter: 3.25, overallDiameter: 9.75 },
-  '70': { size: '70', wireCount: 19, wireDiameter: 2.25, overallDiameter: 10 },
-  '95': { size: '95', wireCount: 19, wireDiameter: 2.5, overallDiameter: 12.5 },
+  '70': { size: '70', wireCount: 19, wireDiameter: 2.25, overallDiameter: 11.25, resistance: 0.3808, breakingLoad: 1040, ampacity: 270, weight: 208 },
+  '95': { size: '95', wireCount: 19, wireDiameter: 2.5, overallDiameter: 12.5, resistance: 0.3084, breakingLoad: 1560, ampacity: 340, weight: 257 },
   '100': { size: '100', wireCount: 7, wireDiameter: 4.25, overallDiameter: 12.75 },
   '120': { size: '120', wireCount: 19, wireDiameter: 2.75, overallDiameter: 13.75 },
   '150 A': { size: '150 A', wireCount: 19, wireDiameter: 3.25, overallDiameter: 16.25 },
@@ -1583,7 +1587,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorWeightPerCore = area * (densities.Al || 2.703) * 1.02;
       // Resistance calculation: Resistivity / Area
       const rho = CONDUCTOR_RESISTIVITY.Al || 28.264;
-      maxDcResistance = area > 0 ? rho / area : 0;
+      maxDcResistance = aacData.resistance || (area > 0 ? rho / area : 0);
+      currentCapacityAir = aacData.ampacity || 0;
+      if (aacData.weight) {
+        conductorWeightPerCore = aacData.weight;
+      }
     } else {
       conductorDiameter = 0;
       wireCount = 0;

@@ -2297,6 +2297,19 @@ export default function CableDesigner() {
             newParams.earthingCores = 1;
             if (newParams.cores < 2) newParams.cores = 2;
             if (newParams.cores > 3) newParams.cores = 3;
+
+            // Ensure earthingSize is valid for NFA2X-T
+            const prefix = `${newParams.cores}x${newParams.size}+`;
+            const validEarthingSizes = Object.keys(NFA2XT_DATA)
+              .filter(k => k.startsWith(prefix))
+              .map(k => Number(k.split('+')[1]))
+              .sort((a, b) => a - b);
+            
+            if (validEarthingSizes.length > 0) {
+              if (!validEarthingSizes.includes(newParams.earthingSize)) {
+                newParams.earthingSize = validEarthingSizes[0];
+              }
+            }
           } else {
             newParams.hasEarthing = false;
             if (newParams.cores < 2) newParams.cores = 2;
@@ -4172,9 +4185,11 @@ export default function CableDesigner() {
                   </button>
                 </div>
                 <div className="text-center mb-4 print:mb-2 space-y-1">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">Technical Specifications</h2>
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">
+                    {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'TECHNICAL SPECIFICATION' : 'Technical Specifications'}
+                  </h2>
                   <p className="text-xs text-slate-600 font-medium print:text-[10px]">
-                    {p.standard === 'BS EN 50288-7' ? 'Instrument Cable' : (isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable')} {p.standard !== 'BS EN 50288-7' && `(${p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)`}
+                    {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'All Aluminium Bare Conductor' : (p.standard === 'BS EN 50288-7' ? 'Instrument Cable' : (isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'))} {p.standard !== 'BS EN 50288-7' && p.standard !== 'SPLN 41-6 : 1981 AAC' && `(${p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)`}
                   </p>
                 </div>
 
@@ -5819,6 +5834,203 @@ export default function CableDesigner() {
                           </td>
                         </tr>
                       </>
+                    ) : p.standard === 'SPLN 41-6 : 1981 AAC' ? (
+                      <>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">1</td>
+                          <td className="border border-slate-400 p-2 font-medium">Brand</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-aac-brand`] ?? "MULTI KABEL"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-aac-brand`]: val }))}
+                              bold={true}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">2</td>
+                          <td className="border border-slate-400 p-2 font-medium">Reference Standard</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-aac-std`] ?? "SPLN 41-6 : 1981"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-aac-std`]: val }))}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">3</td>
+                          <td className="border border-slate-400 p-2 font-medium">Type</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            <EditableCell
+                              value={specEdits[`${groupKey}-aac-type`] ?? "All Aluminium Conductor"}
+                              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-aac-type`]: val }))}
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">4</td>
+                          <td className="border border-slate-400 p-2 font-medium">Cross-Sectional Area</td>
+                          <td className="border border-slate-400 p-2 text-center">mm²</td>
+                          {items.map((item, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+                              {item.params.size}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">Conductor Shape</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            Round Stranded (rm)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">Nominal Wire Diameter</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.wireDiameter.toFixed(2).replace('.', ',') || '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">Tolerance Wire</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              ±0.02
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">Number of Wires</td>
+                          <td className="border border-slate-400 p-2 text-center">pcs</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.wireCount || '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center"></td>
+                          <td className="border border-slate-400 p-2 pl-4">Overall Diameter Conductor (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">mm</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.overallDiameter.toFixed(2).replace('.', ',') || '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">5</td>
+                          <td className="border border-slate-400 p-2 font-medium">Conductor Resistance at 20°C</td>
+                          <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.resistance?.toFixed(4).replace('.', ',') || item.result.electrical.maxDcResistance.toFixed(4).replace('.', ',')}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">6</td>
+                          <td className="border border-slate-400 p-2 font-medium">Calculated breaking load</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg/Km</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.breakingLoad || '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">7</td>
+                          <td className="border border-slate-400 p-2 font-medium">Current Carrying Capacity at 35°C</td>
+                          <td className="border border-slate-400 p-2 text-center">A</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.ampacity || item.result.electrical.currentCapacityAir || '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">8</td>
+                          <td className="border border-slate-400 p-2 font-medium">Direction of stranding of outermost layer</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            Right Hand (Z)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">9</td>
+                          <td className="border border-slate-400 p-2 font-medium">Density</td>
+                          <td className="border border-slate-400 p-2 text-center">g/mm³</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            2,703
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">10</td>
+                          <td className="border border-slate-400 p-2 font-medium">Conductor Net Weight (Approx.)</td>
+                          <td className="border border-slate-400 p-2 text-center">Kg/Km</td>
+                          {items.map((item, idx) => {
+                            const aacKey = String(item.params.size);
+                            const aacData = AAC_DATA[aacKey];
+                            return (
+                              <td key={idx} className="border border-slate-400 p-2 text-center">
+                                {aacData?.weight || Math.round(item.result.bom.conductorWeight)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">11</td>
+                          <td className="border border-slate-400 p-2 font-medium">Standard Length per drum</td>
+                          <td className="border border-slate-400 p-2 text-center">meter</td>
+                          {items.map((_, idx) => (
+                            <td key={idx} className="border border-slate-400 p-2 text-center">
+                              5000
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-400 p-2 text-center">12</td>
+                          <td className="border border-slate-400 p-2 font-medium">Drum (Packaging)</td>
+                          <td className="border border-slate-400 p-2 text-center">-</td>
+                          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+                            Wooden Drum
+                          </td>
+                        </tr>
+                      </>
                     ) : (
                       <>
                         {/* 1. General Info */}
@@ -5952,7 +6164,7 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
-                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && p.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
+                    {(p.standard as string) !== 'SPLN 41-6 : 1981 AAC' && (p.standard as string) !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center">
                           <EditableCell
@@ -6208,7 +6420,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Insulation (Phase) */}
-                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && p.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
+                    {(p.standard as string) !== 'SPLN 41-6 : 1981 AAC' && (p.standard as string) !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? (p.mvScreenType !== 'None' ? 8 : 6) : 4}></td>
@@ -9241,7 +9453,13 @@ export default function CableDesigner() {
                                   className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:opacity-50"
                                 >
                                   <option value={0}>None</option>
-                                  {CABLE_SIZES.filter(s => !params.standard.includes('NFA2X-T') || s <= params.size).map((s) => (
+                                  {CABLE_SIZES.filter(s => {
+                                    if (params.standard.includes('NFA2X-T')) {
+                                      const key = `${params.cores}x${params.size}+${s}`;
+                                      return !!NFA2XT_DATA[key];
+                                    }
+                                    return s <= params.size;
+                                  }).map((s) => (
                                     <option key={s} value={s}>{s} mm²</option>
                                   ))}
                                 </select>
