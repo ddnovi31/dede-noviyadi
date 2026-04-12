@@ -10,6 +10,8 @@ import {
   CWS_WIRE_DIAMETERS,
   AAC_SIZES,
   AAC_DATA,
+  AAACS_SIZES,
+  AAACS_DATA,
   ConductorMaterial,
   ConductorType,
   InsulationMaterial,
@@ -291,6 +293,7 @@ export default function CableDesigner() {
     { value: "BS EN 50288-7", label: "BS EN 50288-7 (Instrumentation)" },
     { value: "LiYCY", label: "LiYCY (Flexible Screened)" },
     { value: "SPLN 41-6 : 1981 AAC", label: "SPLN 41-6 : 1981 AAC" },
+    { value: "SPLN 41-10 : 1991 (AAAC-S)", label: "SPLN 41-10 : 1991 (AAAC-S)" },
     { value: "Manufacturing Specification", label: "Manufacturing Specification" },
   ];
 
@@ -623,11 +626,12 @@ export default function CableDesigner() {
       const isNoSheath = sampleItem.params.standard.includes('NYA') || sampleItem.params.standard.includes('NYAF') || sampleItem.params.standard.includes('NFA2X');
       const hasInnerSheath = !isNoSheath && (sampleItem.params.hasInnerSheath !== false) && ((sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored') || sampleItem.params.hasInnerSheath || (sampleItem.params.innerSheathMaterial && sampleItem.params.innerSheathMaterial !== 'None'));
       const hasSeparator = isIEC60502_1 && (sampleItem.params.hasSeparator || (hasScreen && hasArmor));
-      const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X') && sampleItem.params.standard !== 'SPLN 41-6 : 1981 AAC' && sampleItem.params.hasOuterSheath !== false;
+      const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X') && sampleItem.params.standard !== 'SPLN 41-6 : 1981 AAC' && sampleItem.params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && sampleItem.params.hasOuterSheath !== false;
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
       const isNFA2X = sampleItem.params.standard.includes('NFA2X') && !isNFA2XT;
       const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7' || (sampleItem.params.standard === 'Manufacturing Specification' && sampleItem.params.hasScreen);
       const isAAC = sampleItem.params.standard === 'SPLN 41-6 : 1981 AAC';
+      const isAAACS = sampleItem.params.standard === 'SPLN 41-10 : 1991 (AAAC-S)';
       const hasPetTapeInGroup = isMV ? items.some(i => i.item.params.cores === 1) : true;
 
       let sheetName = getCableDesignation(sampleItem.params, sampleItem.result).split(' ')[0];
@@ -2048,6 +2052,17 @@ export default function CableDesigner() {
         newParams.hasInnerSheath = false;
         newParams.hasScreen = false;
         newParams.voltage = 'None';
+      } else if (key === 'standard' && value === 'SPLN 41-10 : 1991 (AAAC-S)') {
+        newParams.conductorMaterial = 'Al';
+        newParams.conductorType = 'rm';
+        newParams.size = '35';
+        newParams.cores = 1;
+        newParams.insulationMaterial = 'XLPE';
+        newParams.sheathMaterial = 'None';
+        newParams.armorType = 'Unarmored';
+        newParams.hasInnerSheath = false;
+        newParams.hasScreen = false;
+        newParams.voltage = '20 kV';
       }
 
       // Auto-calculate Drain Wire Size
@@ -2386,6 +2401,10 @@ export default function CableDesigner() {
     
     if (p.standard === 'SPLN 41-6 : 1981 AAC') {
       return `AAC ${p.size}`;
+    }
+    
+    if (p.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+      return `AAAC-S ${p.size}`;
     }
 
     if (p.standard === 'BS EN 50288-7') {
@@ -2902,7 +2921,7 @@ export default function CableDesigner() {
                     
                     const isNY = item.params.standard.includes('(NYA)') || item.params.standard.includes('(NYAF)');
                     const isNFA = item.params.standard.includes('NFA2X');
-                    const hasOuterSheath = !isNY && !isNFA && item.params.standard !== 'SPLN 41-6 : 1981 AAC' && item.params.hasOuterSheath !== false;
+                    const hasOuterSheath = !isNY && !isNFA && item.params.standard !== 'SPLN 41-6 : 1981 AAC' && item.params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && item.params.hasOuterSheath !== false;
                     const hasAssembly = (item.params.cores > 1 && !isNFA) || item.params.hasInnerSheath || item.params.hasSeparator;
                     const hasArmor = item.params.armorType !== 'Unarmored';
                     const hasInstrumentation = item.params.formationType && item.params.formationType !== 'Core';
@@ -4113,7 +4132,7 @@ export default function CableDesigner() {
             const isNYA = p.standard.includes('(NYA)');
             const isNYAF = p.standard.includes('(NYAF)');
             const isABC = p.standard.includes('NFA2X');
-            const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC' && p.hasOuterSheath !== false;
+            const hasOuterSheath = !p.standard.includes('NYAF') && !isABC && p.standard !== 'SPLN 41-6 : 1981 AAC' && p.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && p.hasOuterSheath !== false;
 
             // Get construction name (material part of designation)
             const designation = getCableDesignation(p, firstItem.result);
@@ -5918,6 +5937,8 @@ export default function CableDesigner() {
                         let defaultVal = `${constructionName} ${itemSizeDesignation} mm²`;
                         if (p.standard === 'SPLN 41-6 : 1981 AAC') {
                           defaultVal = `AAC ${item.params.size} mm²`;
+                        } else if (p.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+                          defaultVal = `AAAC-S ${item.params.size} mm²`;
                         }
                         const editKey = `${groupKey}-type-size-${idx}`;
                         return (
@@ -5931,7 +5952,7 @@ export default function CableDesigner() {
                         );
                       })}
                     </tr>
-                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && p.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <tr>
                         <td className="border border-slate-400 p-2 text-center">
                           <EditableCell
@@ -6187,7 +6208,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Insulation (Phase) */}
-                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {p.standard !== 'SPLN 41-6 : 1981 AAC' && p.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <>
                         <tr>
                           <td className="border border-slate-400 p-2 text-center" rowSpan={isMV ? (p.mvScreenType !== 'None' ? 8 : 6) : 4}></td>
@@ -8848,7 +8869,7 @@ export default function CableDesigner() {
 
 
                     {/* Voltage Selection (Dynamic) */}
-                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Voltage Rating (Uo/U)</label>
                         <select
@@ -9073,11 +9094,11 @@ export default function CableDesigner() {
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard === 'SPLN 41-6 : 1981 AAC' ? 1 : params.standard.includes('(NYMHY)') ? 2 : params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : params.standard === 'SPLN 43-4 (NYCY)' ? 1 : 1}
-                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard === 'SPLN 41-6 : 1981 AAC' ? 1 : params.standard.includes('(NYMHY)') ? 5 : params.standard.includes('(NYM)') ? 4 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
+                            min={params.standard === 'IEC 60502-2' ? 1 : params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? 1 : params.standard.includes('(NYMHY)') ? 2 : params.standard.includes('(NYM)') ? 2 : params.standard.includes('NFA2X-T') ? 2 : params.standard.includes('NFA2X') ? 2 : params.standard === 'SPLN 43-4 (NYCY)' ? 1 : 1}
+                            max={params.standard === 'IEC 60502-2' ? 3 : params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? 1 : params.standard.includes('(NYMHY)') ? 5 : params.standard.includes('(NYM)') ? 4 : (params.standard.includes('(NYAF)') || params.standard.includes('(NYA)')) ? 1 : params.standard.includes('NFA2X-T') ? 3 : params.standard.includes('NFA2X') ? 4 : params.standard === 'SPLN 43-4 (NYCY)' ? 61 : 80}
                             value={params.cores}
                             onChange={(e) => handleParamChange('cores', Number(e.target.value))}
-                            disabled={isInstrumentationPairTriad || isBulkCalculationEnabled || params.standard === 'SPLN 41-6 : 1981 AAC'}
+                            disabled={isInstrumentationPairTriad || isBulkCalculationEnabled || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)'}
                             className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:opacity-50"
                           />
                         </div>
@@ -9090,7 +9111,7 @@ export default function CableDesigner() {
                           {(() => {
                             let cores = [1, 2, 3, 4, 5];
                             if (params.standard === 'IEC 60502-2') cores = [1, 3];
-                            else if (params.standard === 'SPLN 41-6 : 1981 AAC') cores = [1];
+                            else if (params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') cores = [1];
                             else if (params.standard === 'SPLN 43-4 (NYCY)') cores = Array.from(new Set(Object.keys(NYCY_DATA).map(k => Number(k.split('x')[0])))).sort((a, b) => a - b);
                             else if (params.standard.includes('(NYM)')) cores = [2, 3, 4];
                             else if (params.standard.includes('(NYMHY)')) cores = [2, 3, 4, 5];
@@ -9127,12 +9148,16 @@ export default function CableDesigner() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">Cross Section (mm²)</label>
                         <select
                           value={params.size}
-                          onChange={(e) => handleParamChange('size', params.standard === 'SPLN 41-6 : 1981 AAC' ? e.target.value : Number(e.target.value))}
+                          onChange={(e) => handleParamChange('size', params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? e.target.value : Number(e.target.value))}
                           disabled={isInstrumentationPairTriad || isBulkCalculationEnabled}
                           className="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-slate-50 disabled:bg-slate-100 disabled:opacity-50"
                         >
                           {params.standard === 'SPLN 41-6 : 1981 AAC' ? (
                             AAC_SIZES.map((s) => (
+                              <option key={s} value={s}>{s} mm²</option>
+                            ))
+                          ) : params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? (
+                            AAACS_SIZES.map((s) => (
                               <option key={s} value={s}>{s} mm²</option>
                             ))
                           ) : (
@@ -9175,7 +9200,7 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Earthing Core Section */}
-                    {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' || params.standard === 'SPLN 41-6 : 1981 AAC') && (
+                    {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <div className="flex items-center justify-between">
                           <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -9344,7 +9369,7 @@ export default function CableDesigner() {
                             return availableConductors.map((mat) => {
                               const isDisabled = (params.standard.includes('SNI 04-6629') && mat !== 'Cu') || 
                                                (params.standard.includes('NFA2X') && mat !== 'Al') ||
-                                               (params.standard === 'SPLN 41-6 : 1981 AAC' && mat !== 'Al') ||
+                                               ((params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && mat !== 'Al') ||
                                                (params.standard === 'BS EN 50288-7' && mat !== 'Cu' && mat !== 'TCu') ||
                                                (params.standard === 'LiYCY' && mat !== 'Cu' && mat !== 'TCu');
                               return (
@@ -9397,7 +9422,7 @@ export default function CableDesigner() {
                             if (params.standard === 'LiYCY') isDisabled = isDisabled || type !== 'f';
                             if (params.standard === 'IEC 60502-2') isDisabled = isDisabled || type !== 'cm';
                             if (params.standard.includes('NFA2X')) isDisabled = isDisabled || !['cm', 'rm'].includes(type);
-                            if (params.standard === 'SPLN 41-6 : 1981 AAC') isDisabled = isDisabled || type !== 'rm';
+                            if (params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') isDisabled = isDisabled || type !== 'rm';
                             
                             return (
                               <button
@@ -9431,7 +9456,7 @@ export default function CableDesigner() {
                               <input
                                 type="number"
                                 value={params.manualWireCount || ''}
-                                placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.wireCount.toString() || '7') : (params.conductorType === 're' ? '1' : '7')}
+                                placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.wireCount.toString() || '7') : params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? (AAACS_DATA[String(params.size)]?.wireCount.toString() || '7') : (params.conductorType === 're' ? '1' : '7')}
                                 onChange={(e) => handleParamChange('manualWireCount', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -9443,7 +9468,7 @@ export default function CableDesigner() {
                                 type="number"
                                 step="0.01"
                                 value={params.manualWireDiameter || ''}
-                                placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.wireDiameter.toFixed(2) || result.spec.phaseCore.wireDiameter.toFixed(2)) : result.spec.phaseCore.wireDiameter.toFixed(2)}
+                                placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.wireDiameter.toFixed(2) || result.spec.phaseCore.wireDiameter.toFixed(2)) : params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? (AAACS_DATA[String(params.size)]?.wireDiameter.toFixed(2) || result.spec.phaseCore.wireDiameter.toFixed(2)) : result.spec.phaseCore.wireDiameter.toFixed(2)}
                                 onChange={(e) => handleParamChange('manualWireDiameter', e.target.value ? Number(e.target.value) : undefined)}
                                 className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                               />
@@ -9457,7 +9482,7 @@ export default function CableDesigner() {
                               type="number"
                               step="0.1"
                               value={params.manualConductorDiameter || ''}
-                              placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.overallDiameter.toFixed(2) || result.spec.conductorDiameter.toFixed(2)) : result.spec.conductorDiameter.toFixed(2)}
+                              placeholder={params.standard === 'SPLN 41-6 : 1981 AAC' ? (AAC_DATA[String(params.size)]?.overallDiameter.toFixed(2) || result.spec.conductorDiameter.toFixed(2)) : params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? (result.spec.conductorDiameter.toFixed(2)) : result.spec.conductorDiameter.toFixed(2)}
                               onChange={(e) => handleParamChange('manualConductorDiameter', e.target.value ? Number(e.target.value) : undefined)}
                               className="w-full rounded-xl border-indigo-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border bg-white"
                             />
@@ -9551,7 +9576,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* MV Screen Selection (Moved after Insulation) */}
-                    {params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3.1 Metallic Screen (MV)</label>
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
@@ -9634,7 +9659,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Cabling Diameter Section (Advance Mode Only) */}
-                    {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">3.2 Cabling Diameter</label>
                         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -9698,7 +9723,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Inner Sheath Section */}
-                    {params.standard !== 'LiYCY' && params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.standard !== 'LiYCY' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
@@ -9759,7 +9784,7 @@ export default function CableDesigner() {
                     )}
 
                     {/* Screen Section */}
-                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isLV ? 'opacity-50' : ''}`}>
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen {!isLV && '(IEC 60502-1 or NYCY Only)'}</label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
@@ -9929,7 +9954,7 @@ export default function CableDesigner() {
                     </div>
 
                     {/* Armor Section */}
-                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">{params.standard === 'LiYCY' ? '5. Braid Screen' : '5. Armour'}</label>
                       <div>
@@ -10139,7 +10164,7 @@ export default function CableDesigner() {
                   )}
 
                     {/* Outer Sheath Section */}
-                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC') && (
+                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">6. Outer Sheath</label>
                         
@@ -10237,7 +10262,7 @@ export default function CableDesigner() {
 
 
                     {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
-                    {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && (
+                    {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">7. Advanced Intermediate Diameters</label>
                         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -11210,7 +11235,7 @@ export default function CableDesigner() {
                       </div>
                     )}
                     
-                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC') && params.hasOuterSheath !== false && (
+                    {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && params.hasOuterSheath !== false && (
                       <SpecRow label="Outer Sheath" value={result.spec.sheathThickness} unit="mm" />
                     )}
                     

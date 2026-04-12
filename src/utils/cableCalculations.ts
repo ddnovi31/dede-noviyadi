@@ -30,7 +30,7 @@ export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
 export type ScreenType = 'None' | 'CTS' | 'CWS';
-export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)' | 'LiYCY' | 'SPLN 41-6 : 1981 AAC' | 'Manufacturing Specification';
+export type CableStandard = 'IEC 60502-1' | 'IEC 60502-2' | 'IEC 60092-353' | 'SNI 04-6629.4 (NYM)' | 'SNI 04-6629.3 (NYAF)' | 'SNI 04-6629.3 (NYA)' | 'SNI 04-6629.5 (NYMHY)' | 'SPLN D3. 010-1 : 2014 (NFA2X)' | 'SPLN D3. 010-1 : 2015 (NFA2X-T)' | 'BS EN 50288-7' | 'SPLN 43-4 (NYCY)' | 'LiYCY' | 'SPLN 41-6 : 1981 AAC' | 'SPLN 41-10 : 1991 (AAAC-S)' | 'Manufacturing Specification';
 export type FormationType = 'Core' | 'Pair' | 'Triad' | 'Quad';
 export type DesignMode = 'standard' | 'advance';
 
@@ -494,6 +494,15 @@ export interface AACData {
   overallDiameter: number;
 }
 
+export interface AAACSData {
+  size: string;
+  wireCount: number;
+  wireDiameter: number;
+  sheathThickness: number;
+  kha30: number;
+  kha40: number;
+}
+
 export const AAC_DATA: Record<string, AACData> = {
   '16': { size: '16', wireCount: 7, wireDiameter: 1.75, overallDiameter: 5.25 },
   '25': { size: '25', wireCount: 7, wireDiameter: 2.25, overallDiameter: 6.75 },
@@ -519,10 +528,26 @@ export const AAC_DATA: Record<string, AACData> = {
   '1000': { size: '1000', wireCount: 91, wireDiameter: 3.75, overallDiameter: 41.25 },
 };
 
+export const AAACS_DATA: Record<string, AAACSData> = {
+  '35': { size: '35', wireCount: 7, wireDiameter: 2.5, sheathThickness: 3.0, kha30: 167, kha40: 150 },
+  '50': { size: '50', wireCount: 19, wireDiameter: 1.75, sheathThickness: 3.0, kha30: 200, kha40: 180 },
+  '70': { size: '70', wireCount: 19, wireDiameter: 2.25, sheathThickness: 3.0, kha30: 275, kha40: 246 },
+  '95': { size: '95', wireCount: 19, wireDiameter: 2.5, sheathThickness: 3.0, kha30: 315, kha40: 282 },
+  '120': { size: '120', wireCount: 19, wireDiameter: 2.75, sheathThickness: 3.0, kha30: 356, kha40: 319 },
+  '150 A': { size: '150 A', wireCount: 19, wireDiameter: 3.25, sheathThickness: 3.0, kha30: 423, kha40: 378 },
+  '150 B': { size: '150 B', wireCount: 37, wireDiameter: 2.25, sheathThickness: 3.0, kha30: 423, kha40: 378 },
+  '185': { size: '185', wireCount: 37, wireDiameter: 2.5, sheathThickness: 3.0, kha30: 484, kha40: 423 },
+  '240': { size: '240', wireCount: 61, wireDiameter: 2.25, sheathThickness: 3.0, kha30: 586, kha40: 523 },
+};
+
 export const AAC_SIZES = [
   '16', '25', '35', '50 A', '50 B', '55', '70', '95', '100', '120', 
   '150 A', '150 B', '185', '200', '240 A', '240 B', '300', '400', 
   '500', '630', '800', '1000'
+];
+
+export const AAACS_SIZES = [
+  '35', '50', '70', '95', '120', '150 A', '150 B', '185', '240'
 ];
 
 export interface NYCYData {
@@ -1316,6 +1341,20 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     effectiveParams.manualInnerSheathThickness = 0;
     effectiveParams.manualConductorScreenThickness = 0;
     effectiveParams.manualInsulationScreenThickness = 0;
+  } else if (params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+    effectiveParams.conductorMaterial = 'Al';
+    effectiveParams.conductorType = 'rm';
+    effectiveParams.insulationMaterial = 'XLPE';
+    effectiveParams.sheathMaterial = 'None';
+    effectiveParams.armorType = 'Unarmored';
+    effectiveParams.hasInnerSheath = false;
+    effectiveParams.hasScreen = false;
+    effectiveParams.voltage = '20 kV';
+    effectiveParams.cores = 1;
+    effectiveParams.manualSheathThickness = 0;
+    effectiveParams.manualInnerSheathThickness = 0;
+    effectiveParams.manualConductorScreenThickness = 0;
+    effectiveParams.manualInsulationScreenThickness = 0;
   } else if (isInstrumentation) {
     effectiveParams.insulationMaterial = params.insulationMaterial || 'PE'; // Default for instrumentation
     if (!['300 V', '300/500 V'].includes(params.voltage)) {
@@ -1456,6 +1495,13 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const conductorType = effectiveParams.conductorType === 'f' ? 'class5' : 'class2';
     currentCapacityAir = getMarineKhaValue(effectiveParams.cores, Number(effectiveParams.size), conductorType);
     currentCapacityGround = 0; // Marine cables are typically rated for air
+  } else if (effectiveParams.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+    const aaacsKey = String(effectiveParams.size);
+    const aaacsData = AAACS_DATA[aaacsKey];
+    if (aaacsData) {
+      currentCapacityAir = aaacsData.kha30 || 0;
+      currentCapacityGround = aaacsData.kha40 || 0;
+    }
   } else if (effectiveParams.standard.includes('SNI 04-6629.4 (NYM)')) {
     const nymEntry = NYM_KHA_DATA.find(e => e.size === Number(effectiveParams.size));
     if (nymEntry) {
@@ -1545,9 +1591,39 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorWeightPerCore = 0;
       maxDcResistance = 0;
     }
+  } else if (effectiveParams.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+    const aaacsKey = String(effectiveParams.size);
+    const aaacsData = AAACS_DATA[aaacsKey];
+    if (aaacsData) {
+      // Calculate conductor diameter from wire count and diameter
+      // For 7 wires: 3 * wireDiameter
+      // For 19 wires: 5 * wireDiameter
+      // For 37 wires: 7 * wireDiameter
+      // For 61 wires: 9 * wireDiameter
+      if (aaacsData.wireCount === 7) conductorDiameter = 3 * aaacsData.wireDiameter;
+      else if (aaacsData.wireCount === 19) conductorDiameter = 5 * aaacsData.wireDiameter;
+      else if (aaacsData.wireCount === 37) conductorDiameter = 7 * aaacsData.wireDiameter;
+      else if (aaacsData.wireCount === 61) conductorDiameter = 9 * aaacsData.wireDiameter;
+      else conductorDiameter = Math.sqrt(aaacsData.wireCount) * aaacsData.wireDiameter; // Fallback
+      
+      wireCount = aaacsData.wireCount || 0;
+      wireDiameter = aaacsData.wireDiameter || 0;
+      // Weight calculation for Al: Area * Density * 1.02 (stranding factor)
+      const area = (Math.PI * wireDiameter * wireDiameter / 4) * wireCount;
+      conductorWeightPerCore = area * (densities.Al || 2.703) * 1.02;
+      // Resistance calculation: Resistivity / Area
+      const rho = CONDUCTOR_RESISTIVITY.Al || 28.264;
+      maxDcResistance = area > 0 ? rho / area : 0;
+    } else {
+      conductorDiameter = 0;
+      wireCount = 0;
+      wireDiameter = 0;
+      conductorWeightPerCore = 0;
+      maxDcResistance = 0;
+    }
   }
 
-  if (!effectiveParams.manualConductorDiameter && !abcData && !abcTData && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') {
+  if (!effectiveParams.manualConductorDiameter && !abcData && !abcTData && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC' && effectiveParams.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') {
     if (effectiveParams.conductorType === 're') {
       conductorDiameter = Math.sqrt((4 * Number(effectiveParams.size)) / Math.PI);
     } else if (effectiveParams.conductorType === 'f') {
@@ -1740,6 +1816,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
 
   if (effectiveParams.standard === 'SPLN 41-6 : 1981 AAC') {
     insulationThickness = 0;
+    innerCoveringThickness = 0;
+    sheathThickness = 0;
+    conductorScreenThickness = 0;
+    insulationScreenThickness = 0;
+  } else if (effectiveParams.standard === 'SPLN 41-10 : 1991 (AAAC-S)') {
+    const aaacsKey = String(effectiveParams.size);
+    const aaacsData = AAACS_DATA[aaacsKey];
+    if (aaacsData) {
+      insulationThickness = aaacsData.sheathThickness;
+    } else {
+      insulationThickness = 0;
+    }
     innerCoveringThickness = 0;
     sheathThickness = 0;
     conductorScreenThickness = 0;
@@ -2744,12 +2832,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   let sheathWeight = 0;
   if (isMV) {
     const cabFactor = (effectiveParams.cores > 1 ? 1.01 : 1.0);
-    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') 
+    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC' && effectiveParams.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') 
       ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
       : 0;
   } else {
     const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC') 
+    sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC' && effectiveParams.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') 
       ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
       : 0;
   }
@@ -2803,7 +2891,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   };
 
   const evalFormula = (defaultWeight: number, defaultFormula: string, key: string) => {
-    if ((key === 'outerSheath' || key === 'insulation' || key === 'innerSheath') && effectiveParams.standard === 'SPLN 41-6 : 1981 AAC') {
+    if ((key === 'outerSheath' || key === 'innerSheath') && (effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' || effectiveParams.standard === 'SPLN 41-10 : 1991 (AAAC-S)')) {
+      return { weight: 0, formula: '0', isCustom: false };
+    }
+    if (key === 'insulation' && effectiveParams.standard === 'SPLN 41-6 : 1981 AAC') {
       return { weight: 0, formula: '0', isCustom: false };
     }
     if (effectiveParams.customFormulas && effectiveParams.customFormulas[key]) {
