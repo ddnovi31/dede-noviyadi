@@ -72,13 +72,16 @@ const DEFAULT_MATERIAL_PRICES = {
   'Aluminium Foil': 15000,
   'Polyester Tape': 10000,
   'Masterbatch': 50000,
+  'PP Yarn': 25000,
+  'Jute': 15000,
+  'Filler': 12000,
 };
 
 const DEFAULT_MATERIAL_DENSITIES = {
   Cu: 8.89,
   Al: 2.7,
   XLPE: 0.92,
-  'XLPE MV': 9.3,
+  'XLPE MV': 0.93,
   PVC: 1.45,
   PE: 0.95,
   LSZH: 1.5,
@@ -108,6 +111,9 @@ const DEFAULT_MATERIAL_DENSITIES = {
   'Aluminium Foil': 2.7,
   'Polyester Tape': 1.4,
   'Masterbatch': 1.2,
+  'PP Yarn': 0.9,
+  'Jute': 0.6,
+  'Filler': 1.45,
 };
 
 const DEFAULT_MATERIAL_SCRAP = {
@@ -227,8 +233,14 @@ export default function CableDesigner() {
     );
   };
 
-  const isMV = params.standard === 'IEC 60502-2';
-  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+  const isMV = params.voltage.includes('/') && (
+    params.voltage.includes('3.6/6') || 
+    params.voltage.includes('6/10') || 
+    params.voltage.includes('8.7/15') || 
+    params.voltage.includes('12/20') || 
+    params.voltage.includes('18/30')
+  );
+  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen) || params.standard.includes('Instrument');
 
   const [lmeData, setLmeData] = useState<{date: string, copper: number | null, aluminium: number | null, exchangeRate?: number | null} | null>(null);
 
@@ -618,7 +630,14 @@ export default function CableDesigner() {
 
     (Object.entries(groupedItems) as [string, { item: { params: CableDesignParams, result: CalculationResult }, index: number }[]][]).forEach(([groupKey, items]) => {
       const sampleItem = items[0].item;
-      const isMV = sampleItem.params.standard === 'IEC 60502-2';
+      const isMV = sampleItem.params.voltage.includes('/') && (
+        sampleItem.params.voltage.includes('3.6/6') || 
+        sampleItem.params.voltage.includes('6/10') || 
+        sampleItem.params.voltage.includes('8.7/15') || 
+        sampleItem.params.voltage.includes('12/20') || 
+        sampleItem.params.voltage.includes('18/30')
+      );
+      const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7' || (sampleItem.params.standard === 'Manufacturing Specification' && sampleItem.params.hasScreen) || sampleItem.params.standard.includes('Instrument');
       const isIEC60502_1 = sampleItem.params.standard === 'IEC 60502-1';
       const hasScreen = isMV ? (sampleItem.params.mvScreenType && sampleItem.params.mvScreenType !== 'None') : (sampleItem.params.hasScreen && sampleItem.params.screenType && sampleItem.params.screenType !== 'None');
       const hasArmor = sampleItem.params.armorType && sampleItem.params.armorType !== 'Unarmored';
@@ -629,7 +648,6 @@ export default function CableDesigner() {
       const hasOuterSheath = !sampleItem.params.standard.includes('NYA') && !sampleItem.params.standard.includes('NFA2X') && sampleItem.params.standard !== 'SPLN 41-6 : 1981 AAC' && sampleItem.params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && sampleItem.params.hasOuterSheath !== false;
       const isNFA2XT = sampleItem.params.standard.includes('NFA2X-T');
       const isNFA2X = sampleItem.params.standard.includes('NFA2X') && !isNFA2XT;
-      const isInstrumentation = sampleItem.params.standard === 'BS EN 50288-7' || (sampleItem.params.standard === 'Manufacturing Specification' && sampleItem.params.hasScreen);
       const isAAC = sampleItem.params.standard === 'SPLN 41-6 : 1981 AAC';
       const isAAACS = sampleItem.params.standard === 'SPLN 41-10 : 1991 (AAAC-S)';
       const hasPetTapeInGroup = isMV ? items.some(i => i.item.params.cores === 1) : true;
@@ -654,8 +672,14 @@ export default function CableDesigner() {
       };
 
       // General
-      const coreLabel = isInstrumentation ? (sampleItem.params.formationType || 'Pair') : 'Core';
-      addGroup('General', hGen, ['No', coreLabel, 'Size', 'Laid-up Dia']);
+      const generalHeaders = ['No'];
+      if (isInstrumentation) {
+        generalHeaders.push('Total Core', sampleItem.params.formationType || 'Pair');
+      } else {
+        generalHeaders.push('Core');
+      }
+      generalHeaders.push('Size', 'Laid-up Dia');
+      addGroup('General', hGen, generalHeaders);
       
       // Conductor
       addGroup('Conductor', hCond, ['Wires', 'Wire Dia', 'DC Res (Ω/km)', 'Resistivity', 'Calc Area (mm2)', 'Cond OD', 'Wt (kg/km)', 'Prc (Rp/kg)', 'Cst (Rp/m)']);
@@ -788,9 +812,20 @@ export default function CableDesigner() {
 
         // General
         pushCol(index + 1);
-        const coreVal = isInstrumentation ? (item.params.formationCount || 1) : item.params.cores;
-        const coreCol = pushCol(coreVal);
-        const sizeCol = pushCol(item.params.size);
+        const totalCoresDisplay = isInstrumentation 
+          ? (item.params.formationCount || 1) * (item.params.formationType === 'Triad' ? 3 : (item.params.formationType === 'Quad' ? 4 : 2)) 
+          : item.params.cores;
+        
+        let coreCol = '';
+        if (isInstrumentation) {
+          coreCol = pushCol(totalCoresDisplay);
+          pushCol(item.params.formationCount || 1);
+        } else {
+          coreCol = pushCol(item.params.cores);
+        }
+        
+        const sizeVal = isInstrumentation ? (item.params.instrumentationSize || item.params.size) : item.params.size;
+        const sizeCol = pushCol(sizeVal);
         
         // We will fill Laid-up Dia formula later once we know Core OD
         const laidUpDiaColIdx = colIdx;
@@ -824,7 +859,7 @@ export default function CableDesigner() {
           ? pushCol(null, fmtNum, condOdFormula.replace(getColName(colIdx - 1), calcAreaCol))
           : pushCol(item.result.spec.phaseCore.conductorDiameter || 0, fmtNum);
         
-        let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
+        let condWtFormula = `${calcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${coreCol}${r}*1.008*${isInstrumentation ? '1.02' : '1.01'}*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`;
         if (isNFA2X || isNFA2XT) {
           condWtFormula = `${item.result.bom.conductorWeight - (item.result.bom.earthingConductorWeight || 0)}`;
         }
@@ -851,7 +886,8 @@ export default function CableDesigner() {
           cScrThkCol = pushCol(item.result.spec.conductorScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${cScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('Inner Semi Conductive')}*${coreCol}${r}*1.1*${mvCabFactor}*(1+${materialScrap['Inner Semi Conductive'] || 0}/100)`);
+          const cScrFactor = isInstrumentation ? 1.02 : mvCabFactor;
+          cScrWtCol = pushCol(null, fmtNum, `PI()*${cScrThkCol}${r}*(${currentDiaFormula}-2*${cScrThkCol}${r}+${cScrThkCol}${r})*${getDensity('Inner Semi Conductive')}*${coreCol}${r}*1.1*${cScrFactor}*(1+${materialScrap['Inner Semi Conductive'] || 0}/100)`);
           const cScrPrcCol = pushCol(innerSemiPrice, fmtRp);
           cScrCstCol = pushCol(null, fmtRp, `${cScrWtCol}${r}*${cScrPrcCol}${r}/1000`);
         }
@@ -871,7 +907,7 @@ export default function CableDesigner() {
           // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
           const insFormula = `(${diaBeforeIns}+${insThkCol}${r})*PI()*(${insThkCol}${r}+(${diaBeforeIns}*${insulationFactor}))`;
 
-          const insFactor = isMV ? mvCabFactor : lvCabFactor;
+          const insFactor = isInstrumentation ? 1.02 : (isMV ? mvCabFactor : lvCabFactor);
           insWtCol = pushCol(null, fmtNum, `ROUND(${insFormula}*${getDensity(item.params.insulationMaterial)}*${coreCol}${r}*${insFactor}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
           insPrcCol = pushCol(insPrice, fmtRp);
           insCstCol = pushCol(null, fmtRp, `${insWtCol}${r}*${insPrcCol}${r}/1000`);
@@ -883,7 +919,8 @@ export default function CableDesigner() {
           iScrThkCol = pushCol(item.result.spec.insulationScreenThickness || 0, fmtNum);
           currentDiaFormula = `(${currentDiaFormula}+2*${iScrThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('Outer Semi Conductive')}*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Outer Semi Conductive'] || 0}/100)`);
+          const iScrFactor = isInstrumentation ? 1.02 : mvCabFactor;
+          iScrWtCol = pushCol(null, fmtNum, `PI()*${iScrThkCol}${r}*(${currentDiaFormula}-2*${iScrThkCol}${r}+${iScrThkCol}${r})*${getDensity('Outer Semi Conductive')}*${coreCol}${r}*${iScrFactor}*(1+${materialScrap['Outer Semi Conductive'] || 0}/100)`);
           const iScrPrcCol = pushCol(outerSemiPrice, fmtRp);
           iScrCstCol = pushCol(null, fmtRp, `${iScrWtCol}${r}*${iScrPrcCol}${r}/1000`);
         }
@@ -904,12 +941,13 @@ export default function CableDesigner() {
             currentDiaFormula = `(${currentDiaFormula}+2*(2*${tapeThkCol}${r}+2*${petThkRef}))`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
             
-            const cuTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-2*${petThkRef}+${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('Cu')}*1.25*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
+            const mScrFactor = isInstrumentation ? 1.02 : mvCabFactor;
+            const cuTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-2*${petThkRef}+${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('Cu')}*1.25*${coreCol}${r}*${mScrFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
             
             let petTapeWtCol = '';
             let petTapeWtRef = '0';
             if (hasPetTapeInGroup) {
-              petTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${petThkRef}+${petThkRef})*${petThkRef}*${getDensity('Polyester Tape')}*1.25*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+              petTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${petThkRef}+${petThkRef})*${petThkRef}*${getDensity('Polyester Tape')}*1.25*${coreCol}${r}*${mScrFactor}*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
               petTapeWtRef = `${petTapeWtCol}${r}`;
             }
             
@@ -934,13 +972,14 @@ export default function CableDesigner() {
             currentDiaFormula = `(${currentDiaFormula}+2*(${wireDiaCol}${r}+${tapeThkCol}${r}+2*${petThkRef}))`;
             pushCol(null, fmtNum, currentDiaFormula); // OD
             
-            const cuWireWtCol = pushCol(null, fmtNum, `${wireCountCol}${r}*(PI()*POWER(${wireDiaCol}${r}/2,2))*${getDensity('Cu')}*1.05*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
-            const cuTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-2*${petThkRef}+${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('Cu')}*0.25*1.05*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
+            const mScrFactor = isInstrumentation ? 1.02 : mvCabFactor;
+            const cuWireWtCol = pushCol(null, fmtNum, `${wireCountCol}${r}*(PI()*POWER(${wireDiaCol}${r}/2,2))*${getDensity('Cu')}*1.05*${coreCol}${r}*${mScrFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
+            const cuTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${tapeThkCol}${r}-2*${petThkRef}+${tapeThkCol}${r})*${tapeThkCol}${r}*${getDensity('Cu')}*0.25*1.05*${coreCol}${r}*${mScrFactor}*(1+${materialScrap['Cu'] || 0}/100)`);
             
             let petTapeWtCol = '';
             let petTapeWtRef = '0';
             if (hasPetTapeInGroup) {
-              petTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${petThkRef}+${petThkRef})*${petThkRef}*${getDensity('Polyester Tape')}*1.25*${coreCol}${r}*${mvCabFactor}*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+              petTapeWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-2*${petThkRef}+${petThkRef})*${petThkRef}*${getDensity('Polyester Tape')}*1.25*${coreCol}${r}*${mScrFactor}*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
               petTapeWtRef = `${petTapeWtCol}${r}`;
             }
             
@@ -998,7 +1037,7 @@ export default function CableDesigner() {
             }
             const earthCalcAreaCol = pushCol(null, fmtNum, earthCalcAreaFormula);
             const earthCondOdCol = pushCol(item.result.spec.earthingCore?.conductorDiameter || 0, fmtNum);
-            earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${item.params.earthingCores || 1}*1.008*1.01*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
+            earthWtCol = pushCol(null, fmtNum, `${earthCalcAreaCol}${r}*${getDensity(item.params.conductorMaterial)}*${item.params.earthingCores || 1}*1.008*${isInstrumentation ? '1.02' : '1.01'}*(1+${materialScrap[item.params.conductorMaterial] || 0}/100)`);
             earthCstCol = pushCol(null, fmtRp, `${earthWtCol}${r}*${condPrcCol}${r}/1000`);
           }
           
@@ -1007,7 +1046,7 @@ export default function CableDesigner() {
           const earthingInsFactor = item.params.conductorType !== 're' ? getWeightAdditionFactor(item.result.spec.earthingCore?.wireCount || 7) : 0;
           
           // Adopsi rumus skala industri detail: ROUND ((([Diameter konduktor]+[Thickness Insul] ) xPI()x( [Thickness Insul]+([Diameter konduktor]x[getWeightAdditionFactor(wireCount)])x[berat jenis]x[jumlah core] x 1,01
-          earthInsWtCol = pushCol(null, fmtNum, `ROUND((${earthCurrentDiaFormula}+${earthInsThkCol}${r})*PI()*(${earthInsThkCol}${r}+(${earthCurrentDiaFormula}*${earthingInsFactor}))*${getDensity(item.params.insulationMaterial)}*${item.params.earthingCores || 1}*1.01*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
+          earthInsWtCol = pushCol(null, fmtNum, `ROUND((${earthCurrentDiaFormula}+${earthInsThkCol}${r})*PI()*(${earthInsThkCol}${r}+(${earthCurrentDiaFormula}*${earthingInsFactor}))*${getDensity(item.params.insulationMaterial)}*${item.params.earthingCores || 1}*${isInstrumentation ? '1.02' : '1.01'}*(1+${materialScrap[item.params.insulationMaterial] || 0}/100), 2)`);
           earthInsCstCol = pushCol(null, fmtRp, `${earthInsWtCol}${r}*${insPrcCol}${r}/1000`);
         }
 
@@ -1023,20 +1062,20 @@ export default function CableDesigner() {
           const isAlOverlap = item.params.manualIsAluminiumOverlap !== undefined ? item.params.manualIsAluminiumOverlap : 25;
           isDiaFormula = `(${isDiaFormula}+${isAlOverlap > 0 ? 4 : 2}*${isAlThkCol}${r})`;
           pushCol(null, fmtNum, isDiaFormula); // OD
-          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlOverlap > 0 ? 2 : 1}*${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*(1+${materialScrap['Al'] || 0}/100)`);
+          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlOverlap > 0 ? 2 : 1}*${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*1.02*(1+${materialScrap['Al'] || 0}/100)`);
           const isAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
           const isDrainCount = item.params.manualIsDrainWireCount || 17;
           pushCol(isDrainCount * isMultiplier, fmtNum); // Drain Wire Qty
           const isDrainDia = item.params.manualIsDrainWireDiameter || 0.2;
           const defaultDrainSize = Math.PI * Math.pow(isDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualIsDrainWireSize || item.result.spec.drainWireSize || defaultDrainSize, fmtNum); // Drain Size (mm2)
-          isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${isDrainCount}*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
+          isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
           const isDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
           pushCol(isMultiplier, fmtNum); // PET Tape Qty
           const isPetThkCol = pushCol(item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
           isDiaFormula = `(${isDiaFormula}+${isPetOverlap > 0 ? 4 : 2}*${isPetThkCol}${r})`;
-          const isPetWtFormula = `PI()*(${isDiaFormula}-${isPetOverlap > 0 ? 2 : 1}*${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*(1+${materialScrap['Polyester Tape'] || 0}/100)`;
+          const isPetWtFormula = `PI()*(${isDiaFormula}-${isPetOverlap > 0 ? 2 : 1}*${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*1.02*(1+${materialScrap['Polyester Tape'] || 0}/100)`;
           isPetWtCol = pushCol(null, fmtNum, isPetWtFormula);
           const isPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
@@ -1050,20 +1089,20 @@ export default function CableDesigner() {
           const osAlOverlap = item.params.manualOsAluminiumOverlap !== undefined ? item.params.manualOsAluminiumOverlap : 25;
           currentDiaFormula = `(${currentDiaFormula}+${osAlOverlap > 0 ? 4 : 2}*${osAlThkCol}${r})`;
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlOverlap > 0 ? 2 : 1}*${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*(1+${materialScrap['Al'] || 0}/100)`);
+          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlOverlap > 0 ? 2 : 1}*${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*1.02*(1+${materialScrap['Al'] || 0}/100)`);
           const osAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
           const osDrainCount = item.params.manualOsDrainWireCount || 17;
           pushCol(osDrainCount, fmtNum); // Drain Wire Qty
           const osDrainDia = item.params.manualOsDrainWireDiameter || 0.2;
           const defaultOsDrainSize = Math.PI * Math.pow(osDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualOsDrainWireSize || item.result.spec.drainWireSize || defaultOsDrainSize, fmtNum); // Drain Size (mm2)
-          osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${osDrainCount}*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
+          osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
           const osDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
           pushCol(1, fmtNum); // PET Tape Qty
           const osPetThkCol = pushCol(item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
           const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
           currentDiaFormula = `(${currentDiaFormula}+${osPetOverlap > 0 ? 4 : 2}*${osPetThkCol}${r})`;
-          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetOverlap > 0 ? 2 : 1}*${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${osPetOverlap}/100)*2*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetOverlap > 0 ? 2 : 1}*${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${osPetOverlap}/100)*2*1.02*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
           const osPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
@@ -2561,8 +2600,14 @@ export default function CableDesigner() {
     const prices = pricesOverride || { ...materialPrices, ...(params.customMaterialPrices || {}) };
     const getPrice = (mat: string, fallback: number) => prices[mat] !== undefined ? prices[mat] : fallback;
     
-    const isMV = params.standard === 'IEC 60502-2';
-    const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+    const isMV = params.voltage.includes('/') && (
+      params.voltage.includes('3.6/6') || 
+      params.voltage.includes('6/10') || 
+      params.voltage.includes('8.7/15') || 
+      params.voltage.includes('12/20') || 
+      params.voltage.includes('18/30')
+    );
+    const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen) || params.standard.includes('Instrument');
     
     const formationType = params.formationType || 'Pair';
     const multiplier = formationType === 'Pair' ? params.cores / 2 : (formationType === 'Triad' ? params.cores / 3 : params.cores);
@@ -4140,8 +4185,14 @@ export default function CableDesigner() {
             const firstItem = items[0];
             const p = firstItem.params;
             
-            const isMV = p.standard === 'IEC 60502-2';
-            const isInstrumentation = p.standard === 'BS EN 50288-7' || (p.standard === 'Manufacturing Specification' && p.hasScreen);
+            const isMV = p.voltage.includes('/') && (
+              p.voltage.includes('3.6/6') || 
+              p.voltage.includes('6/10') || 
+              p.voltage.includes('8.7/15') || 
+              p.voltage.includes('12/20') || 
+              p.voltage.includes('18/30')
+            );
+            const isInstrumentation = p.standard === 'BS EN 50288-7' || (p.standard === 'Manufacturing Specification' && p.hasScreen) || p.standard.includes('Instrument');
             const isNYA = p.standard.includes('(NYA)');
             const isNYAF = p.standard.includes('(NYAF)');
             const isABC = p.standard.includes('NFA2X');

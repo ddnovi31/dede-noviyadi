@@ -212,6 +212,7 @@ export interface MaterialDensities {
   SHF2: number;
   EPR: number;
   HEPR: number;
+  'XLPE MV': number;
   TCWB: number;
   CTS: number;
   CWS: number;
@@ -223,6 +224,8 @@ export interface MaterialDensities {
   RGB: number;
   'Polyester Tape': number;
   'PP Yarn': number;
+  Jute: number;
+  Filler: number;
   None: number;
 }
 
@@ -238,7 +241,8 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   'Inner Semi Conductive': 1.15,
   'Outer Semi Conductive': 1.15,
   MGT: 2.2,
-  TCu: 9.2,
+  TCu: 8.89,
+  'XLPE MV': 0.93,
   'PVC-FR': 1.55,
   'PVC-FR Cat.A': 1.55,
   'PVC-FR Cat.B': 1.55,
@@ -258,6 +262,8 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   RGB: 7.85,
   'Polyester Tape': 1.38,
   'PP Yarn': 0.9,
+  Jute: 0.6,
+  Filler: 1.45,
   None: 0,
 };
 
@@ -1079,29 +1085,29 @@ const CONDUCTOR_CONSTRUCTION: Record<string, Record<number, { wireCount: number,
   },
   rm: {
     0.5: { wireCount: 7, wireDiameter: 0.30 },
-    0.75: { wireCount: 7, wireDiameter: 0.36 },
-    1: { wireCount: 7, wireDiameter: 0.42 },
-    1.5: { wireCount: 7, wireDiameter: 0.51 },
-    2.5: { wireCount: 7, wireDiameter: 0.65 },
-    4: { wireCount: 7, wireDiameter: 0.83 },
-    6: { wireCount: 7, wireDiameter: 1.02 },
-    10: { wireCount: 7, wireDiameter: 1.32 },
-    16: { wireCount: 7, wireDiameter: 1.66 },
-    25: { wireCount: 7, wireDiameter: 2.09 },
-    35: { wireCount: 7, wireDiameter: 2.46 },
-    50: { wireCount: 19, wireDiameter: 1.74 },
-    70: { wireCount: 19, wireDiameter: 2.09 },
-    95: { wireCount: 19, wireDiameter: 2.46 },
-    120: { wireCount: 37, wireDiameter: 1.98 },
-    150: { wireCount: 37, wireDiameter: 2.20 },
-    185: { wireCount: 37, wireDiameter: 2.46 },
-    240: { wireCount: 61, wireDiameter: 2.20 },
-    300: { wireCount: 61, wireDiameter: 2.46 },
-    400: { wireCount: 61, wireDiameter: 2.79 },
-    500: { wireCount: 61, wireDiameter: 3.16 },
-    630: { wireCount: 127, wireDiameter: 2.49 },
-    800: { wireCount: 127, wireDiameter: 2.81 },
-    1000: { wireCount: 127, wireDiameter: 3.15 },
+    0.75: { wireCount: 7, wireDiameter: 0.37 },
+    1: { wireCount: 7, wireDiameter: 0.43 },
+    1.5: { wireCount: 7, wireDiameter: 0.52 },
+    2.5: { wireCount: 7, wireDiameter: 0.67 },
+    4: { wireCount: 7, wireDiameter: 0.85 },
+    6: { wireCount: 7, wireDiameter: 1.04 },
+    10: { wireCount: 7, wireDiameter: 1.35 },
+    16: { wireCount: 7, wireDiameter: 1.70 },
+    25: { wireCount: 7, wireDiameter: 2.14 },
+    35: { wireCount: 7, wireDiameter: 2.52 },
+    50: { wireCount: 19, wireDiameter: 1.78 },
+    70: { wireCount: 19, wireDiameter: 2.14 },
+    95: { wireCount: 19, wireDiameter: 2.52 },
+    120: { wireCount: 37, wireDiameter: 2.03 },
+    150: { wireCount: 37, wireDiameter: 2.27 },
+    185: { wireCount: 37, wireDiameter: 2.52 },
+    240: { wireCount: 61, wireDiameter: 2.24 },
+    300: { wireCount: 61, wireDiameter: 2.52 },
+    400: { wireCount: 61, wireDiameter: 2.85 },
+    500: { wireCount: 61, wireDiameter: 3.20 },
+    630: { wireCount: 127, wireDiameter: 2.52 },
+    800: { wireCount: 127, wireDiameter: 2.85 },
+    1000: { wireCount: 127, wireDiameter: 3.20 },
   },
   sm: {
     25: { wireCount: 7, wireDiameter: 2.19 },
@@ -1211,8 +1217,14 @@ const CURRENT_CAPACITY_GROUND_AL_MV: Record<number, number> = {
 export function calculateCable(params: CableDesignParams, customDensities?: MaterialDensities, scrapFactors?: Record<string, number>): CalculationResult {
   const densities = customDensities || DEFAULT_DENSITIES;
   
-  const isMV = params.standard === 'IEC 60502-2';
-  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+  const isMV = params.voltage.includes('/') && (
+    params.voltage.includes('3.6/6') || 
+    params.voltage.includes('6/10') || 
+    params.voltage.includes('8.7/15') || 
+    params.voltage.includes('12/20') || 
+    params.voltage.includes('18/30')
+  );
+  const isInstrumentation = params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen) || params.standard.includes('Instrument');
 
   const applyScrap = (weight: number, material: string) => {
     if (!scrapFactors) return weight;
@@ -1754,7 +1766,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     earthingConductorWeightPerCore = alWeightPerCore + steelWeightPerCore;
   }
 
-  const totalConductorWeight = (conductorWeightPerCore * effectiveParams.cores) + (earthingConductorWeightPerCore * earthingCores);
+  const totalConductorWeight = isInstrumentation 
+    ? (conductorWeightPerCore * effectiveParams.cores * 1.02) + (earthingConductorWeightPerCore * earthingCores * 1.02)
+    : (conductorWeightPerCore * effectiveParams.cores) + (earthingConductorWeightPerCore * earthingCores);
 
   // 1.5 Mica Glass Tape (MGT) - Fire Resistant
   let mgtThickness = effectiveParams.manualMgtThickness || 0;
@@ -1774,7 +1788,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     mgtWeightPerCore = mgtArea * densities.MGT; // Density for Mica Tape
   }
 
-  const totalMgtWeight = (mgtWeightPerCore * effectiveParams.cores) + (earthingCores > 0 ? (mgtWeightPerCore * (earthingConductorDiameter / conductorDiameter)) * earthingCores : 0);
+  const totalMgtWeight = isInstrumentation
+    ? ((mgtWeightPerCore * effectiveParams.cores * 1.02) + (earthingCores > 0 ? (mgtWeightPerCore * (earthingConductorDiameter / conductorDiameter)) * earthingCores * 1.02 : 0))
+    : ((mgtWeightPerCore * effectiveParams.cores) + (earthingCores > 0 ? (mgtWeightPerCore * (earthingConductorDiameter / conductorDiameter)) * earthingCores : 0));
 
   // 2. Semi-conductive and Insulation
   let conductorScreenThickness = effectiveParams.manualConductorScreenThickness || 0;
@@ -1792,27 +1808,21 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (insulationThickness === undefined || !effectiveParams.manualInsulationThickness) {
       const is300V = effectiveParams.voltage === '300 V';
       const is300_500V = effectiveParams.voltage === '300/500 V';
-      const size = effectiveParams.size;
+      const size = Number(effectiveParams.size);
+      const isPVC = effectiveParams.insulationMaterial === 'PVC';
 
       if (is300V) {
-        if (Number(size) <= 0.5) insulationThickness = 0.40;
-        else if (Number(size) <= 0.75) insulationThickness = 0.40;
-        else if (Number(size) <= 1.25) insulationThickness = 0.40;
-        else if (Number(size) <= 1.5) insulationThickness = 0.50;
-        else {
-          // 300V only up to 1.5mm2, default to 0.50 or throw error? 
-          // Assuming default to 0.50 for now as per table limit
-          insulationThickness = 0.50;
-        }
+        if (size <= 0.5) insulationThickness = isPVC ? 0.45 : 0.40;
+        else if (size <= 0.75) insulationThickness = isPVC ? 0.45 : 0.40;
+        else if (size <= 1.0) insulationThickness = isPVC ? 0.45 : 0.40;
+        else if (size <= 1.5) insulationThickness = 0.50;
+        else insulationThickness = 0.60;
       } else if (is300_500V) {
-        if (Number(size) <= 0.5) insulationThickness = 0.60;
-        else if (Number(size) <= 0.75) insulationThickness = 0.60;
-        else if (Number(size) <= 1.25) insulationThickness = 0.60;
-        else if (Number(size) <= 1.5) insulationThickness = 0.60;
-        else if (Number(size) <= 2.5) insulationThickness = 0.70;
-        else insulationThickness = 0.70; // Default for larger
+        if (size <= 1.0) insulationThickness = isPVC ? 0.60 : 0.50;
+        else if (size <= 1.5) insulationThickness = 0.60;
+        else if (size <= 2.5) insulationThickness = 0.70;
+        else insulationThickness = 0.80;
       } else {
-        // Fallback
         insulationThickness = 0.60;
       }
     }
@@ -2115,7 +2125,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     }
   }
 
-  const totalMvScreenWeight = mvScreenWeightPerCore * effectiveParams.cores;
+  const totalMvScreenWeight = isInstrumentation
+    ? mvScreenWeightPerCore * effectiveParams.cores * 1.02
+    : mvScreenWeightPerCore * effectiveParams.cores;
 
   // Area calculations for BOM
   const rCond = conductorDiameter / 2;
@@ -2180,11 +2192,17 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     insulationWeightPerCore = insulationArea * densities[effectiveParams.insulationMaterial] * insulationFactor;
   }
   
-  const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : applyScrap((insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores), effectiveParams.insulationMaterial);
-  const totalEarthingInsulationWeight = applyScrap(earthingInsulationWeightPerCore * earthingCores, effectiveParams.insulationMaterial);
+  const totalInsulationWeight = effectiveParams.standard === 'SPLN 41-6 : 1981 AAC' ? 0 : (isInstrumentation 
+    ? ((insulationWeightPerCore * effectiveParams.cores * 1.02) + (earthingInsulationWeightPerCore * earthingCores * 1.02))
+    : ((insulationWeightPerCore * effectiveParams.cores) + (earthingInsulationWeightPerCore * earthingCores)));
+  const totalEarthingInsulationWeight = (earthingInsulationWeightPerCore * earthingCores);
   
-  const totalInnerSemiCondWeight = applyScrap(innerSemiCondWeightPerCore * effectiveParams.cores, 'Inner Semi Conductive');
-  const totalOuterSemiCondWeight = applyScrap(outerSemiCondWeightPerCore * effectiveParams.cores, 'Outer Semi Conductive');
+  const totalInnerSemiCondWeight = isInstrumentation
+    ? innerSemiCondWeightPerCore * effectiveParams.cores * 1.02
+    : innerSemiCondWeightPerCore * effectiveParams.cores;
+  const totalOuterSemiCondWeight = isInstrumentation
+    ? outerSemiCondWeightPerCore * effectiveParams.cores * 1.02
+    : outerSemiCondWeightPerCore * effectiveParams.cores;
   const totalSemiCondWeight = totalInnerSemiCondWeight + totalOuterSemiCondWeight;
 
   // 3. Laying up
@@ -2243,9 +2261,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const alThk = effectiveParams.manualIsAluminiumThickness || 0.05;
       const alOverlap = effectiveParams.manualIsAluminiumOverlap || 25;
       
-      const drainWireCount = effectiveParams.manualIsDrainWireCount || 17;
-      const drainWireDia = effectiveParams.manualIsDrainWireDiameter || 0.2;
-      const drainWireSize = effectiveParams.manualIsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+      const drainWireCount = effectiveParams.manualIsDrainWireCount || 7;
+      const drainWireDia = effectiveParams.manualIsDrainWireDiameter || 0.3;
+      const calculatedIsDrainWireSize = (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+      const effectiveIsDrainWireSize = effectiveParams.manualIsDrainWireSize || (calculatedIsDrainWireSize > 0 ? calculatedIsDrainWireSize : 0.5);
       
       const isPetThkContribution = petOverlap > 0 ? 2 * petThk : petThk;
       const isAlThkContribution = alOverlap > 0 ? 2 * alThk : alThk;
@@ -2259,14 +2278,14 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       // Weight per formation
       const pWeight = Math.PI * (diaBeforeIS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2; // 2 layers
       const aWeight = Math.PI * (diaBeforeIS + 2 * petThk + alThk) * alThk * alDensity * (1 + alOverlap/100);
-      const drainWireWeight = drainWireSize * densities.Cu * 1.02; // kg/km
+      const drainWireWeightPerFormation = effectiveIsDrainWireSize * densities.TCu * 1.02; // 1.02 is pairing factor
       
-      isAlWeight = aWeight * isMultiplier;
-      isDrainWeight = drainWireWeight * isMultiplier;
-      isPetWeight = pWeight * isMultiplier;
+      isAlWeight = aWeight * isMultiplier * CABLING_FACTOR;
+      isDrainWeight = effectiveIsDrainWireSize * densities.TCu * 1.02 * isMultiplier;
+      isPetWeight = pWeight * isMultiplier * CABLING_FACTOR;
       isWeight = isAlWeight + isDrainWeight + isPetWeight;
       
-      formationWeight += (pWeight + aWeight + drainWireWeight);
+      formationWeight += (pWeight + aWeight + drainWireWeightPerFormation);
     }
 
     let factor = getLayingUpFactor(isMultiplier);
@@ -2309,9 +2328,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       const alThk = effectiveParams.manualOsAluminiumThickness || 0.05;
       const alOverlap = effectiveParams.manualOsAluminiumOverlap || 25;
       
-      const drainWireCount = effectiveParams.manualOsDrainWireCount || 17;
-      const drainWireDia = effectiveParams.manualOsDrainWireDiameter || 0.2;
-      const drainWireSize = effectiveParams.manualOsDrainWireSize || (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+      const drainWireCount = effectiveParams.manualOsDrainWireCount || 7;
+      const drainWireDia = effectiveParams.manualOsDrainWireDiameter || 0.3;
+      const calculatedOsDrainWireSize = (drainWireCount * Math.PI * Math.pow(drainWireDia / 2, 2));
+      const effectiveOsDrainWireSize = effectiveParams.manualOsDrainWireSize || (calculatedOsDrainWireSize > 0 ? calculatedOsDrainWireSize : 0.5);
 
       const osPetThkContribution = petOverlap > 0 ? 2 * petThk : petThk;
       const osAlThkContribution = alOverlap > 0 ? 2 * alThk : alThk;
@@ -2324,11 +2344,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       
       const pWeight = Math.PI * (diaBeforeOS + petThk) * petThk * petDensity * (1 + petOverlap/100) * 2;
       const aWeight = Math.PI * (diaBeforeOS + 2 * petThk + alThk) * alThk * alDensity * (1 + alOverlap/100);
-      const drainWireWeight = drainWireSize * densities.Cu * 1.02; // kg/km
+      const osDrainWireWeight = effectiveOsDrainWireSize * densities.TCu * 1.02;
       
-      osAlWeight = aWeight;
-      osDrainWeight = drainWireWeight;
-      osPetWeight = pWeight;
+      osAlWeight = aWeight * CABLING_FACTOR;
+      osDrainWeight = osDrainWireWeight;
+      osPetWeight = pWeight * CABLING_FACTOR;
       osWeight = osAlWeight + osDrainWeight + osPetWeight;
     }
   }
@@ -2426,12 +2446,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType && effectiveParams.cablingFillerType !== 'Extruded') {
       const fillerDensity = densities[effectiveParams.cablingFillerType] || 0.9;
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor), effectiveParams.cablingFillerType);
+      cablingFillerWeight = fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor);
       fillerArea = 0; // Remove from inner sheath area
     } else if (effectiveParams.standard === 'Manufacturing Specification' && effectiveParams.cablingFillerType === 'Extruded') {
       const fillerDensity = densities[effectiveParams.cablingFillerMaterial || 'PVC'] || densities.PVC;
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-      cablingFillerWeight = applyScrap(fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor), effectiveParams.cablingFillerMaterial || 'PVC');
+      cablingFillerWeight = fillerArea * fillerDensity * cabFactor * (1 + effectiveWeightAdditionFactor);
       fillerArea = 0; // Remove from inner sheath area
     }
     
@@ -2439,10 +2459,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     
     if (isMV) {
       const mvInShCabFactor = effectiveParams.cores > 1 ? 1.01 : 1.0;
-      innerCoveringWeight = applyScrap(ringArea * mvInShCabFactor * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * (1 + effectiveWeightAdditionFactor), effectiveParams.innerSheathMaterial || 'PVC');
+      innerCoveringWeight = ringArea * mvInShCabFactor * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * (1 + effectiveWeightAdditionFactor);
     } else {
       const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
-      innerCoveringWeight = applyScrap(totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * cabFactor, effectiveParams.innerSheathMaterial || 'PVC');
+      innerCoveringWeight = totalInnerSheathArea * (densities[effectiveParams.innerSheathMaterial || 'PVC'] || densities.PVC) * cabFactor;
     }
   }
 
@@ -2841,12 +2861,12 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
   if (isMV) {
     const cabFactor = (effectiveParams.cores > 1 ? 1.01 : 1.0);
     sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC' && effectiveParams.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') 
-      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
+      ? (sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor) 
       : 0;
   } else {
     const cabFactor = (effectiveParams.cores > 1 ? lvCablingFactor : 1.0);
     sheathWeight = (finalSheathThickness > 0 && effectiveParams.standard !== 'SPLN 41-6 : 1981 AAC' && effectiveParams.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') 
-      ? applyScrap(sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor, effectiveParams.sheathMaterial) 
+      ? (sheathArea * densities[effectiveParams.sheathMaterial] * cabFactor) 
       : 0;
   }
 
@@ -3105,7 +3125,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     braidWireDiameter = diameterUnderArmor <= 15 ? 0.2 : 0.3;
   }
 
-  return {
+  const result: CalculationResult = {
     spec: {
       phaseCore: {
         conductorDiameter: Number(conductorDiameter.toFixed(2)),
@@ -3157,7 +3177,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       gswbLayPitch,
       gswbCoverage,
       aluminiumThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
-      drainWireSize: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.5 : undefined,
+      drainWireSize: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? Number((effectiveParams.manualIsDrainWireSize || effectiveParams.manualOsDrainWireSize || ((effectiveParams.manualIsDrainWireCount || 7) * Math.PI * Math.pow((effectiveParams.manualIsDrainWireDiameter || 0.3) / 2, 2)) || 0.5).toFixed(2)) : undefined,
       polyesterTapeThickness: (effectiveParams.hasIndividualScreen || effectiveParams.hasOverallScreen) ? 0.05 : undefined,
       binderTapeThickness: binderTapeThickness > 0 ? binderTapeThickness : undefined,
       binderTapeOverArmorThickness: binderTapeOverArmorThickness > 0 ? binderTapeOverArmorThickness : undefined,
@@ -3169,11 +3189,11 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       conductorWeight: Number(applyScrap(weightDetails.conductor?.weight || totalConductorWeight || 0, effectiveParams.conductorMaterial).toFixed(1)),
       insulationWeight: Number(applyScrap(weightDetails.insulation?.weight || totalInsulationWeight || 0, effectiveParams.insulationMaterial).toFixed(1)),
       innerCoveringWeight: Number(applyScrap(weightDetails.innerSheath?.weight || innerCoveringWeight || 0, effectiveParams.innerSheathMaterial || 'PVC').toFixed(1)),
-      cablingFillerWeight: Number(cablingFillerWeight.toFixed(1)),
+      cablingFillerWeight: Number(applyScrap(cablingFillerWeight || 0, effectiveParams.cablingFillerType === 'Extruded' ? (effectiveParams.cablingFillerMaterial || 'PVC') : (effectiveParams.cablingFillerType || 'PP Yarn')).toFixed(1)),
       screenWeight: Number(applyScrap(screenWeight || 0, effectiveParams.screenType === 'CTS' ? 'CTS' : (effectiveParams.screenType === 'CWS' ? 'CWS' : 'Steel')).toFixed(1)),
       separatorWeight: Number(applyScrap(weightDetails.separator?.weight || separatorWeight || 0, effectiveParams.separatorMaterial || 'PVC').toFixed(1)),
       armorWeight: Number(applyScrap(weightDetails.armor?.weight || armorWeight || 0, effectiveParams.armorType === 'AWA' ? 'AWA' : (effectiveParams.armorType === 'SWA' ? 'SWA' : (effectiveParams.armorType === 'STA' ? 'STA' : (effectiveParams.armorType === 'SFA' ? 'SFA' : (effectiveParams.armorType === 'RGB' ? 'RGB' : (effectiveParams.armorType === 'GSWB' ? 'GSWB' : (effectiveParams.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))))).toFixed(1)),
-      armorWireWeight: Number(applyScrap(armorWireWeight || 0, 'SteelWire').toFixed(1)),
+      armorWireWeight: Number(applyScrap(armorWireWeight || 0, effectiveParams.armorType === 'AWA' ? 'Al' : 'SteelWire').toFixed(1)),
       armorTapeWeight: Number(applyScrap(armorTapeWeight || 0, 'Steel').toFixed(1)),
       sheathWeight: Number(applyScrap(weightDetails.outerSheath?.weight || sheathWeight || 0, effectiveParams.sheathMaterial).toFixed(1)),
       innerSemiCondWeight: Number(applyScrap(totalInnerSemiCondWeight || 0, 'Inner Semi Conductive').toFixed(1)),
@@ -3189,18 +3209,18 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       isWeight: (isWeight || 0) > 0 ? Number(applyScrap(isWeight || 0, 'Cu').toFixed(1)) : 0,
       osWeight: (osWeight || 0) > 0 ? Number(applyScrap(osWeight || 0, 'Cu').toFixed(1)) : 0,
       isAlWeight: (isAlWeight || 0) > 0 ? Number(applyScrap(isAlWeight || 0, 'Al').toFixed(1)) : 0,
-      isDrainWeight: (isDrainWeight || 0) > 0 ? Number(applyScrap(isDrainWeight || 0, 'Cu').toFixed(1)) : 0,
-      isPetWeight: (isPetWeight || 0) > 0 ? Number(applyScrap(isPetWeight || 0, 'PE').toFixed(1)) : 0,
-      osAlWeight: (osAlWeight || 0) > 0 ? Number(applyScrap(osAlWeight || 0, 'Al').toFixed(1)) : 0,
+      isDrainWeight: (isDrainWeight || 0) > 0 ? Number(applyScrap(isDrainWeight || 0, 'TCu').toFixed(1)) : 0,
+      isPetWeight: (isPetWeight || 0) > 0 ? Number(applyScrap(isPetWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
+      osAlWeight: (osAlWeight || 0) > 0 ? Number(applyScrap(osAlWeight || 0, 'Aluminium Foil').toFixed(1)) : 0,
       binderTapeWeight: (binderTapeWeight || 0) > 0 ? Number(applyScrap(binderTapeWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
       binderTapeOverArmorWeight: (binderTapeOverArmorWeight || 0) > 0 ? Number(applyScrap(binderTapeOverArmorWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
       copperWireWeight: (copperWireWeight || 0) > 0 ? Number(applyScrap(copperWireWeight || 0, 'Cu').toFixed(1)) : 0,
       copperTapeWeight: (copperTapeWeight || 0) > 0 ? Number(applyScrap(copperTapeWeight || 0, 'Cu').toFixed(1)) : 0,
       polyesterTapeWeight: (polyesterTapeWeight || 0) > 0 ? Number(applyScrap(polyesterTapeWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
-      osDrainWeight: (osDrainWeight || 0) > 0 ? Number(applyScrap(osDrainWeight || 0, 'Cu').toFixed(1)) : 0,
-      osPetWeight: (osPetWeight || 0) > 0 ? Number(applyScrap(osPetWeight || 0, 'PE').toFixed(1)) : 0,
+      osDrainWeight: (osDrainWeight || 0) > 0 ? Number(applyScrap(osDrainWeight || 0, 'TCu').toFixed(1)) : 0,
+      osPetWeight: (osPetWeight || 0) > 0 ? Number(applyScrap(osPetWeight || 0, 'Polyester Tape').toFixed(1)) : 0,
       isMultiplier: isMultiplier || 0,
-      totalWeight: Number(applyScrap(totalWeight || 0, 'Total').toFixed(1)),
+      totalWeight: 0, // Will be calculated below
     },
     weights: weightDetails,
     electrical: {
@@ -3220,6 +3240,38 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
       flameRetardant: flameRetardant,
     },
   };
+
+  // Calculate total weight in BOM as sum of all scrap-applied components
+  const bom = result.bom;
+  bom.totalWeight = Number((
+    (bom.conductorWeight || 0) + 
+    (bom.insulationWeight || 0) + 
+    (bom.semiCondWeight || 0) + 
+    (bom.innerCoveringWeight || 0) + 
+    (bom.cablingFillerWeight || 0) + 
+    (bom.screenWeight || 0) + 
+    (bom.separatorWeight || 0) + 
+    (bom.armorWeight || 0) + 
+    (bom.sheathWeight || 0) + 
+    (bom.mvScreenWeight || 0) + 
+    (bom.mgtWeight || 0) + 
+    (bom.masterbatchWeight || 0) +
+    (bom.isAlWeight || 0) +
+    (bom.isDrainWeight || 0) +
+    (bom.isPetWeight || 0) +
+    (bom.osAlWeight || 0) +
+    (bom.osDrainWeight || 0) +
+    (bom.osPetWeight || 0) +
+    (bom.binderTapeWeight || 0) +
+    (bom.binderTapeOverArmorWeight || 0) +
+    (bom.copperWireWeight || 0) +
+    (bom.copperTapeWeight || 0) +
+    (bom.polyesterTapeWeight || 0) +
+    (bom.earthingConductorWeight || 0) +
+    (bom.earthingInsulationWeight || 0)
+  ).toFixed(1));
+
+  return result;
 }
 
 export const CABLE_SIZES = CABLE_DATA.map(d => d.size);
