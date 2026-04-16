@@ -8605,6 +8605,64 @@ export default function CableDesigner() {
           </div>
         )}
 
+        {/* Elegant Project Control Bar - Moved to full width */}
+        <div className="mb-6 bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden">
+          <div className="p-5 bg-gradient-to-br from-slate-50 to-white">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl hidden md:block border border-indigo-100/50 shadow-inner">
+                  <FolderOpen className="w-6 h-6" />
+                </div>
+                <div className="flex-1 w-full flex flex-col md:flex-row gap-3">
+                  <div className="relative group max-w-sm w-full">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Package className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder="Project Name"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none shadow-sm"
+                    />
+                  </div>
+                  <div className="relative group max-w-sm w-full">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <List className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      value={projectNumber}
+                      onChange={(e) => setProjectNumber(e.target.value)}
+                      placeholder="Project Number"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-100 rounded-2xl text-xs font-bold text-slate-500 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none shadow-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end xl:self-auto shrink-0 xl:border-l xl:border-slate-200 xl:pl-6 overflow-x-auto pb-1 xl:pb-0">
+                <button 
+                  onClick={() => {
+                    setProjectId(null);
+                    setProjectName('New Project');
+                    setProjectNumber('');
+                    setProjectItems([]);
+                  }} 
+                  className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 shadow-sm border border-slate-200 bg-white rounded-xl transition-all flex shrink-0" 
+                  title="New Project"
+                >
+                  <FilePlus className="w-4 h-4" />
+                </button>
+                <button onClick={() => setProjectItems([])} className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 bg-white rounded-xl transition-all flex shrink-0" title="Clear List"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={handleLoadProjects} className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 shadow-sm border border-slate-200 bg-white rounded-xl transition-all flex shrink-0" title="Open Project"><FolderOpen className="w-4 h-4" /></button>
+                <button onClick={handleSaveProject} className="py-2.5 px-4 text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm border border-indigo-600 rounded-xl transition-all flex items-center gap-2 shrink-0" title="Save Project"><Save className="w-4 h-4" /><span className="text-xs font-bold">Save</span></button>
+                <button onClick={handleExportExcel} className="py-2.5 px-4 text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm border border-emerald-500 rounded-xl transition-all flex items-center gap-2 shrink-0" title="Download Excel"><Download className="w-4 h-4" /><span className="text-xs font-bold">Export Excel</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Configuration & Prices Panel */}
@@ -8622,59 +8680,6 @@ export default function CableDesigner() {
             </button>
 
             <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden flex flex-col h-full">
-              {/* Elegant Project Control Bar */}
-              <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Project Details</h2>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => {
-                          setProjectId(null);
-                          setProjectName('New Project');
-                          setProjectNumber('');
-                          setProjectItems([]);
-                        }} 
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" 
-                        title="New Project"
-                      >
-                        <FilePlus className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setProjectItems([])} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear List"><Trash2 className="w-4 h-4" /></button>
-                      <button onClick={handleLoadProjects} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Open Project"><FolderOpen className="w-4 h-4" /></button>
-                      <button onClick={handleSaveProject} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Save Project"><Save className="w-4 h-4" /></button>
-                      <button onClick={handleExportExcel} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Download Excel"><Download className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Package className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                      </div>
-                      <input
-                        type="text"
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        placeholder="Project Name"
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <List className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                      </div>
-                      <input
-                        type="text"
-                        value={projectNumber}
-                        onChange={(e) => setProjectNumber(e.target.value)}
-                        placeholder="Project Number"
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-100 rounded-2xl text-xs font-bold text-slate-500 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Modern Tab Navigation */}
               <div className="flex p-2 bg-slate-50/50 gap-1 border-b border-slate-100">
                 {[
