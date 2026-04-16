@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronRight, Ruler } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronRight, Ruler, Shield, Lock, Box, Sliders } from 'lucide-react';
 import {
   calculateCable,
   CABLE_DATA,
@@ -256,6 +256,7 @@ export default function CableDesigner() {
   }, []);
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'conductor' | 'insulation' | 'inner' | 'armor' | 'outer' | 'advanced'>('general');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 1024;
@@ -674,7 +675,11 @@ export default function CableDesigner() {
       // General
       const generalHeaders = ['No'];
       if (isInstrumentation) {
-        generalHeaders.push('Total Core', sampleItem.params.formationType || 'Pair');
+        if (sampleItem.params.formationType === 'Core') {
+          generalHeaders.push('Core');
+        } else {
+          generalHeaders.push('Total Core', sampleItem.params.formationType || 'Pair');
+        }
       } else {
         generalHeaders.push('Core');
       }
@@ -813,18 +818,22 @@ export default function CableDesigner() {
         // General
         pushCol(index + 1);
         const totalCoresDisplay = isInstrumentation 
-          ? (item.params.formationCount || 1) * (item.params.formationType === 'Triad' ? 3 : (item.params.formationType === 'Quad' ? 4 : 2)) 
+          ? (item.params.formationType === 'Core' ? item.params.cores : (item.params.formationCount || 1) * (item.params.formationType === 'Triad' ? 3 : (item.params.formationType === 'Quad' ? 4 : 2)))
           : item.params.cores;
         
         let coreCol = '';
         if (isInstrumentation) {
-          coreCol = pushCol(totalCoresDisplay);
-          pushCol(item.params.formationCount || 1);
+          if (item.params.formationType === 'Core') {
+            coreCol = pushCol(item.params.cores);
+          } else {
+            coreCol = pushCol(totalCoresDisplay);
+            pushCol(item.params.formationCount || 1);
+          }
         } else {
           coreCol = pushCol(item.params.cores);
         }
         
-        const sizeVal = isInstrumentation ? (item.params.instrumentationSize || item.params.size) : item.params.size;
+        const sizeVal = isInstrumentation ? (item.params.formationType !== 'Core' ? (item.params.instrumentationSize || item.params.size) : item.params.size) : item.params.size;
         const sizeCol = pushCol(sizeVal);
         
         // We will fill Laid-up Dia formula later once we know Core OD
@@ -1054,30 +1063,39 @@ export default function CableDesigner() {
         let isCstCol, isAlWtCol, isDrainWtCol, isPetWtCol;
         if (isInstrumentation && sampleItem.params.hasIndividualScreen) {
           const isMultiplier = item.result.bom.isMultiplier || 1;
-          const pairTriadFactor = item.params.formationType === 'Triad' ? 2.15 : (item.params.formationType === 'Pair' ? 2 : 1);
-          let isDiaFormula = `(${coreDiaFormula}*${pairTriadFactor})`;
+          const pairTriadFactor = item.params.formationType === 'Triad' ? 2.15 : (item.params.formationType === 'Pair' ? 2 : (item.params.formationType === 'Quad' ? 2.41 : 1));
+          let isDiaBeforeIS = `(${coreDiaFormula}*${pairTriadFactor})`;
 
           pushCol(isMultiplier, fmtNum); // Al Foil Qty
           const isAlThkCol = pushCol(item.params.manualIsAluminiumThickness || item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
           const isAlOverlap = item.params.manualIsAluminiumOverlap !== undefined ? item.params.manualIsAluminiumOverlap : 25;
-          isDiaFormula = `(${isDiaFormula}+${isAlOverlap > 0 ? 4 : 2}*${isAlThkCol}${r})`;
+          
+          const petThkVal = item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05;
+          const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
+          
+          const isPetThkContribution = isPetOverlap > 0 ? `2*${petThkVal}` : `${petThkVal}`;
+          const isAlThkContribution = isAlOverlap > 0 ? `2*${isAlThkCol}${r}` : `${isAlThkCol}${r}`;
+          const isDiaFormula = `(${isDiaBeforeIS}+2*(${isPetThkContribution}+${isAlThkContribution}))`;
+          
           pushCol(null, fmtNum, isDiaFormula); // OD
-          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaFormula}-${isAlOverlap > 0 ? 2 : 1}*${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Al')}*(1+${isAlOverlap}/100)*${isMultiplier}*1.02*(1+${materialScrap['Al'] || 0}/100)`);
+          
+          isAlWtCol = pushCol(null, fmtNum, `PI()*(${isDiaBeforeIS}+2*${petThkVal}+${isAlThkCol}${r})*${isAlThkCol}${r}*${getDensity('Aluminium Foil')}*(1+${isAlOverlap}/100)*${isMultiplier}*1.01*(1+${materialScrap['Al'] || 0}/100)`);
           const isAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
-          const isDrainCount = item.params.manualIsDrainWireCount || 17;
+          
+          const isDrainCount = item.params.manualIsDrainWireCount || 7;
           pushCol(isDrainCount * isMultiplier, fmtNum); // Drain Wire Qty
-          const isDrainDia = item.params.manualIsDrainWireDiameter || 0.2;
+          const isDrainDia = item.params.manualIsDrainWireDiameter || 0.3;
           const defaultDrainSize = Math.PI * Math.pow(isDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualIsDrainWireSize || item.result.spec.drainWireSize || defaultDrainSize, fmtNum); // Drain Size (mm2)
           isDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${getDensity('TCu')}*1.02*${isMultiplier}*(1+${materialScrap['TCu'] || 0}/100)`);
           const isDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
+          
           pushCol(isMultiplier, fmtNum); // PET Tape Qty
-          const isPetThkCol = pushCol(item.params.manualIsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
-          const isPetOverlap = item.params.manualIsPolyesterOverlap !== undefined ? item.params.manualIsPolyesterOverlap : 25;
-          isDiaFormula = `(${isDiaFormula}+${isPetOverlap > 0 ? 4 : 2}*${isPetThkCol}${r})`;
-          const isPetWtFormula = `PI()*(${isDiaFormula}-${isPetOverlap > 0 ? 2 : 1}*${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*1.02*(1+${materialScrap['Polyester Tape'] || 0}/100)`;
+          const isPetThkCol = pushCol(petThkVal, fmtNum); // PET Thk
+          const isPetWtFormula = `PI()*(${isDiaBeforeIS}+${isPetThkCol}${r})*${isPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${isPetOverlap}/100)*2*${isMultiplier}*1.01*(1+${materialScrap['Polyester Tape'] || 0}/100)`;
           isPetWtCol = pushCol(null, fmtNum, isPetWtFormula);
           const isPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
+          
           isCstCol = pushCol(null, fmtRp, `(${isAlWtCol}${r}*${isAlPrcCol}${r} + ${isDrainWtCol}${r}*${isDrainPrcCol}${r} + ${isPetWtCol}${r}*${isPetPrcCol}${r})/1000`);
         }
 
@@ -1087,23 +1105,34 @@ export default function CableDesigner() {
           pushCol(1, fmtNum); // Al Foil Qty
           const osAlThkCol = pushCol(item.params.manualOsAluminiumThickness || item.result.spec.aluminiumThickness || 0.05, fmtNum); // Al Foil Thk
           const osAlOverlap = item.params.manualOsAluminiumOverlap !== undefined ? item.params.manualOsAluminiumOverlap : 25;
-          currentDiaFormula = `(${currentDiaFormula}+${osAlOverlap > 0 ? 4 : 2}*${osAlThkCol}${r})`;
+          
+          const osPetThkVal = item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05;
+          const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
+          
+          const osPetThkContribution = osPetOverlap > 0 ? `2*${osPetThkVal}` : `${osPetThkVal}`;
+          const osAlThkContribution = osAlOverlap > 0 ? `2*${osAlThkCol}${r}` : `${osAlThkCol}${r}`;
+          
+          const osDiaBeforeOS = currentDiaFormula;
+          currentDiaFormula = `(${osDiaBeforeOS}+2*(${osPetThkContribution}+${osAlThkContribution}))`;
+          
           pushCol(null, fmtNum, currentDiaFormula); // OD
-          osAlWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osAlOverlap > 0 ? 2 : 1}*${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Al')}*(1+${osAlOverlap}/100)*1.02*(1+${materialScrap['Al'] || 0}/100)`);
+          
+          osAlWtCol = pushCol(null, fmtNum, `PI()*(${osDiaBeforeOS}+2*${osPetThkVal}+${osAlThkCol}${r})*${osAlThkCol}${r}*${getDensity('Aluminium Foil')}*(1+${osAlOverlap}/100)*1.01*(1+${materialScrap['Al'] || 0}/100)`);
           const osAlPrcCol = pushCol(getPrice('Aluminium Foil', getPrice('Al', 0)), fmtRp);
-          const osDrainCount = item.params.manualOsDrainWireCount || 17;
+          
+          const osDrainCount = item.params.manualOsDrainWireCount || 7;
           pushCol(osDrainCount, fmtNum); // Drain Wire Qty
-          const osDrainDia = item.params.manualOsDrainWireDiameter || 0.2;
+          const osDrainDia = item.params.manualOsDrainWireDiameter || 0.3;
           const defaultOsDrainSize = Math.PI * Math.pow(osDrainDia / 2, 2);
           const drainSizeCol = pushCol(item.params.manualOsDrainWireSize || item.result.spec.drainWireSize || defaultOsDrainSize, fmtNum); // Drain Size (mm2)
           osDrainWtCol = pushCol(null, fmtNum, `${drainSizeCol}${r}*${getDensity('TCu')}*1.02*(1+${materialScrap['TCu'] || 0}/100)`);
           const osDrainPrcCol = pushCol(getPrice('TCu', getPrice('Cu', 0)), fmtRp);
+          
           pushCol(1, fmtNum); // PET Tape Qty
-          const osPetThkCol = pushCol(item.params.manualOsPolyesterThickness || item.result.spec.polyesterTapeThickness || 0.05, fmtNum); // PET Thk
-          const osPetOverlap = item.params.manualOsPolyesterOverlap !== undefined ? item.params.manualOsPolyesterOverlap : 25;
-          currentDiaFormula = `(${currentDiaFormula}+${osPetOverlap > 0 ? 4 : 2}*${osPetThkCol}${r})`;
-          osPetWtCol = pushCol(null, fmtNum, `PI()*(${currentDiaFormula}-${osPetOverlap > 0 ? 2 : 1}*${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${osPetOverlap}/100)*2*1.02*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
+          const osPetThkCol = pushCol(osPetThkVal, fmtNum); // PET Thk
+          osPetWtCol = pushCol(null, fmtNum, `PI()*(${osDiaBeforeOS}+${osPetThkCol}${r})*${osPetThkCol}${r}*${getDensity('Polyester Tape')}*(1+${osPetOverlap}/100)*2*1.01*(1+${materialScrap['Polyester Tape'] || 0}/100)`);
           const osPetPrcCol = pushCol(getPrice('Polyester Tape', 10000), fmtRp);
+          
           osCstCol = pushCol(null, fmtRp, `(${osAlWtCol}${r}*${osAlPrcCol}${r} + ${osDrainWtCol}${r}*${osDrainPrcCol}${r} + ${osPetWtCol}${r}*${osPetPrcCol}${r})/1000`);
         }
 
@@ -2573,7 +2602,17 @@ export default function CableDesigner() {
       const newItems: {params: CableDesignParams, result: CalculationResult}[] = [];
       
       for (const item of bulkItems) {
-        const newParams = { ...params, cores: item.cores, size: item.size, id: crypto.randomUUID() };
+        const newParams = { ...params, id: crypto.randomUUID() };
+        const isInst = newParams.standard === 'BS EN 50288-7' || (newParams.standard === 'Manufacturing Specification' && newParams.hasScreen) || newParams.standard.includes('Instrument');
+        
+        if (isInst && newParams.formationType !== 'Core') {
+          newParams.formationCount = item.cores;
+          newParams.instrumentationSize = item.size;
+        } else {
+          newParams.cores = item.cores;
+          newParams.size = item.size;
+        }
+        
         const newResult = calculateCable(newParams, materialDensities, materialScrap);
         if (newResult) {
           newItems.push({ params: newParams, result: newResult });
@@ -8661,8 +8700,40 @@ export default function CableDesigner() {
 
               <div className="p-6">
                 {activeTab === 'config' && (
-                  <div className="space-y-4">
-                    {/* Design Mode Toggle */}
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* Vertical Sidebar Navigation */}
+                    <div className="w-full md:w-48 shrink-0 flex flex-col gap-1.5">
+                      {[
+                        { id: 'general', label: 'General' },
+                        { id: 'conductor', label: 'Conductor' },
+                        { id: 'insulation', label: 'Insulation' },
+                        { id: 'inner', label: 'Inner' },
+                        { id: 'armor', label: 'Armor' },
+                        { id: 'outer', label: 'Outer' },
+                        { id: 'advanced', label: 'Advanced' }
+                      ].map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => setActiveSubTab(sub.id as any)}
+                          className={`group flex items-center justify-between w-full px-4 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${
+                            activeSubTab === sub.id
+                              ? 'bg-indigo-600 text-white shadow-md translate-x-2'
+                              : 'bg-transparent text-slate-500 hover:bg-indigo-50 hover:text-indigo-700'
+                          }`}
+                        >
+                          <span className={`transition-transform duration-300 ${activeSubTab !== sub.id ? 'group-hover:translate-x-1' : ''}`}>
+                            {sub.label}
+                          </span>
+                          <ChevronRight className={`w-4 h-4 transition-all duration-300 ${activeSubTab === sub.id ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover:opacity-50 group-hover:translate-x-0'}`} />
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="flex-1 min-w-0 space-y-6">
+                      {activeSubTab === 'general' && (
+                      <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
+                        {/* Design Mode Toggle */}
                     <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-indigo-600" />
@@ -9621,9 +9692,13 @@ export default function CableDesigner() {
                         )}
                       </div>
                     )}
+                    </div>
+                    )}
 
+                    {activeSubTab === 'conductor' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Conductor Section */}
-                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                    <div className="space-y-4">
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">2. Conductor</label>
                       
                       {/* Conductor Material */}
@@ -9774,10 +9849,14 @@ export default function CableDesigner() {
                         </div>
                       )}
                     </div>
+                    </div>
+                    )}
 
+                    {activeSubTab === 'insulation' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Insulation Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3. Insulation</label>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
@@ -9990,10 +10069,14 @@ export default function CableDesigner() {
                         </div>
                       </div>
                     )}
+                    </div>
+                    )}
 
+                    {activeSubTab === 'inner' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Inner Sheath Section */}
                     {params.standard !== 'LiYCY' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
                             <label className={`flex items-center justify-between cursor-pointer group ${params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -10221,10 +10304,14 @@ export default function CableDesigner() {
                         )}
                       </div>
                     </div>
+                    </div>
+                    )}
 
+                    {activeSubTab === 'armor' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Armor Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">{params.standard === 'LiYCY' ? '5. Braid Screen' : '5. Armour'}</label>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
@@ -10430,11 +10517,15 @@ export default function CableDesigner() {
                         </div>
                       )}
                     </div>
-                  )}
+                    )}
+                    </div>
+                    )}
 
+                    {activeSubTab === 'outer' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Outer Sheath Section */}
                     {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">6. Outer Sheath</label>
                         
                         {params.standard === 'Manufacturing Specification' && (
@@ -10528,11 +10619,15 @@ export default function CableDesigner() {
                         )}
                       </div>
                     )}
+                    </div>
+                    )}
 
 
+                    {activeSubTab === 'advanced' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                     {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
                     {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4">
                         <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">7. Advanced Intermediate Diameters</label>
                         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                           <div className="grid grid-cols-2 gap-4">
@@ -10688,6 +10783,8 @@ export default function CableDesigner() {
                         </div>
                       </div>
                     )}
+                    </div>
+                    )}
 
                     {/* Add to Project Button moved to bottom of config */}
                     <div className="pt-4">
@@ -10700,6 +10797,7 @@ export default function CableDesigner() {
                           ? `Bulk Add to Project (${bulkItems.length} Items)` 
                           : 'Add to Project'}
                       </button>
+                    </div>
                     </div>
                   </div>
                 )}
