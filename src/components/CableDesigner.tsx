@@ -257,12 +257,6 @@ export default function CableDesigner() {
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [activeSubTab, setActiveSubTab] = useState<'general' | 'conductor' | 'insulation' | 'inner' | 'armor' | 'outer' | 'advanced'>('general');
-  const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024;
-    }
-    return false;
-  });
   const [showReview, setShowReview] = useState(false);
   const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
   const [newMaterialName, setNewMaterialName] = useState('');
@@ -8524,9 +8518,9 @@ export default function CableDesigner() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="w-full max-w-[1920px] mx-auto space-y-6 px-2 lg:px-6">
         
-        <header className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-200/60 flex flex-col md:flex-row items-center justify-between gap-6 mb-10 relative overflow-hidden group">
+        <header className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-200/60 flex flex-col md:flex-row items-center justify-between gap-6 mb-10 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-700"></div>
           
@@ -8574,26 +8568,26 @@ export default function CableDesigner() {
                 <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Source: westmetall.com • {lmeData.date}</p>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Copper (Settlement)</span>
+            <div className="grid grid-cols-1 sm:flex sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+              <div className="flex flex-col items-center sm:items-end p-3 bg-slate-50/50 sm:bg-transparent rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Copper</span>
                 <span className="text-sm font-black text-orange-600 flex items-center gap-1">
                   ${lmeData.copper?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || 'N/A'}
-                  <span className="text-[10px] text-slate-400 font-medium">/ ton</span>
+                  <span className="text-[10px] text-slate-400 font-medium">/t</span>
                 </span>
               </div>
-              <div className="w-px h-8 bg-slate-200"></div>
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aluminium (Settlement)</span>
+              <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+              <div className="flex flex-col items-center sm:items-end p-3 bg-slate-50/50 sm:bg-transparent rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aluminium</span>
                 <span className="text-sm font-black text-slate-700 flex items-center gap-1">
                   ${lmeData.aluminium?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || 'N/A'}
-                  <span className="text-[10px] text-slate-400 font-medium">/ ton</span>
+                  <span className="text-[10px] text-slate-400 font-medium">/t</span>
                 </span>
               </div>
               {lmeData.exchangeRate && (
                 <>
-                  <div className="w-px h-8 bg-slate-200"></div>
-                  <div className="flex flex-col items-end">
+                  <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                  <div className="flex flex-col items-center sm:items-end p-3 bg-slate-50/50 sm:bg-transparent rounded-xl col-span-2 sm:col-span-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">USD to IDR</span>
                     <span className="text-sm font-black text-emerald-600 flex items-center gap-1">
                       Rp {lmeData.exchangeRate.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -8605,16 +8599,16 @@ export default function CableDesigner() {
           </div>
         )}
 
-        {/* Elegant Project Control Bar - Moved to full width */}
-        <div className="mb-6 bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden">
+        {/* Elegant Project Control Bar (Moved to full width below LME) */}
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden mb-6">
           <div className="p-5 bg-gradient-to-br from-slate-50 to-white">
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
+              <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
                 <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl hidden md:block border border-indigo-100/50 shadow-inner">
                   <FolderOpen className="w-6 h-6" />
                 </div>
                 <div className="flex-1 w-full flex flex-col md:flex-row gap-3">
-                  <div className="relative group max-w-sm w-full">
+                  <div className="relative group flex-1 w-full">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Package className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                     </div>
@@ -8626,7 +8620,7 @@ export default function CableDesigner() {
                       className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none shadow-sm"
                     />
                   </div>
-                  <div className="relative group max-w-sm w-full">
+                  <div className="relative group flex-1 w-full">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <List className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                     </div>
@@ -8641,7 +8635,7 @@ export default function CableDesigner() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end xl:self-auto shrink-0 xl:border-l xl:border-slate-200 xl:pl-6 overflow-x-auto pb-1 xl:pb-0">
+              <div className="flex items-center justify-center gap-2 xl:border-l xl:border-slate-200 xl:pl-6 overflow-x-auto pb-1 xl:pb-0">
                 <button 
                   onClick={() => {
                     setProjectId(null);
@@ -8663,22 +8657,10 @@ export default function CableDesigner() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
           
-          {/* Configuration & Prices Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-3'} space-y-6 transition-all duration-500 relative`}>
-            {/* Floating Expand Button */}
-            <button
-              onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-              className="absolute -right-4 top-10 z-50 p-2.5 bg-white shadow-xl rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hidden lg:flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
-              title={isConfigExpanded ? "Collapse View" : "Expand View"}
-            >
-              {isConfigExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              <div className="absolute right-full mr-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                {isConfigExpanded ? "Compact View" : "Full View"}
-              </div>
-            </button>
-
+          {/* Configuration & Prices Panel (Lebar Prioritas) */}
+          <div className="xl:w-[420px] 2xl:w-[460px] shrink-0 w-full space-y-6 transition-all duration-500 relative xl:sticky xl:top-6 z-30">
             <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden flex flex-col h-full">
               {/* Modern Tab Navigation */}
               <div className="flex p-2 bg-slate-50/50 gap-1 border-b border-slate-100">
@@ -8698,7 +8680,7 @@ export default function CableDesigner() {
                     }`}
                   >
                     <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
-                    <span className={isConfigExpanded ? 'inline' : 'hidden md:inline lg:hidden xl:inline'}>{tab.label}</span>
+                    <span className="hidden md:inline lg:hidden xl:inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -11364,8 +11346,14 @@ export default function CableDesigner() {
             </div>
           </div>
 
-          {/* Results Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
+          {/* Right Workspace (Results + Project List) */}
+          <div className="flex-1 min-w-0 flex flex-col xl:flex-row gap-6 items-start transition-all duration-500">
+            
+            {/* Main Content Area */}
+            <div className="flex-1 w-full flex flex-col gap-6">
+
+              {/* Results Panel */}
+              <div className="space-y-6 transition-all duration-300">
             
             {isBulkCalculationEnabled && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in duration-300">
@@ -11394,47 +11382,47 @@ export default function CableDesigner() {
               </div>
 
               <div className="relative z-10 w-full max-w-4xl">
-                <div className="flex flex-col items-center gap-4 mb-8">
-                  <div className="px-5 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.4em] backdrop-blur-xl border border-white/10 shadow-2xl flex items-center gap-2">
+                <div className="flex flex-col items-center gap-4 mb-8 w-full">
+                  <div className="px-5 py-2 bg-white/5 rounded-full text-[9px] font-black uppercase tracking-[0.3em] backdrop-blur-xl border border-white/10 shadow-2xl flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></div>
                     Cable Designation
                   </div>
                 </div>
                 
-                <h2 className="text-[37px] font-black tracking-tighter mb-10 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.1] px-4">
+                <h2 className="text-[22px] sm:text-[28px] md:text-[37px] font-black tracking-tighter mb-8 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.2] px-2 break-words w-full">
                   {getCableDesignation(params, result)}
                 </h2>
                 
-                <div className="flex flex-wrap justify-center items-center gap-8">
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-indigo-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-indigo-300 transition-colors">Overall Diameter</span>
+                <div className="flex flex-row flex-wrap justify-center items-center gap-4 sm:gap-8 w-full">
+                  <div className="flex flex-col items-center bg-white/5 px-4 py-4 sm:px-10 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item flex-1 min-w-[140px]">
+                    <span className="text-indigo-400 uppercase text-[8px] sm:text-[10px] font-black tracking-[0.2em] sm:tracking-[0.3em] mb-2 group-hover/item:text-indigo-300 transition-colors">Overall Diameter</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tighter">{result.spec.overallDiameter}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">mm</span>
+                      <span className="text-2xl sm:text-4xl font-black tracking-tighter">{result.spec.overallDiameter}</span>
+                      <span className="text-[10px] sm:text-sm font-bold opacity-40 uppercase tracking-widest">mm</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-purple-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-purple-300 transition-colors">Total Weight</span>
+                  <div className="flex flex-col items-center bg-white/5 px-4 py-4 sm:px-10 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item flex-1 min-w-[140px]">
+                    <span className="text-purple-400 uppercase text-[8px] sm:text-[10px] font-black tracking-[0.2em] sm:tracking-[0.3em] mb-2 group-hover/item:text-purple-300 transition-colors">Total Weight</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tighter">{Math.round(result.bom.totalWeight).toLocaleString()}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">kg/km</span>
+                      <span className="text-2xl sm:text-4xl font-black tracking-tighter">{Math.round(result.bom.totalWeight).toLocaleString()}</span>
+                      <span className="text-[10px] sm:text-sm font-bold opacity-40 uppercase tracking-widest">kg/km</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-emerald-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-emerald-300 transition-colors">Selling Price</span>
+                  <div className="flex flex-col items-center bg-white/5 px-4 py-4 sm:px-10 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item w-full sm:w-auto mt-2 sm:mt-0">
+                    <span className="text-emerald-400 uppercase text-[8px] sm:text-[10px] font-black tracking-[0.2em] sm:tracking-[0.3em] mb-2 group-hover/item:text-emerald-300 transition-colors">Selling Price</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest mr-1">Rp</span>
-                      <span className="text-4xl font-black tracking-tighter">{currentSellingPrice.toLocaleString('id-ID')}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">/m</span>
+                      <span className="text-[10px] sm:text-sm font-bold opacity-40 uppercase tracking-widest mr-1">Rp</span>
+                      <span className="text-2xl sm:text-4xl font-black tracking-tighter">{currentSellingPrice.toLocaleString('id-ID')}</span>
+                      <span className="text-[10px] sm:text-sm font-bold opacity-40 uppercase tracking-widest">/m</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {/* General Data & Features */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 order-2 xl:order-none">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -11510,7 +11498,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Technical Specification */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 order-1">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-emerald-50 rounded-2xl">
@@ -11622,7 +11610,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Packing Data */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 order-4 flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-amber-50 rounded-2xl">
@@ -11667,7 +11655,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Bill of Material */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 order-5">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -11753,7 +11741,7 @@ export default function CableDesigner() {
               )}
 
               {/* Electrical Properties */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 order-3">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-yellow-50 rounded-2xl">
@@ -11784,11 +11772,11 @@ export default function CableDesigner() {
               </div>
 
               {/* Cost Analysis */}
-              <div className="md:col-span-2 bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-200/60 relative overflow-hidden group">
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-200/60 relative overflow-hidden group order-6 flex flex-col justify-between">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/50 rounded-full -mr-48 -mt-48 blur-3xl group-hover:bg-indigo-100/50 transition-colors duration-700"></div>
                 
-                <div className="relative flex flex-col lg:flex-row gap-12">
-                  <div className="lg:w-1/3 space-y-8">
+                <div className="relative flex flex-col gap-6">
+                  <div className="w-full space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
                         <BarChart3 className="w-6 h-6 text-white" />
@@ -11800,30 +11788,30 @@ export default function CableDesigner() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Factory Cost (HPP)</span>
-                        <span className="text-3xl font-black text-slate-900 font-mono tracking-tighter">
+                        <span className="text-2xl font-black text-slate-900 font-mono tracking-tighter">
                           Rp {currentHPP.toLocaleString('id-ID')}
                         </span>
                       </div>
-                      <div className="p-8 bg-indigo-600 rounded-[2rem] shadow-xl shadow-indigo-200 relative overflow-hidden group/price">
+                      <div className="p-5 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200 relative overflow-hidden group/price">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover/price:scale-150 transition-transform duration-700"></div>
                         <span className="text-[10px] font-black text-white/60 uppercase tracking-widest block mb-1 relative z-10">Selling Price</span>
-                        <span className="text-4xl font-black text-white font-mono tracking-tighter relative z-10">
+                        <span className="text-3xl font-black text-white font-mono tracking-tighter relative z-10">
                           Rp {currentSellingPrice.toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="lg:w-2/3">
-                    <div className="bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100">
-                      <div className="flex items-center justify-between mb-6">
+                  <div className="w-full">
+                    <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between h-full">
+                      <div className="flex items-center justify-between mb-4">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Breakdown</span>
-                        <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Per Meter</span>
+                        <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-widest">Per Meter</span>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
+                      <div className="flex flex-col gap-y-2">
                         {(() => {
                           const breakdown = calculateCostBreakdown(result.bom, params);
                           const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight);
@@ -11860,11 +11848,10 @@ export default function CableDesigner() {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Project List Section (Right Side) */}
-          <div className={`${isConfigExpanded ? 'hidden' : 'lg:col-span-4'} transition-all duration-500`}>
-            <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 h-full flex flex-col">
+          {/* Project List Section (Right Sidebar) */}
+          <div className="xl:w-[360px] 2xl:w-[420px] shrink-0 w-full transition-all duration-500 xl:sticky xl:top-6 z-20">
+            <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 flex flex-col max-h-[calc(100vh-3rem)]">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -11883,9 +11870,9 @@ export default function CableDesigner() {
               </div>
 
               {projectItems.length > 0 ? (
-                <div className="space-y-4 flex-grow overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4 flex-grow overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
                   {projectItems.map((item) => (
-                    <div key={item.params.id} className="p-5 rounded-3xl border-2 border-slate-50 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
+                    <div key={item.params.id} className="p-4 sm:p-5 rounded-3xl border-2 border-slate-50 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <button
                         onClick={() => removeFromProject(item.params.id!)}
@@ -11946,7 +11933,10 @@ export default function CableDesigner() {
         </div>
       </div>
     </div>
-  );
+  </div>
+  </div>
+  </div>
+);
 }
 
 function WeightFormulaRow({ 
