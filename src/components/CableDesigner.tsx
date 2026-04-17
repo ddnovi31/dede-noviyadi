@@ -64,6 +64,7 @@ const DEFAULT_MATERIAL_PRICES = {
   CTS: 160000,
   CWS: 158000,
   STA: 22000,
+  ATA: 24000,
   SWA: 50000,
   AWA: 48000,
   GSWB: 25000,
@@ -103,6 +104,7 @@ const DEFAULT_MATERIAL_DENSITIES = {
   CTS: 8.89,
   CWS: 8.89,
   STA: 7.85,
+  ATA: 2.7,
   SWA: 7.85,
   AWA: 2.7,
   GSWB: 7.85,
@@ -141,6 +143,7 @@ const DEFAULT_MATERIAL_SCRAP = {
   CTS: 2.5,
   CWS: 2.5,
   STA: 2.5,
+  ATA: 2.5,
   SWA: 2.5,
   AWA: 2.5,
   GSWB: 2.5,
@@ -764,7 +767,7 @@ export default function CableDesigner() {
         const insPrice = getPrice(item.params.insulationMaterial, getPrice('XLPE', 0));
         const innerPrice = getPrice(item.params.innerSheathMaterial || 'PVC', getPrice('PVC', 0));
         
-        const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : (item.params.armorType === 'TCWB' ? 'TCWB' : 'Steel'))))));
+        const armorMat = item.params.armorType === 'AWA' ? 'AWA' : (item.params.armorType === 'ATA' ? 'ATA' : (item.params.armorType === 'SWA' ? 'SWA' : (item.params.armorType === 'STA' ? 'STA' : (item.params.armorType === 'SFA' ? 'SFA' : (item.params.armorType === 'RGB' ? 'RGB' : (item.params.armorType === 'GSWB' ? 'GSWB' : (item.params.armorType === 'TCWB' ? 'TCWB' : 'Steel')))))));
         const armorWirePrice = (
           item.params.armorType === 'AWA' ? getPrice('AWA', getPrice('Al', 0)) : 
           item.params.armorType === 'SWA' ? getPrice('SWA', getPrice('SteelWire', 0)) : 
@@ -774,7 +777,7 @@ export default function CableDesigner() {
           item.params.armorType === 'TCWB' ? getPrice('TCWB', getPrice('TCu', 0)) : 
           getPrice('SteelWire', getPrice('Steel', 0))
         );
-        const armorTapePrice = getPrice('STA', getPrice('Steel', 0));
+        const armorTapePrice = (item.params.armorType === 'ATA' ? getPrice('ATA', getPrice('Al', 0)) : getPrice('STA', getPrice('Steel', 0)));
 
         const sheathPrice = getPrice(item.params.sheathMaterial, getPrice('PVC', 0));
         const innerSemiPrice = getPrice('Inner Semi Conductive', 65000);
@@ -7332,6 +7335,7 @@ export default function CableDesigner() {
                               'RGB': 'Steel wire & Tape Armour (RGB)',
                               'GSWB': 'Galvanized Steel Wire Braided (GSWB)',
                               'STA': 'Steel Tape Armour (STA)',
+                              'ATA': 'Aluminium Tape Armour (ATA)',
                               'AWA': 'Aluminium Wire Armour (AWA)'
                             };
                             const defaultVal = armorMapping[p.armorType] || (p.armorType === 'Unarmored' ? '-' : p.armorType);
@@ -10244,6 +10248,7 @@ export default function CableDesigner() {
                               <option value="GSWB">GSWB (Steel Wire Braided)</option>
                               <option value="TCWB">TCWB (Tinned Copper Wire Braided)</option>
                               <option value="AWA">AWA (Aluminum Wire)</option>
+                              <option value="ATA">ATA (Aluminum Tape)</option>
                             </>
                           ) : params.standard === 'IEC 60092-353' ? (
                             <>
@@ -10256,7 +10261,10 @@ export default function CableDesigner() {
                               <option value="CWB">CWB (Copper Wire Braided)</option>
                             </>
                           ) : params.cores === 1 ? (
-                            <option value="AWA">AWA (Aluminum Wire)</option>
+                            <>
+                              <option value="AWA">AWA (Aluminum Wire)</option>
+                              <option value="ATA">ATA (Aluminum Tape)</option>
+                            </>
                           ) : (
                             <>
                               <option value="SWA">SWA (Steel Wire)</option>
@@ -10298,7 +10306,7 @@ export default function CableDesigner() {
                       )}
 
                       {/* STA Overlap Input */}
-                      {params.mode === 'advance' && params.armorType === 'STA' && (
+                      {params.mode === 'advance' && (params.armorType === 'STA' || params.armorType === 'ATA') && (
                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                           <label className="block text-sm font-medium text-slate-700 mb-1">Tape Overlap (%)</label>
                           <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
@@ -10332,7 +10340,7 @@ export default function CableDesigner() {
                             </div>
                           )}
 
-                          {(params.armorType === 'STA' || params.armorType === 'SFA' || params.armorType === 'RGB') && (
+                          {(params.armorType === 'STA' || params.armorType === 'ATA' || params.armorType === 'SFA' || params.armorType === 'RGB') && (
                             <div>
                               <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Armor Tape Thickness (mm)</label>
                               <input

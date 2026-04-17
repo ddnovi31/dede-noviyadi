@@ -25,7 +25,7 @@ export const CWS_WIRE_DIAMETERS: Record<number, number> = {
 export type ConductorMaterial = string;
 export type ConductorType = 're' | 'rm' | 'sm' | 'f' | 'cm';
 export type InsulationMaterial = string;
-export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB' | 'CWB';
+export type ArmorType = 'Unarmored' | 'SWA' | 'STA' | 'AWA' | 'ATA' | 'SFA' | 'RGB' | 'GSWB' | 'TCWB' | 'CWB';
 export type SheathMaterial = string;
 export type FlameRetardantCategory = 'None' | 'Cat.A' | 'Cat.B' | 'Cat.C';
 export type MvScreenType = 'None' | 'CTS' | 'CWS';
@@ -219,6 +219,7 @@ export interface MaterialDensities {
   STA: number;
   SWA: number;
   AWA: number;
+  ATA: number;
   GSWB: number;
   SFA: number;
   RGB: number;
@@ -257,6 +258,7 @@ const DEFAULT_DENSITIES: MaterialDensities = {
   STA: 7.85,
   SWA: 7.85,
   AWA: 2.7,
+  ATA: 2.7,
   GSWB: 7.85,
   SFA: 7.85,
   RGB: 7.85,
@@ -2622,9 +2624,9 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     armorWireWeight = numWires * wireArea * armorDensity * 1.05 * cabFactor; // 5% lay factor
     armorWeight = armorWireWeight;
     armorWireDiameter = armorThickness;
-  } else if (effectiveParams.armorType === 'STA') {
+  } else if (effectiveParams.armorType === 'STA' || effectiveParams.armorType === 'ATA') {
     if (!effectiveParams.manualArmorThickness) {
-      // STA Tape thickness
+      // STA/ATA Tape thickness
       if (diameterUnderArmor <= 30) armorThickness = 0.3;
       else if (diameterUnderArmor <= 70) armorThickness = 0.5;
       else armorThickness = 0.8;
@@ -2641,7 +2643,8 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     const overlapMultiplier = 1 + (overlap / 100);
     const tapeArea = Math.PI * meanArmorDiameter * 2 * armorThickness * overlapMultiplier;
     const cabFactor = effectiveParams.standard === 'IEC 60502-2' ? mvCablingFactor : lvCablingFactor;
-    armorTapeWeight = tapeArea * (densities.STA || densities.Steel) * 1.02 * cabFactor; // 2% lay factor
+    const armorDensity = effectiveParams.armorType === 'ATA' ? (densities.ATA || densities.Al) : (densities.STA || densities.Steel);
+    armorTapeWeight = tapeArea * armorDensity * 1.02 * cabFactor; // 2% lay factor
     armorWeight = armorTapeWeight;
   } else if (effectiveParams.armorType === 'SFA') {
     // Steel Flat & Tape Armour
@@ -2911,6 +2914,7 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     densityCTS: densities.CTS || densities.Cu,
     densityCWS: densities.CWS || densities.Cu,
     densitySTA: densities.STA || densities.Steel,
+    densityATA: densities.ATA || densities.Al,
     densitySWA: densities.SWA || densities.SteelWire,
     densityAWA: densities.AWA || densities.Al,
     densityGSWB: densities.GSWB || densities.Steel,
@@ -2987,9 +2991,10 @@ export function calculateCable(params: CableDesignParams, customDensities?: Mate
     } else if (effectiveParams.armorType === 'GSWB' || effectiveParams.armorType === 'TCWB') {
       const layFactor = (1 / Math.cos(45 * Math.PI / 180)).toFixed(3);
       defaultFormula = `(n=${gswbWiresPerCarrier} * m=${gswbCarriers}) * π * (d=${armorWireDiameter}/2)² * density * LayFactor(${layFactor})`;
-    } else if (effectiveParams.armorType === 'STA') {
+    } else if (effectiveParams.armorType === 'STA' || effectiveParams.armorType === 'ATA') {
       const overlap = effectiveParams.staOverlap ?? 25;
-      defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${densities.STA || densities.Steel} * (1 + ${overlap}/100)`;
+      const density = effectiveParams.armorType === 'ATA' ? (densities.ATA || densities.Al) : (densities.STA || densities.Steel);
+      defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${density} * (1 + ${overlap}/100)`;
     } else {
       defaultFormula = `π * Mean Diameter * 2 * ${armorThickness} * ${densities.Steel}`;
     }
