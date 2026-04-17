@@ -97,8 +97,14 @@ export default function CableDesigner() {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 1024;
     }
-    return false;
+    return true; // Default to true now for better UX
   });
+
+  useEffect(() => {
+    if (activeTab === 'config') {
+      setIsConfigExpanded(true);
+    }
+  }, [activeTab]);
   const [showReview, setShowReview] = useState(false);
   const [reviewTab, setReviewTab] = useState<'summary' | 'specifications'>('summary');
   const [newMaterialName, setNewMaterialName] = useState('');
@@ -1595,8 +1601,14 @@ export default function CableDesigner() {
   };
 
   const [drumData, setDrumData] = useState<DrumData[]>(() => {
-    const saved = safeLocalStorage.getItem('cable_drum_data');
-    return saved ? JSON.parse(saved) : INITIAL_DRUM_DATA;
+    try {
+      const saved = safeLocalStorage.getItem('cable_drum_data');
+      if (!saved) return INITIAL_DRUM_DATA;
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_DRUM_DATA;
+    } catch {
+      return INITIAL_DRUM_DATA;
+    }
   });
 
   useEffect(() => {
@@ -4308,7 +4320,7 @@ export default function CableDesigner() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Configuration & Prices Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-3'} space-y-6 transition-all duration-500 relative`}>
+          <div className={`${isConfigExpanded ? 'lg:col-span-8' : 'lg:col-span-3'} space-y-6 transition-all duration-500 relative`}>
             {/* Floating Expand Button */}
             <button
               onClick={() => setIsConfigExpanded(!isConfigExpanded)}
@@ -4400,8 +4412,37 @@ export default function CableDesigner() {
 
               <div className="p-6">
                 {activeTab === 'config' && (
-                  <div className="space-y-4">
-                    {/* Design Mode Toggle */}
+                  <div className="flex flex-col space-y-6">
+                    {/* Horizontal Steps Header */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-4 custom-scrollbar snap-x border-b border-slate-200">
+                      {[
+                        { id: 0, label: 'General', icon: Settings },
+                        { id: 1, label: 'Properties', icon: Zap },
+                        { id: 2, label: 'Core', icon: Layers },
+                        { id: 3, label: 'Earthing', icon: Zap },
+                        { id: 4, label: 'Insulation', icon: Package },
+                        { id: 5, label: 'Inner Layers', icon: Layers },
+                        { id: 6, label: 'Outer Layers', icon: Package }
+                      ].map((step, idx) => (
+                        <button
+                          key={step.id}
+                          onClick={() => document.getElementById(`design-step-${step.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' })}
+                          className="flex items-center gap-2 flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 shadow-sm snap-center"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">{idx + 1}</div>
+                          <step.icon className="w-3 h-3 text-slate-400" />
+                          <span>{step.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Horizontal Cards Container */}
+                    <div className="flex overflow-x-auto gap-6 pb-8 items-start custom-scrollbar snap-x snap-mandatory px-4 -mx-4 h-full min-h-[70vh]">
+                    <div id="design-step-0" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Settings className="w-4 h-4 text-indigo-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Settings</h3>
+                      </div>
+                      {/* Design Mode Toggle */}
                     <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-indigo-600" />
@@ -4793,8 +4834,11 @@ export default function CableDesigner() {
                   )}
 
                     {/* Features Section */}
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">1. Cable Features</label>
+                    <div id="design-step-1" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Zap className="w-4 h-4 text-amber-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Properties</h3>
+                      </div>
                       <div className="grid grid-cols-1 gap-3">
                         {/* Fireguard Toggle (Includes MGT) */}
                         <div className="space-y-2">
@@ -4917,6 +4961,7 @@ export default function CableDesigner() {
                       </div>
                     )}
 
+                    </div>
                     {/* Bulk Calculation Toggle */}
                     <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-xl border border-indigo-100 mt-4">
                       <div className="flex flex-col">
@@ -5088,7 +5133,12 @@ export default function CableDesigner() {
                       </div>
                     )}
 
-                    {/* Cores and Size in one row */}
+                    <div id="design-step-2" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Layers className="w-4 h-4 text-emerald-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Phase Conductor</h3>
+                      </div>
+                      {/* Cores and Size in one row */}
                     <div className={`grid grid-cols-2 gap-4 ${isInstrumentationPairTriad ? 'opacity-40 pointer-events-none' : ''}`}>
                       {/* Number of Cores */}
                       <div>
@@ -5201,7 +5251,13 @@ export default function CableDesigner() {
                       </div>
                     </div>
 
-                    {/* Earthing Core Section */}
+                    </div>
+                    <div id="design-step-3" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Zap className="w-4 h-4 text-emerald-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Earth & Neutral</h3>
+                      </div>
+                      {/* Earthing Core Section */}
                     {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <div className="flex items-center justify-between">
@@ -5363,7 +5419,7 @@ export default function CableDesigner() {
 
                     {/* Conductor Section */}
                     <div className="space-y-4 border-t border-slate-100 pt-4">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">2. Conductor</label>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Conductor</label>
                       
                       {/* Conductor Material */}
                       <div>
@@ -5514,10 +5570,16 @@ export default function CableDesigner() {
                       )}
                     </div>
 
-                    {/* Insulation Section */}
+                    </div>
+                    <div id="design-step-4" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Package className="w-4 h-4 text-purple-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Insulation & Screen</h3>
+                      </div>
+                      {/* Insulation Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3. Insulation</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Insulation</label>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
                           <select
@@ -5586,7 +5648,7 @@ export default function CableDesigner() {
                     {/* MV Screen Selection (Moved after Insulation) */}
                     {params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3.1 Metallic Screen (MV)</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Metallic Screen (MV)</label>
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
                           <div>
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Type</label>
@@ -5669,7 +5731,7 @@ export default function CableDesigner() {
                     {/* Cabling Diameter Section (Advance Mode Only) */}
                     {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">3.2 Cabling Diameter</label>
+                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">Cabling Diameter</label>
                         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                           <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cabling Dia (mm)</label>
                           <input
@@ -5688,7 +5750,7 @@ export default function CableDesigner() {
                     {/* Cabling Filler Section */}
                     {params.standard === 'Manufacturing Specification' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">3.3 Cabling Filler</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Cabling Filler</label>
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Filler Type</label>
@@ -5733,7 +5795,7 @@ export default function CableDesigner() {
                     {/* Inner Sheath Section */}
                     {params.standard !== 'LiYCY' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4. Inner Sheath</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Inner Sheath</label>
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
                             <label className={`flex items-center justify-between cursor-pointer group ${params.standard !== 'Manufacturing Specification' && params.armorType !== 'Unarmored' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Inner Sheath</span>
@@ -5794,7 +5856,7 @@ export default function CableDesigner() {
                     {/* Screen Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className={`space-y-4 border-t border-slate-100 pt-4 ${!isLV ? 'opacity-50' : ''}`}>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">4.1 Screen {!isLV && '(IEC 60502-1 or NYCY Only)'}</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Screen {!isLV && '(IEC 60502-1 or NYCY Only)'}</label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
                         <label className={`flex items-center justify-between ${!isLV || isNYCY ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                           <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">Apply Screen</span>
@@ -5890,10 +5952,16 @@ export default function CableDesigner() {
                     </div>
                   )}
 
-                    {/* Separator Section */}
+                    </div>
+                    <div id="design-step-5" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Layers className="w-4 h-4 text-blue-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inner Layers</h3>
+                      </div>
+                      {/* Separator Section */}
                     <div className={`space-y-4 border-t border-slate-100 pt-4 ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') ? 'opacity-50' : ''}`}>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        {params.standard === 'LiYCY' ? '4.2 Inner Tape (Polyester Tape)' : `4.2 Separator Sheath ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification') ? '(IEC 60502-1 or Mfg Spec Only)' : ''}`}
+                        {params.standard === 'LiYCY' ? 'Inner Tape (Polyester Tape)' : `Separator Sheath ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification') ? '(IEC 60502-1 or Mfg Spec Only)' : ''}`}
                       </label>
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
                         <label className={`flex items-center justify-between ${((!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') || (params.hasScreen && params.armorType !== 'Unarmored') || params.standard === 'LiYCY') ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
@@ -5961,7 +6029,13 @@ export default function CableDesigner() {
                       </div>
                     </div>
 
-                    {/* Armor Section */}
+                    </div>
+                    <div id="design-step-6" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Package className="w-4 h-4 text-slate-800" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Armor & Outer Sheath</h3>
+                      </div>
+                      {/* Armor Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">{params.standard === 'LiYCY' ? '5. Braid Screen' : '5. Armour'}</label>
@@ -6178,7 +6252,7 @@ export default function CableDesigner() {
                     {/* Outer Sheath Section */}
                     {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">6. Outer Sheath</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Outer Sheath</label>
                         
                         {params.standard === 'Manufacturing Specification' && (
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3 mb-4">
@@ -6273,10 +6347,12 @@ export default function CableDesigner() {
                     )}
 
 
-                    {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
+                    </div>
+                    <div className="col-span-1 xl:col-span-2 2xl:col-span-3 space-y-6">
+                      {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
                     {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
-                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">7. Advanced Intermediate Diameters</label>
+                        <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest">Advanced Intermediate Diameters</label>
                         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -6432,8 +6508,11 @@ export default function CableDesigner() {
                       </div>
                     )}
 
+                    </div>
+                    </div>
+
                     {/* Add to Project Button moved to bottom of config */}
-                    <div className="pt-4">
+                    <div className="pt-4 pb-8 w-full">
                       <button
                         onClick={addToProject}
                         className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] uppercase tracking-wider text-sm"
@@ -7005,7 +7084,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Results Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-6' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
+          <div className={`${isConfigExpanded ? 'lg:col-span-4' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
             
             {isBulkCalculationEnabled && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in duration-300">
