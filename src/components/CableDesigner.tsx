@@ -64,7 +64,7 @@ const DEFAULT_MATERIAL_PRICES = {
   CTS: 160000,
   CWS: 158000,
   STA: 22000,
-  ATA: 24000,
+  ATA: 70000,
   SWA: 50000,
   AWA: 48000,
   GSWB: 25000,
@@ -104,7 +104,7 @@ const DEFAULT_MATERIAL_DENSITIES = {
   CTS: 8.89,
   CWS: 8.89,
   STA: 7.85,
-  ATA: 2.7,
+  ATA: 2.703,
   SWA: 7.85,
   AWA: 2.7,
   GSWB: 7.85,
@@ -10948,9 +10948,9 @@ export default function CableDesigner() {
                           { title: 'Conductor', items: Array.from(new Set(['Cu', 'Al', 'TCu', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Conductor')])) },
                           { title: 'Compound Insulation', items: Array.from(new Set(['XLPE', 'XLPE MV', 'PVC', 'EPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Insulation')])) },
                           { title: 'Compound (Filler/Sheath)', items: Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Compound Filler' || materialCategories[m] === 'Compound Sheath' || materialCategories[m] === 'Compound (Filler/Sheath)')])) },
-                          { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
+                          { title: 'Armour', items: Array.from(new Set(['Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'ATA', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Armour')])) },
                           { title: 'Screen', items: Array.from(new Set(['Inner Semi Conductive', 'Outer Semi Conductive', 'MGT', 'CTS', 'CWS', ...Object.keys(materialPrices).filter(m => materialCategories[m] === 'Screen')])) },
-                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'XLPE MV', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'Inner Semi Conductive', 'Outer Semi Conductive', 'MGT', 'CTS', 'CWS'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
+                          { title: 'Other', items: Object.keys(materialPrices).filter(m => !['Cu', 'Al', 'TCu', 'XLPE', 'XLPE MV', 'PVC', 'PE', 'LSZH', 'PVC-FR', 'PVC-FR Cat.A', 'PVC-FR Cat.B', 'PVC-FR Cat.C', 'SHF1', 'SHF2', 'EPR', 'HEPR', 'Steel', 'SteelWire', 'STA', 'SWA', 'AWA', 'SFA', 'RGB', 'GSWB', 'TCWB', 'ATA', 'Inner Semi Conductive', 'Outer Semi Conductive', 'MGT', 'CTS', 'CWS'].includes(m) && (!materialCategories[m] || materialCategories[m] === 'Other' || materialCategories[m] === 'Compound')) }
                         ].map(category => {
                           const categoryMaterials = category.items.filter(mat => materialPrices[mat] !== undefined).sort();
                           if (categoryMaterials.length === 0) return null;
