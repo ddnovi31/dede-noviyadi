@@ -4435,9 +4435,9 @@ export default function CableDesigner() {
                         </button>
                       ))}
                     </div>
-                    {/* Horizontal Cards Container */}
-                    <div className="flex overflow-x-auto gap-6 pb-8 items-start custom-scrollbar snap-x snap-mandatory px-4 -mx-4 h-full min-h-[70vh]">
-                    <div id="design-step-0" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    {/* Cards Grid Container */}
+                    <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 pb-8 items-start">
+                    <div id="design-step-0" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Settings</h3>
@@ -4834,12 +4834,13 @@ export default function CableDesigner() {
                   )}
 
                     {/* Features Section */}
-                    <div id="design-step-1" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    <div id="design-step-1" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Zap className="w-4 h-4 text-amber-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Properties</h3>
                       </div>
                       <div className="grid grid-cols-1 gap-3">
+
                         {/* Fireguard Toggle (Includes MGT) */}
                         <div className="space-y-2">
                           <label className="flex items-center justify-between cursor-pointer group">
@@ -4962,178 +4963,179 @@ export default function CableDesigner() {
                     )}
 
                     </div>
-                    {/* Bulk Calculation Toggle */}
-                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-xl border border-indigo-100 mt-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-indigo-900">Bulk Calculation</span>
-                        <span className="text-xs text-indigo-700">Calculate multiple cores and sizes at once</span>
-                      </div>
-                      <button
-                        onClick={() => setIsBulkCalculationEnabled(!isBulkCalculationEnabled)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isBulkCalculationEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isBulkCalculationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
+
+                    {/* End Properties wrapper */}
                     </div>
 
-                    {/* Bulk Calculation Options */}
-                    {isBulkCalculationEnabled && (
-                      <div className="space-y-4 p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl mt-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                            <List className="w-4 h-4" />
-                            Manual Bulk Input
-                          </h4>
-                        </div>
 
-                        {/* Manual Input Form */}
-                        <div className="space-y-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Step 1: Input Core Count</label>
-                              <div className="flex gap-2">
+                    <div id="design-step-bulk" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-center">
+                      {/* Bulk Calculation Toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-800">Bulk Calculation</span>
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Multi-core/size entry</span>
+                        </div>
+                        <button
+                          onClick={() => setIsBulkCalculationEnabled(!isBulkCalculationEnabled)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isBulkCalculationEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                        >
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isBulkCalculationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+
+                      {isBulkCalculationEnabled && (
+                        <div className="space-y-4 p-4 border border-slate-200 rounded-2xl bg-slate-50 shadow-inner animate-in fade-in slide-in-from-top-1 duration-200 mt-4">
+                          <h4 className="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-widest border-b border-slate-200 pb-2 mb-2">
+                             <List className="w-3 h-3" />
+                             Manual Bulk Input
+                          </h4>
+
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="col-span-1">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cores</label>
                                 <input
                                   type="number"
                                   min="1"
                                   value={manualBulkCore}
                                   onChange={(e) => setManualBulkCore(parseInt(e.target.value) || 1)}
-                                  className="w-full rounded-lg border-slate-200 text-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500 font-bold bg-slate-50"
-                                  placeholder="Enter number of cores..."
+                                  className="w-full rounded-lg border-slate-200 text-sm p-1.5 focus:ring-indigo-500 focus:border-indigo-500 font-bold bg-white"
+                                  placeholder="E.g. 3"
                                 />
                               </div>
-                            </div>
-                            <div className="flex items-end">
-                              <button
-                                onClick={() => {
-                                  if (selectedBulkSizes.length === 0) {
-                                    alert('Please select at least one size first.');
-                                    return;
-                                  }
-                                  const newItems = selectedBulkSizes.map(size => ({ cores: manualBulkCore, size }));
-                                  setBulkItems([...bulkItems, ...newItems]);
-                                  setSelectedBulkSizes([]); // Clear selection after adding
-                                }}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-[0.98]"
-                              >
-                                <Plus className="w-4 h-4" />
-                                Add {selectedBulkSizes.length > 0 ? `${selectedBulkSizes.length} Sizes` : 'to List'} for {manualBulkCore}C
-                              </button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Step 2: Select Sizes (mm²)</label>
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => {
-                                    const availableSizes = CABLE_SIZES.filter(s => {
-                                      if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
-                                      if (params.standard === 'IEC 60502-2') return s >= 25;
-                                      if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
-                                      if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
-                                      if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
-                                      if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
-                                      if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
-                                      if (params.conductorMaterial === 'Al') return s >= 10;
-                                      return true;
-                                    });
-                                    setSelectedBulkSizes(availableSizes);
-                                  }}
-                                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold uppercase"
-                                >
-                                  Select All
-                                </button>
-                                <span className="text-slate-300">|</span>
-                                <button 
-                                  onClick={() => setSelectedBulkSizes([])}
-                                  className="text-[10px] text-slate-500 hover:text-slate-700 font-bold uppercase"
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
-                              {CABLE_SIZES.filter(s => {
-                                if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
-                                if (params.standard === 'IEC 60502-2') return s >= 25;
-                                if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
-                                if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
-                                if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
-                                if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
-                                if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
-                                if (params.conductorMaterial === 'Al') return s >= 10;
-                                return true;
-                              }).map((s) => (
-                                <button
-                                  key={s}
-                                  onClick={() => {
-                                    if (selectedBulkSizes.includes(s)) {
-                                      setSelectedBulkSizes(selectedBulkSizes.filter(size => size !== s));
-                                    } else {
-                                      setSelectedBulkSizes([...selectedBulkSizes, s].sort((a, b) => a - b));
-                                    }
-                                  }}
-                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    selectedBulkSizes.includes(s)
-                                      ? 'bg-indigo-600 text-white shadow-sm scale-105' 
-                                      : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
-                                  }`}
-                                >
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Added Items List */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Configuration List</label>
-                            {bulkItems.length > 0 && (
-                              <button 
-                                onClick={() => setBulkItems([])}
-                                className="text-[10px] text-rose-500 hover:text-rose-700 font-bold uppercase"
-                              >
-                                Clear All
-                              </button>
-                            )}
-                          </div>
-                          
-                          {bulkItems.length === 0 ? (
-                            <div className="py-6 text-center border-2 border-dashed border-indigo-200 rounded-xl bg-white/50">
-                              <p className="text-xs text-indigo-400 font-medium">No items added yet</p>
-                            </div>
-                          ) : (
-                            <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                              {bulkItems.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-indigo-50 rounded-lg shadow-sm group">
-                                  <div className="flex items-center gap-3">
-                                    <span className="w-5 h-5 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold">
-                                      {idx + 1}
-                                    </span>
-                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                                      <span className="px-2 py-0.5 bg-slate-100 rounded text-indigo-700">{item.cores}C</span>
-                                      <span className="text-slate-300">×</span>
-                                      <span className="px-2 py-0.5 bg-slate-100 rounded text-indigo-700">{item.size} mm²</span>
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
-                                    className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                              
+                              <div className="col-span-2">
+                                <div className="flex justify-between items-center mb-1">
+                                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Select Sizes (mm²)</label>
+                                  <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => {
+                                      const availableSizes = CABLE_SIZES.filter(s => {
+                                        if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                                        if (params.standard === 'IEC 60502-2') return s >= 25;
+                                        if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
+                                        if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                                        if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                                        if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                                        if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                                        if (params.conductorMaterial === 'Al') return s >= 10;
+                                        return true;
+                                      });
+                                      setSelectedBulkSizes(availableSizes);
+                                    }}
+                                    className="text-[9px] text-indigo-600 hover:text-indigo-800 font-black uppercase"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    All
+                                  </button>
+                                  <span className="text-slate-300">|</span>
+                                  <button 
+                                    onClick={() => setSelectedBulkSizes([])}
+                                    className="text-[9px] text-slate-400 hover:text-slate-700 font-bold uppercase"
+                                  >
+                                    Clear
                                   </button>
                                 </div>
-                              ))}
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 custom-scrollbar">
+                                {CABLE_SIZES.filter(s => {
+                                  if (params.standard === 'BS EN 50288-7') return s >= 0.5 && s <= 2.5;
+                                  if (params.standard === 'IEC 60502-2') return s >= 25;
+                                  if (params.standard === 'SPLN 43-4 (NYCY)') return Array.from(new Set(Object.keys(NYCY_DATA).filter(k => k.startsWith(`${manualBulkCore}x`)).map(k => Number(k.split('x')[1].split('/')[0])))).includes(s);
+                                  if (params.standard.includes('(NYMHY)')) return [0.75, 1, 1.5, 2.5].includes(s);
+                                  if (params.standard.includes('(NYM)')) return [1.5, 2.5, 4, 6, 10, 16, 25, 35].includes(s);
+                                  if (params.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)') return [35, 50, 70, 95, 120].includes(s);
+                                  if (params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)') return [10, 16, 25, 35].includes(s);
+                                  if (params.conductorMaterial === 'Al') return s >= 10;
+                                  return true;
+                                }).map((s) => (
+                                  <button
+                                    key={s}
+                                    onClick={() => {
+                                      if (selectedBulkSizes.includes(s)) {
+                                        setSelectedBulkSizes(selectedBulkSizes.filter(size => size !== s));
+                                      } else {
+                                        setSelectedBulkSizes([...selectedBulkSizes, s].sort((a, b) => a - b));
+                                      }
+                                    }}
+                                    className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${
+                                      selectedBulkSizes.includes(s)
+                                        ? 'bg-indigo-600 text-white shadow-sm scale-105' 
+                                        : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
+                                    }`}
+                                  >
+                                    {s}
+                                  </button>
+                                ))}
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                              
+                            <button
+                              onClick={() => {
+                                if (selectedBulkSizes.length === 0) {
+                                  alert('Select at least one size first.');
+                                  return;
+                                }
+                                const newItems = selectedBulkSizes.map(size => ({ cores: manualBulkCore, size }));
+                                setBulkItems([...bulkItems, ...newItems]);
+                                setSelectedBulkSizes([]);
+                              }}
+                              className="w-full flex items-center justify-center gap-1.5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm active:scale-[0.98]"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add {selectedBulkSizes.length > 0 ? `${selectedBulkSizes.length} Configs` : 'Config'}
+                            </button>
+                            
+                            {/* Added Items List */}
+                            <div className="space-y-2 pt-2 border-t border-slate-200 mt-2">
+                              <div className="flex justify-between items-center">
+                                <label className="block text-[10px] font-bold text-indigo-900 uppercase tracking-widest">Configuration List</label>
+                                {bulkItems.length > 0 && (
+                                  <button 
+                                    onClick={() => setBulkItems([])}
+                                    className="text-[9px] text-rose-500 hover:text-rose-700 font-bold uppercase bg-rose-50 px-2 py-0.5 rounded"
+                                  >
+                                    Clear List
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {bulkItems.length === 0 ? (
+                                <div className="py-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-white/50">
+                                  <p className="text-[10px] text-slate-400 font-medium">No configs added yet</p>
+                                </div>
+                              ) : (
+                                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                                  {bulkItems.map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-100 rounded-lg shadow-sm group">
+                                      <div className="flex items-center gap-2">
+                                        <span className="w-4 h-4 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-bold">
+                                          {idx + 1}
+                                        </span>
+                                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                                          <span className="px-1.5 py-0.5 bg-slate-50 rounded text-indigo-700 border border-slate-100">{item.cores}C</span>
+                                          <span className="text-slate-300">×</span>
+                                          <span className="px-1.5 py-0.5 bg-slate-50 rounded text-indigo-700 border border-slate-100">{item.size} mm²</span>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
+                                        className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
 
-                    <div id="design-step-2" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div id="design-step-2" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Phase Conductor</h3>
@@ -5252,7 +5254,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-3" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    <div id="design-step-3" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Zap className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Earth & Neutral</h3>
@@ -5571,7 +5573,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-4" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    <div id="design-step-4" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-purple-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Insulation & Screen</h3>
@@ -5952,8 +5954,7 @@ export default function CableDesigner() {
                     </div>
                   )}
 
-                    </div>
-                    <div id="design-step-5" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    <div id="design-step-5" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-blue-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inner Layers</h3>
@@ -6030,7 +6031,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-6" className="flex-none w-[90vw] md:w-[400px] lg:w-[450px] snap-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 break-inside-avoid">
+                    <div id="design-step-6" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-slate-800" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Armor & Outer Sheath</h3>
@@ -6509,6 +6510,8 @@ export default function CableDesigner() {
                     )}
 
                     </div>
+
+                    {/* Close horizontal cards container */}
                     </div>
 
                     {/* Add to Project Button moved to bottom of config */}
@@ -7120,7 +7123,7 @@ export default function CableDesigner() {
                   </div>
                 </div>
                 
-                <h2 className="text-[37px] font-black tracking-tighter mb-10 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.1] px-4">
+                <h2 className="text-[22px] font-black tracking-tighter mb-10 drop-shadow-2xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-slate-400 leading-[1.1] px-4">
                   {getCableDesignation(params, result)}
                 </h2>
                 
