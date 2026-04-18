@@ -4414,7 +4414,7 @@ export default function CableDesigner() {
                 {activeTab === 'config' && (
                   <div className="flex flex-col space-y-6">
                     {/* Horizontal Steps Header */}
-                    <div className="flex items-center gap-2 overflow-x-auto pb-4 custom-scrollbar snap-x border-b border-slate-200">
+                    <div className="hidden items-center gap-2 overflow-x-auto pb-4 custom-scrollbar snap-x border-b border-slate-200">
                       {[
                         { id: 0, label: 'General', icon: Settings },
                         { id: 1, label: 'Properties', icon: Zap },
