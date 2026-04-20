@@ -4317,21 +4317,10 @@ export default function CableDesigner() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="flex flex-col gap-6">
           
           {/* Configuration & Prices Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-8' : 'lg:col-span-3'} space-y-6 transition-all duration-500 relative`}>
-            {/* Floating Expand Button */}
-            <button
-              onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-              className="absolute -right-4 top-10 z-50 p-2.5 bg-white shadow-xl rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hidden lg:flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
-              title={isConfigExpanded ? "Collapse View" : "Expand View"}
-            >
-              {isConfigExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              <div className="absolute right-full mr-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                {isConfigExpanded ? "Compact View" : "Full View"}
-              </div>
-            </button>
+          <div className="space-y-6 transition-all duration-500 relative">
 
             <div className="bg-white rounded-[1.5rem] shadow-lg shadow-slate-100 border border-slate-200/80 overflow-hidden flex flex-col h-full transition-all duration-300">
               {/* Elegant Project Control Bar */}
@@ -4405,7 +4394,7 @@ export default function CableDesigner() {
                     }`}
                   >
                     <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
-                    <span className={isConfigExpanded ? 'inline' : 'hidden md:inline lg:hidden xl:inline'}>{tab.label}</span>
+                    <span className="inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -4436,7 +4425,7 @@ export default function CableDesigner() {
                       ))}
                     </div>
                     {/* Cards Grid Container */}
-                    <div className={`grid gap-6 pb-8 items-start ${isConfigExpanded ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'}`}>
+                    <div className="grid gap-6 pb-8 items-start grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <div id="design-step-0" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
@@ -7087,7 +7076,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Results Panel */}
-          <div className={`${isConfigExpanded ? 'lg:col-span-4' : 'lg:col-span-5'} space-y-6 transition-all duration-300`}>
+          <div className="space-y-6 transition-all duration-300">
             
             {isBulkCalculationEnabled && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in duration-300">
@@ -7243,6 +7232,30 @@ export default function CableDesigner() {
                 </div>
                 
                 <div className="space-y-6">
+                  {/* Summary Head */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Overall Diameter</span>
+                        <span className="text-sm font-black text-slate-900">{result.spec.overallDiameter.toFixed(2)} <span className="text-[10px] opacity-40">mm</span></span>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Min. Bending Radius</span>
+                        <span className="text-sm font-black text-slate-900">{result.spec.bendingRadius} <span className="text-[10px] opacity-40">mm</span></span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Form</span>
+                        <span className="text-sm font-black text-slate-900">{result.spec.deliveryForm}</span>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Standard Delivery</span>
+                        <span className="text-sm font-black text-slate-900">{result.spec.deliveryLength} <span className="text-[10px] opacity-40">m</span></span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Phase Core Group */}
                   <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-100 space-y-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -7506,76 +7519,70 @@ export default function CableDesigner() {
               </div>
 
               {/* Cost Analysis */}
-              <div className="md:col-span-2 bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-200/60 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/50 rounded-full -mr-48 -mt-48 blur-3xl group-hover:bg-indigo-100/50 transition-colors duration-700"></div>
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-indigo-100/50 transition-colors duration-700 pointer-events-none"></div>
                 
-                <div className="relative flex flex-col lg:flex-row gap-12">
-                  <div className="lg:w-1/3 space-y-8">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
-                        <BarChart3 className="w-6 h-6 text-white" />
+                <div className="relative flex flex-col gap-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-indigo-50 rounded-2xl">
+                        <BarChart3 className="w-5 h-5 text-indigo-600" />
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Cost Analysis</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Financial Breakdown</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Factory Cost (HPP)</span>
-                        <span className="text-3xl font-black text-slate-900 font-mono tracking-tighter">
-                          Rp {currentHPP.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                      <div className="p-8 bg-indigo-600 rounded-[2rem] shadow-xl shadow-indigo-200 relative overflow-hidden group/price">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover/price:scale-150 transition-transform duration-700"></div>
-                        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest block mb-1 relative z-10">Selling Price</span>
-                        <span className="text-4xl font-black text-white font-mono tracking-tighter relative z-10">
-                          Rp {currentSellingPrice.toLocaleString('id-ID')}
-                        </span>
-                      </div>
+                      <h2 className="text-lg font-black text-slate-900 tracking-tight">Cost Analysis</h2>
                     </div>
                   </div>
 
-                  <div className="lg:w-2/3">
-                    <div className="bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100">
-                      <div className="flex items-center justify-between mb-6">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Breakdown</span>
-                        <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Per Meter</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
-                        {(() => {
-                          const breakdown = calculateCostBreakdown(result.bom, params, materialPrices);
-                          const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight, drumData);
-                          const items = [
-                            { label: `Conductor`, cost: breakdown.conductor },
-                            { label: `Insulation`, cost: breakdown.insulation },
-                            { label: `Metallic Screen`, cost: breakdown.mvScreen },
-                            { label: `Inner Sheath`, cost: breakdown.innerCovering },
-                            { label: `Armor`, cost: breakdown.armorWire + breakdown.armorTape },
-                            { label: `Outer Sheath`, cost: breakdown.sheath },
-                            { label: `Packing`, cost: packing.packingCostPerMeter },
-                          ].filter(item => item.cost > 0);
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Factory Cost</span>
+                      <span className="text-lg font-black text-slate-900 font-mono tracking-tighter">
+                        Rp {currentHPP.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 relative overflow-hidden">
+                      <span className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1 relative z-10">Selling Price</span>
+                      <span className="text-lg font-black text-white font-mono tracking-tighter relative z-10">
+                        Rp {currentSellingPrice.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
 
-                          return items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-100/50">
-                              <span className="text-xs font-bold text-slate-500">{item.label}</span>
-                              <span className="text-xs font-black text-slate-900 font-mono">Rp {item.cost.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
-                            </div>
-                          ));
-                        })()}
-                      </div>
+                  <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material Breakdown</span>
+                      <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-widest">Per Meter</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {(() => {
+                        const breakdown = calculateCostBreakdown(result.bom, params, materialPrices);
+                        const packing = calculatePacking(result.spec.overallDiameter, result.bom.totalWeight, drumData);
+                        const items = [
+                          { label: `Conductor`, cost: breakdown.conductor },
+                          { label: `Insulation`, cost: breakdown.insulation },
+                          { label: `Metallic Screen`, cost: breakdown.mvScreen },
+                          { label: `Inner Sheath`, cost: breakdown.innerCovering },
+                          { label: `Armor`, cost: breakdown.armorWire + breakdown.armorTape },
+                          { label: `Outer Sheath`, cost: breakdown.sheath },
+                          { label: `Packing`, cost: packing.packingCostPerMeter },
+                        ].filter(item => item.cost > 0);
 
-                      <div className="mt-8 pt-6 border-t-2 border-slate-200 border-dashed flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Margin</span>
-                          <span className="text-xl font-black text-emerald-600">Rp {(currentSellingPrice - currentHPP).toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-2xl text-xs font-black">
-                          {params.margin}% Profit
-                        </div>
+                        return items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center py-1.5 border-b border-slate-100/50 last:border-0">
+                            <span className="text-[10px] font-bold text-slate-500">{item.label}</span>
+                            <span className="text-xs font-black text-slate-900 font-mono">Rp {item.cost.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-slate-200 border-dashed flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Margin</span>
+                        <span className="text-sm font-black text-emerald-600">Rp {(currentSellingPrice - currentHPP).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl text-[10px] font-black">
+                        {params.margin}% Profit
                       </div>
                     </div>
                   </div>
@@ -7585,7 +7592,7 @@ export default function CableDesigner() {
           </div>
 
           {/* Project List Section (Right Side) */}
-          <div className={`${isConfigExpanded ? 'hidden' : 'lg:col-span-4'} transition-all duration-500`}>
+          <div className="transition-all duration-500">
             <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/80 h-full flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
