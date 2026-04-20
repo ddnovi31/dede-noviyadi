@@ -4238,9 +4238,9 @@ export default function CableDesigner() {
 
       <div className="max-w-6xl mx-auto space-y-6">
         
-        <header className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-200/60 flex flex-col md:flex-row items-center justify-between gap-6 mb-10 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-700"></div>
+        <header className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 opacity-90"></div>
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50 transition-opacity duration-700"></div>
           
           <div className="flex flex-col items-center md:items-start relative z-10">
             <div className="flex items-center gap-4">
@@ -4275,8 +4275,8 @@ export default function CableDesigner() {
 
         {/* LME Data Banner */}
         {lmeData && (
-          <div className="bg-white rounded-2xl p-4 shadow-md border border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+          <div className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-50 rounded-xl">
                 <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -4333,7 +4333,7 @@ export default function CableDesigner() {
               </div>
             </button>
 
-            <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden flex flex-col h-full">
+            <div className="bg-white rounded-[1.5rem] shadow-lg shadow-slate-100 border border-slate-200/80 overflow-hidden flex flex-col h-full transition-all duration-300">
               {/* Elegant Project Control Bar */}
               <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
                 <div className="flex flex-col gap-4">
@@ -4388,7 +4388,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Modern Tab Navigation */}
-              <div className="flex p-2 bg-slate-50/50 gap-1 border-b border-slate-100">
+              <div className="flex p-2 bg-slate-50/80 gap-1.5 border-b border-slate-100">
                 {[
                   { id: 'config', icon: Settings, label: 'Design' },
                   { id: 'prices', icon: DollarSign, label: 'Prices' },
@@ -4398,10 +4398,10 @@ export default function CableDesigner() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 mt-1 mb-1 rounded-xl text-xs font-bold transition-all duration-300 ${
                       activeTab === tab.id 
-                        ? 'bg-white text-indigo-600 shadow-md shadow-indigo-100/50 translate-y-[-1px]' 
-                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                        ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' 
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                     }`}
                   >
                     <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
@@ -4437,7 +4437,7 @@ export default function CableDesigner() {
                     </div>
                     {/* Cards Grid Container */}
                     <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 pb-8 items-start">
-                    <div id="design-step-0" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-0" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Settings</h3>
@@ -4834,7 +4834,7 @@ export default function CableDesigner() {
                   )}
 
                     {/* Features Section */}
-                    <div id="design-step-1" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-1" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Zap className="w-4 h-4 text-amber-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Properties</h3>
@@ -4968,7 +4968,7 @@ export default function CableDesigner() {
                     </div>
 
 
-                    <div id="design-step-bulk" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <div id="design-step-bulk" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col justify-center">
                       {/* Bulk Calculation Toggle */}
                       <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
                         <div className="flex flex-col">
@@ -5135,7 +5135,7 @@ export default function CableDesigner() {
                       )}
                     </div>
 
-                    <div id="design-step-2" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-2" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Phase Conductor</h3>
@@ -5254,7 +5254,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-3" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-3" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Zap className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Earth & Neutral</h3>
@@ -5573,7 +5573,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-4" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-4" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-purple-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Insulation & Screen</h3>
@@ -5954,7 +5954,7 @@ export default function CableDesigner() {
                     </div>
                   )}
 
-                    <div id="design-step-5" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-5" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-blue-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inner Layers</h3>
@@ -6031,7 +6031,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-6" className="w-full bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm space-y-4">
+                    <div id="design-step-6" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-slate-800" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Armor & Outer Sheath</h3>
@@ -7107,17 +7107,17 @@ export default function CableDesigner() {
             )}
 
             {/* Cable Designation Hero */}
-            <div className="bg-slate-900 rounded-[2.5rem] p-12 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-slate-800 group">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[2rem] p-10 md:p-14 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-slate-800/80 group mt-4">
               {/* Animated Background Elements */}
               <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5"></div>
+                <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5 mix-blend-overlay"></div>
               </div>
 
               <div className="relative z-10 w-full max-w-4xl">
                 <div className="flex flex-col items-center gap-4 mb-8">
-                  <div className="px-5 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.4em] backdrop-blur-xl border border-white/10 shadow-2xl flex items-center gap-2">
+                  <div className="px-5 py-2 bg-white/[0.03] rounded-full text-[10px] font-black uppercase tracking-[0.4em] backdrop-blur-md border border-white/10 shadow-lg flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></div>
                     Cable Designation
                   </div>
@@ -7127,27 +7127,27 @@ export default function CableDesigner() {
                   {getCableDesignation(params, result)}
                 </h2>
                 
-                <div className="flex flex-wrap justify-center items-center gap-8">
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-indigo-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-indigo-300 transition-colors">Overall Diameter</span>
+                <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 mt-2">
+                  <div className="flex flex-col items-center bg-white/[0.02] px-8 py-5 rounded-[1.5rem] backdrop-blur-md border border-white/10 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.05] hover:border-indigo-500/30 group/item">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] mb-2 group-hover/item:text-slate-300 transition-colors">Overall Diameter</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tighter">{result.spec.overallDiameter}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">mm</span>
+                      <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">{result.spec.overallDiameter}</span>
+                      <span className="text-xs font-bold opacity-50 uppercase tracking-widest text-slate-300">mm</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-purple-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-purple-300 transition-colors">Total Weight</span>
+                  <div className="flex flex-col items-center bg-white/[0.02] px-8 py-5 rounded-[1.5rem] backdrop-blur-md border border-white/10 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.05] hover:border-indigo-500/30 group/item">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold tracking-[0.2em] mb-2 group-hover/item:text-slate-300 transition-colors">Total Weight</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tighter">{Math.round(result.bom.totalWeight).toLocaleString()}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">kg/km</span>
+                      <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">{Math.round(result.bom.totalWeight).toLocaleString()}</span>
+                      <span className="text-xs font-bold opacity-50 uppercase tracking-widest text-slate-300">kg/km</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center bg-white/5 px-10 py-6 rounded-[2rem] backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:scale-105 hover:bg-white/10 group/item">
-                    <span className="text-emerald-400 uppercase text-[10px] font-black tracking-[0.3em] mb-2 group-hover/item:text-emerald-300 transition-colors">Selling Price</span>
+                  <div className="flex flex-col items-center bg-white/[0.02] px-8 py-5 rounded-[1.5rem] backdrop-blur-md border border-white/10 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.05] hover:border-indigo-500/30 group/item">
+                    <span className="text-emerald-400 uppercase text-[10px] font-bold tracking-[0.2em] mb-2 group-hover/item:text-emerald-300 transition-colors">Selling Price</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest mr-1">Rp</span>
-                      <span className="text-4xl font-black tracking-tighter">{currentSellingPrice.toLocaleString('id-ID')}</span>
-                      <span className="text-sm font-bold opacity-40 uppercase tracking-widest">/m</span>
+                      <span className="text-xs font-bold opacity-50 uppercase tracking-widest mr-1 text-slate-300">Rp</span>
+                      <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">{currentSellingPrice.toLocaleString('id-ID')}</span>
+                      <span className="text-xs font-bold opacity-50 uppercase tracking-widest text-slate-300">/m</span>
                     </div>
                   </div>
                 </div>
