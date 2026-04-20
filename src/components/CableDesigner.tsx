@@ -4236,7 +4236,7 @@ export default function CableDesigner() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="w-full max-w-[1800px] mx-auto px-4 md:px-6 2xl:px-8 space-y-6 transition-all duration-500">
         
         <header className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 relative overflow-hidden transition-all duration-300 hover:shadow-md">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 opacity-90"></div>
@@ -4436,7 +4436,7 @@ export default function CableDesigner() {
                       ))}
                     </div>
                     {/* Cards Grid Container */}
-                    <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 pb-8 items-start">
+                    <div className={`grid gap-6 pb-8 items-start ${isConfigExpanded ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'}`}>
                     <div id="design-step-0" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
@@ -7107,7 +7107,7 @@ export default function CableDesigner() {
             )}
 
             {/* Cable Designation Hero */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[2rem] p-10 md:p-14 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-slate-800/80 group mt-4">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[1.5rem] p-10 md:p-14 shadow-2xl text-white flex flex-col justify-center items-center text-center relative overflow-hidden border border-slate-800/80 group mt-4">
               {/* Animated Background Elements */}
               <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
@@ -7156,7 +7156,7 @@ export default function CableDesigner() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* General Data & Features */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -7232,7 +7232,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Technical Specification */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-emerald-50 rounded-2xl">
@@ -7344,7 +7344,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Packing Data */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-amber-50 rounded-2xl">
@@ -7389,7 +7389,7 @@ export default function CableDesigner() {
               </div>
 
               {/* Bill of Material */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -7452,7 +7452,7 @@ export default function CableDesigner() {
 
               {/* Material Weight Calculation (Advance Mode Only) */}
               {params.mode === 'advance' && result.weights && (
-                <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-indigo-50 rounded-2xl">
@@ -7475,7 +7475,7 @@ export default function CableDesigner() {
               )}
 
               {/* Electrical Properties */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60">
+              <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-yellow-50 rounded-2xl">
@@ -7586,7 +7586,7 @@ export default function CableDesigner() {
 
           {/* Project List Section (Right Side) */}
           <div className={`${isConfigExpanded ? 'hidden' : 'lg:col-span-4'} transition-all duration-500`}>
-            <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 border border-slate-200/60 h-full flex flex-col">
+            <div className="bg-white rounded-[1.5rem] p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/80 h-full flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-indigo-50 rounded-2xl">
