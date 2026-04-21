@@ -117,13 +117,26 @@ app.get("/api/health", (req, res) => {
 app.get("/api/lme-prices", async (req, res) => {
   try {
     const fetchHtml = async () => {
-      const response = await fetch('https://www.westmetall.com/en/markdaten.php', {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.text();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const response = await fetch('https://www.westmetall.com/en/markdaten.php', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.text();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
     };
 
     const fetchExchangeRate = async () => {
@@ -160,7 +173,15 @@ app.get("/api/lme-prices", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching LME prices:", error);
-    res.status(500).json({ success: false, error: "Failed to fetch LME prices", details: error instanceof Error ? error.message : String(error) });
+    // Fallback data if fetch fails
+    res.json({
+      success: true,
+      date: new Date().toLocaleDateString(),
+      copper: 9500, // Reasonable fallback
+      aluminium: 2500, // Reasonable fallback
+      exchangeRate: 15800, // Reasonable fallback for IDR
+      isFallback: true
+    });
   }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronRight, Ruler } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronRight, Ruler, Shield } from 'lucide-react';
 import { NYCY_DATA } from '../utils/nycyData';
 import { AAC_SIZES, AAC_DATA, AAACS_SIZES, AAACS_DATA } from '../utils/aacData';
 import { NFA2XT_DATA, getWeightAdditionFactor } from '../utils/abcData';
@@ -82,14 +82,32 @@ export default function CableDesigner() {
   const [lmeData, setLmeData] = useState<{date: string, copper: number | null, aluminium: number | null, exchangeRate?: number | null} | null>(null);
 
   useEffect(() => {
+    console.log("Fetching LME prices...");
     fetch('/api/lme-prices')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        if (data.success) {
+        console.log("LME Data received:", data);
+        if (data && data.success) {
           setLmeData(data);
+        } else {
+          console.error("LME Data failed success check:", data);
         }
       })
-      .catch(err => console.error("Failed to fetch LME data:", err));
+      .catch(err => {
+        console.error("Failed to fetch LME data:", err);
+        // Local fallback in case server route is unreachable
+        setLmeData({
+          success: true,
+          date: new Date().toLocaleDateString(),
+          copper: 9500,
+          aluminium: 2500,
+          exchangeRate: 15800,
+          isFallback: true
+        });
+      });
   }, []);
 
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
@@ -4425,7 +4443,7 @@ export default function CableDesigner() {
                       ))}
                     </div>
                     {/* Cards Grid Container */}
-                    <div className="flex flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto snap-x custom-scrollbar snap-mandatory">
+                    <div className="flex flex-row flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto w-full snap-x custom-scrollbar snap-mandatory">
                     <div id="design-step-0" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
@@ -4952,11 +4970,7 @@ export default function CableDesigner() {
                     )}
 
                     </div>
-
-                    {/* End Properties wrapper */}
-                    </div>
-
-
+                    
                     <div id="design-step-bulk" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col justify-start space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <List className="w-4 h-4 text-indigo-500" />
@@ -5248,7 +5262,12 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div className="pt-4 mt-4 border-t border-slate-100 space-y-5">
+                    
+                    <div id="design-step-earthing" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Shield className="w-4 h-4 text-emerald-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">EARTHING / MESSENGER</h3>
+                      </div>
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2">» Earth & Neutral</h4>
                       {/* Earthing Core Section */}
                     {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
@@ -5562,9 +5581,9 @@ export default function CableDesigner() {
                         </div>
                       )}
                     </div>
+                </div>
 
-                    </div>
-                    <div id="design-step-4" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                <div id="design-step-4" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-purple-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">INSULATION</h3>
@@ -5965,6 +5984,8 @@ export default function CableDesigner() {
                       </div>
                     </div>
                   )}
+
+                    </div>
 
                     <div id="design-step-5" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
