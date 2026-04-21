@@ -194,6 +194,7 @@ export default function TDSLayoutDesigner() {
           rows: [...existing.rows, newRow] // Ensure it's at the VERY end
         }
       };
+      console.log("Adding new row to standard:", selectedStandard, newRow);
       safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
       return updated;
     });
@@ -463,18 +464,19 @@ export default function TDSLayoutDesigner() {
           {/* Main Content - Row Editor */}
           <div className="xl:col-span-6 space-y-4">
             <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none select-none">
                 <FileJson className="w-24 h-24 text-indigo-600" />
               </div>
 
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-6 relative z-10">
                 <div>
                   <h2 className="text-lg font-black text-slate-900">{selectedStandard}</h2>
                   <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Layout Configuration</p>
                 </div>
                 <button 
                   onClick={addRow}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   Add Row
