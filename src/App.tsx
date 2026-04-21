@@ -16,7 +16,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  if (route === '#tds-layout') {
+  if (route.includes('#tds-layout')) {
     return <TDSLayoutSettings />;
   }
 

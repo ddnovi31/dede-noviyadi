@@ -90,8 +90,13 @@ export function ReviewSpecifications({
               </thead>
               <tbody>
                 {(() => {
-                  const savedLayouts = typeof window !== 'undefined' ? JSON.parse(safeLocalStorage.getItem('tds_layouts') || '{}') : {};
-                  const customLayout = savedLayouts[p.standard];
+                  let customLayout = null;
+                  try {
+                    const savedLayouts = typeof window !== 'undefined' ? JSON.parse(safeLocalStorage.getItem('tds_layouts') || '{}') : {};
+                    customLayout = savedLayouts[p.standard];
+                  } catch (e) {
+                    console.error("Error loading custom TDS layout:", e);
+                  }
                   
                   if (customLayout) {
                     return renderDynamicSpec(groupKey, items, specEdits, setSpecEdits, drumData, customLayout);

@@ -62,10 +62,15 @@ const AVAILABLE_KEYS = [
 ];
 
 export default function TDSLayoutDesigner() {
-  const [selectedStandard, setSelectedStandard] = useState(CABLE_STANDARDS[0]);
+  const [selectedStandard, setSelectedStandard] = useState(CABLE_STANDARDS[0].value);
   const [layouts, setLayouts] = useState<Record<string, TDSLayoutConfig>>(() => {
-    const saved = safeLocalStorage.getItem('tds_layouts');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = safeLocalStorage.getItem('tds_layouts');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.error("Error loading TDS layouts:", e);
+      return {};
+    }
   });
 
   const currentLayout = layouts[selectedStandard] || { standard: selectedStandard, rows: [...DEFAULT_ROWS] };
@@ -161,15 +166,15 @@ export default function TDSLayoutDesigner() {
               <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {CABLE_STANDARDS.map((std) => (
                   <button
-                    key={std}
-                    onClick={() => setSelectedStandard(std)}
+                    key={std.value}
+                    onClick={() => setSelectedStandard(std.value)}
                     className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                      selectedStandard === std 
+                      selectedStandard === std.value 
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 italic' 
                         : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    {std}
+                    {std.label}
                   </button>
                 ))}
               </div>
