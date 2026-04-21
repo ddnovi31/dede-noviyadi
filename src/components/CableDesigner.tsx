@@ -4425,11 +4425,11 @@ export default function CableDesigner() {
                       ))}
                     </div>
                     {/* Cards Grid Container */}
-                    <div className="grid gap-6 pb-8 items-start grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <div id="design-step-0" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                    <div className="flex flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto snap-x custom-scrollbar snap-mandatory">
+                    <div id="design-step-0" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Settings</h3>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">GENERAL</h3>
                       </div>
                       {/* Design Mode Toggle */}
                     <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
@@ -4823,8 +4823,8 @@ export default function CableDesigner() {
                   )}
 
                     {/* Features Section */}
-                    <div id="design-step-1" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                    <div className="pt-4 mt-4 border-t border-slate-100">
+                      <div className="flex items-center gap-2 mb-2 pb-2">
                         <Zap className="w-4 h-4 text-amber-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Properties</h3>
                       </div>
@@ -4957,7 +4957,11 @@ export default function CableDesigner() {
                     </div>
 
 
-                    <div id="design-step-bulk" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col justify-center">
+                    <div id="design-step-bulk" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col justify-start space-y-5">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <List className="w-4 h-4 text-indigo-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">BULK CALCULATION</h3>
+                      </div>
                       {/* Bulk Calculation Toggle */}
                       <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
                         <div className="flex flex-col">
@@ -5124,11 +5128,12 @@ export default function CableDesigner() {
                       )}
                     </div>
 
-                    <div id="design-step-2" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                    <div id="design-step-2" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-emerald-500" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Phase Conductor</h3>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">CONDUCTOR</h3>
                       </div>
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2">» Phase Conductor</h4>
                       {/* Cores and Size in one row */}
                     <div className={`grid grid-cols-2 gap-4 ${isInstrumentationPairTriad ? 'opacity-40 pointer-events-none' : ''}`}>
                       {/* Number of Cores */}
@@ -5243,11 +5248,8 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-3" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                        <Zap className="w-4 h-4 text-emerald-500" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Earth & Neutral</h3>
-                      </div>
+                    <div className="pt-4 mt-4 border-t border-slate-100 space-y-5">
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2">» Earth & Neutral</h4>
                       {/* Earthing Core Section */}
                     {!(params.standard.includes('(NYA)') || params.standard.includes('(NYM)') || params.standard.includes('(NYMHY)') || params.standard.includes('(NYAF)') || params.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
@@ -5562,10 +5564,10 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-4" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                    <div id="design-step-4" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-purple-500" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Insulation & Screen</h3>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">INSULATION</h3>
                       </div>
                       {/* Insulation Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && (
@@ -5635,6 +5637,13 @@ export default function CableDesigner() {
                         )}
                       </div>
                     )}
+                    </div>
+
+                    <div id="design-step-screen" className={`w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5 ${(params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') ? 'block' : 'hidden'}`}>
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Layers className="w-4 h-4 text-orange-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">SCREEN</h3>
+                      </div>
 
                     {/* MV Screen Selection (Moved after Insulation) */}
                     {params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
@@ -5718,6 +5727,13 @@ export default function CableDesigner() {
                         </div>
                       </div>
                     )}
+                    </div>
+
+                    <div id="design-step-inner-sheath" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Layers className="w-4 h-4 text-pink-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">INNER SHEATH</h3>
+                      </div>
 
                     {/* Cabling Diameter Section (Advance Mode Only) */}
                     {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
@@ -5843,6 +5859,13 @@ export default function CableDesigner() {
                           )}
                         </div>
                     )}
+                    </div>
+
+                    <div id="design-step-overall-screen" className={`w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5`}>
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Layers className="w-4 h-4 text-orange-400" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">OVERALL SCREEN</h3>
+                      </div>
 
                     {/* Screen Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
@@ -5943,10 +5966,10 @@ export default function CableDesigner() {
                     </div>
                   )}
 
-                    <div id="design-step-5" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                    <div id="design-step-5" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Layers className="w-4 h-4 text-blue-500" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inner Layers</h3>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">SEPARATOR</h3>
                       </div>
                       {/* Separator Section */}
                     <div className={`space-y-4 border-t border-slate-100 pt-4 ${(!isIEC60502_1 && params.standard !== 'Manufacturing Specification' && params.standard !== 'LiYCY') ? 'opacity-50' : ''}`}>
@@ -6020,10 +6043,10 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-6" className="w-full bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                    <div id="design-step-6" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Package className="w-4 h-4 text-slate-800" />
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Armor & Outer Sheath</h3>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">ARMOUR</h3>
                       </div>
                       {/* Armor Section */}
                     {params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
@@ -6239,6 +6262,12 @@ export default function CableDesigner() {
                     </div>
                   )}
 
+                    </div>
+                    <div id="design-step-outer-sheath" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Package className="w-4 h-4 text-emerald-500" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">OUTER SHEATH</h3>
+                      </div>
                     {/* Outer Sheath Section */}
                     {!(params.standard.includes('(NYAF)') || params.standard.includes('(NYA)') || params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)') && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
@@ -6338,7 +6367,11 @@ export default function CableDesigner() {
 
 
                     </div>
-                    <div className="col-span-1 xl:col-span-2 2xl:col-span-3 space-y-6">
+                    <div id="design-step-advanced" className={`w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5 ${params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? 'hidden' : 'block'}`}>
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <Settings className="w-4 h-4 text-slate-800" />
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">ADVANCED / MANUAL</h3>
+                      </div>
                       {/* Advanced Intermediate Diameters Summary (Advance Mode Only) */}
                     {params.mode === 'advance' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)' && (
                       <div className="space-y-4 border-t border-slate-100 pt-4">
