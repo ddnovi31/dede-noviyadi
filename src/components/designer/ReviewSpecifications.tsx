@@ -105,11 +105,13 @@ export function ReviewSpecifications({
 
 // Helper render functions
 function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[]) {
+  const firstItem = items[0];
+  
   return (
     <>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">1</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-100/50">
+        <td className="border border-slate-400 p-2 text-center font-bold">1</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-label`] ?? "Manufactured"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-label`]: val }))}
@@ -117,12 +119,7 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-val`] ?? "MULTI KABEL"}
@@ -133,8 +130,8 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-1 text-center">2</td>
-        <td className="border border-slate-400 p-1 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">2</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-ref-standard-label`] ?? "Reference Standard"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-label`]: val }))}
@@ -142,28 +139,17 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-unit`]: val }))}
+            value={specEdits[`${groupKey}-ref-standard-val`] ?? "SPLN D3.010-1:2014 & ADD. 2015"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-val`]: val }))}
           />
         </td>
-        <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
-          {(() => {
-            const editKey = `${groupKey}-ref-standard`;
-            const defaultVal = "SPLN D3.010-1:2014\nADDENDUM SPLN D3.010-1:2015";
-            return (
-              <EditableCell
-                value={specEdits[editKey] ?? defaultVal}
-                onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-              />
-            );
-          })()}
-        </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">3</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">3</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-type-label`] ?? "Type"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-label`]: val }))}
@@ -171,13 +157,8 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-type-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-blue-700 uppercase">
           <EditableCell
             value={specEdits[`${groupKey}-type-val`] ?? "NFA2X"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-val`]: val }))}
@@ -186,21 +167,16 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">4</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">4</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-size-label`] ?? "Size"}
+            value={specEdits[`${groupKey}-size-label`] ?? "Dimensions"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-size-unit`] ?? "mm²"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">mm²</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
             <EditableCell
@@ -211,711 +187,30 @@ function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, r
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">5</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">5</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage"}
+            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage (Uo/U)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-voltage-unit`] ?? "kV"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-voltage-val`] ?? "0,6/1 (1,2)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">6</td>
-        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold">
-          <EditableCell
-            value={specEdits[`${groupKey}-construction-data-label`] ?? "Constructional Data :"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-construction-data-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-label`] ?? "- Conductor Phase"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-val`] ?? "Aluminium EC Grade"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-shape-label`] ?? "Shape"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-shape-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-shape-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-shape-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-shape-val`] ?? "Round Stranded (rm)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-shape-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-wire-label`] ?? "Number / Diameter of Wires (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-wire-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-wire-unit`] ?? "dia/pcs"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-wire-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-phase-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}`}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-phase-wire-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-diam-label`] ?? "Diameter of Conductor"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-phase-diam-val`] ?? item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-phase-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-label`] ?? "- Conductor Neutral"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-val`] ?? "Aluminium EC Grade"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-shape-label`] ?? "Shape"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-shape-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-shape-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-shape-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-shape-val`] ?? "Round Stranded (rm)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-shape-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-wire-label`] ?? "Number / Diameter of Wires (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-wire-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-wire-unit`] ?? "dia/pcs"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-wire-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-neutral-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}`}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-neutral-wire-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-diam-label`] ?? "Diameter of Conductor"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-neutral-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-neutral-diam-val`] ?? item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-neutral-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-label`] ?? "- Insulation Phase"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-unit`] ?? ""}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-val`] ?? "Extruded Black XLPE"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-thick-label`] ?? "Thickness"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-thick-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-thick-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-thick-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-insul-phase-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-phase-thick-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-diam-label`] ?? "Diameter Insulation"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-insul-phase-diam-val`] ?? item.result.spec.coreDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-phase-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-neutral-label`] ?? "- Insulation Neutral"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-neutral-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-neutral-unit`] ?? ""}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-neutral-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-neutral-val`] ?? "Extruded Black XLPE"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-neutral-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-neutral-thick-label`] ?? "Thickness"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-neutral-thick-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-neutral-thick-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-neutral-thick-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-insul-neutral-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-neutral-thick-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-marking-label`] ?? "Marking on netral surface"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-marking-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          {(() => {
-            const firstItem = items[0];
-            const defaultMarking = `SPLN D3.010-1:2014  MULTI KABEL  NFA2X  ${firstItem.params.cores}x${firstItem.params.size} mm²  0.6/1 (1.2) kV   <>LMK<>`;
-            const editKey = `${groupKey}-marking-group`;
-            return (
-              <EditableCell
-                value={specEdits[editKey] ?? defaultMarking}
-                onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-                bold={true}
-              />
-            );
-          })()}
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">7</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-label`] ?? "Calculated Breaking Load"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-unit`] ?? "kN"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-breaking-load-val`] ?? (item.result.spec.breakingLoad?.toFixed(2).replace('.', ',') || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-breaking-load-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">8</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-ac-test-label`] ?? "AC Test Voltage"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ac-test-unit`] ?? "kV/5Mins"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ac-test-val`] ?? "3,5"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">9</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-dc-res-label`] ?? "DC Condutor Resistance 20°C (Max.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-dc-res-unit`] ?? "Ohm/km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(2).replace('.', ',') || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">10</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-amp-air-label`] ?? "Current Carrying Capacity in Air"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-amp-air-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-amp-air-unit`] ?? "A"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-amp-air-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-amp-air-val`] ?? (item.result.electrical.currentCapacityAir || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-amp-air-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">11</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-label`] ?? "Net Weight (Approx.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-unit`] ?? "Kg/Km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? item.result.bom.totalWeight.toFixed(1).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-net-weight-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">12</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-std-length-label`] ?? "Standard Length Per Haspel"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-std-length-unit`] ?? "Meter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => {
-          const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
-          return (
-            <td key={idx} className="border border-slate-400 p-2 text-center">
-              <EditableCell
-                value={specEdits[`${item.params.id || idx}-std-length-val`] ?? String(packing.standardLength)}
-                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-std-length-val`]: val }))}
-              />
-            </td>
-          );
-        })}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">13</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-packaging-label`] ?? "Packaging"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-packaging-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-packaging-val`] ?? "Wooden Drum"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-val`]: val }))}
-          />
-        </td>
-      </tr>
-    </>
-  );
-}
-
-function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[]) {
-  return (
-    <>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">1</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-label`] ?? "Manufactured"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-val`] ?? "MULTI KABEL"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-val`]: val }))}
-            bold={true}
-            uppercase={true}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center">2</td>
-        <td className="border border-slate-400 p-1 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-label`] ?? "Reference Standard"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
-          {(() => {
-            const editKey = `${groupKey}-ref-standard`;
-            const defaultVal = "SPLN D3.010-1:2014\nADDENDUM SPLN D3.010-1:2015";
-            return (
-              <EditableCell
-                value={specEdits[editKey] ?? defaultVal}
-                onChange={(val) => setSpecEdits(prev => ({ ...prev, [editKey]: val }))}
-              />
-            );
-          })()}
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">3</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-type-label`] ?? "Type"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-type-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-type-val`] ?? "NFA2X-T"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-val`]: val }))}
-            bold={true}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center">4</td>
-        <td className="border border-slate-400 p-1 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-size-label`] ?? "Size"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-size-unit`] ?? "mm²"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center font-bold">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-size-val`] ?? `${item.params.cores}x${item.params.size} + ${item.params.earthingSize}`}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-size-val`]: val }))}
-              bold={true}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">5</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-voltage-unit`] ?? "kV"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
             value={specEdits[`${groupKey}-voltage-val`] ?? "0,6/1 (1,2)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-val`]: val }))}
+            bold={true}
           />
         </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">6</td>
-        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">6</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-construction-data-label`] ?? "Constructional Data :"}
+            value={specEdits[`${groupKey}-construction-data-label`] ?? "CONSTRUCTIONAL DATA"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-construction-data-label`]: val }))}
             align="left"
             bold={true}
@@ -923,331 +218,159 @@ function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, 
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
+        <td className="border border-slate-400 p-2 text-center">6.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-label`] ?? "- Conductor Phase"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-label`]: val }))}
+            value={specEdits[`${groupKey}-cond-label`] ?? "Conductor (Phase)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-val`] ?? "Aluminium EC Grade"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-shape-label`] ?? "Shape"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-shape-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-shape-val`] ?? "Round Stranded (rm)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-shape-val`]: val }))}
+            value={specEdits[`${groupKey}-cond-val`] ?? "Aluminium EC Grade"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
         <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-wire-label`] ?? "No. and dia. of wires (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-wire-label`]: val }))}
+            value={specEdits[`${groupKey}-cond-shape-label`] ?? "- Shape"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
+        <td className="border border-slate-400 p-1 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-1 text-center italic">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-wire-unit`] ?? "dia/pcs"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-wire-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-phase-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}`}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-phase-wire-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-diam-label`] ?? "Diameter of Conductor"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-phase-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-phase-diam-val`] ?? item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-phase-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-label`] ?? "- Messenger (Insulated)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-val`] ?? "Aluminium Alloy (AAAC)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-val`]: val }))}
+            value={specEdits[`${groupKey}-cond-shape-val`] ?? "Round Stranded (rm)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8 font-medium">
+        <td className="border border-slate-400 p-2 text-center">6.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
-            value={specEdits[`${groupKey}-messenger-shape-label`] ?? "Shape"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-shape-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-shape-val`] ?? "Round Stranded rm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-shape-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-wire-label`] ?? "No. and dia. of wires (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-wire-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-wire-unit`] ?? "dia/pcs"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-wire-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-messenger-wire-val`] ?? `${item.params.earthingSize === 25 ? '7' : '7'} / ${item.params.earthingSize === 25 ? '2.12' : (item.params.earthingSize === 35 ? '2.52' : (item.params.earthingSize === 50 ? '3.00' : '3.58'))}`}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-messenger-wire-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-diam-label`] ?? "Diameter of Messenger"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-messenger-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-messenger-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-messenger-diam-val`] ?? (item.params.earthingSize === 25 ? '6,36' : (item.params.earthingSize === 35 ? '7,56' : (item.params.earthingSize === 50 ? '9,00' : (item.params.earthingSize === 70 ? '10,74' : (item.params.earthingSize === 95 ? '12,60' : '-')))))}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-messenger-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-label`] ?? "- Insulation"}
+            value={specEdits[`${groupKey}-insul-label`] ?? "Insulation"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center uppercase">
           <EditableCell
-            value={specEdits[`${groupKey}-insul-val`] ?? "Extruded Black XLPE"}
+            value={specEdits[`${groupKey}-insul-val`] ?? "Extruded XLPE"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
         <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-thick-label`] ?? "Thickness Phase (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-thick-label`]: val }))}
+            value={specEdits[`${groupKey}-insul-thick-label`] ?? "- Thickness (Nominal)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-thick-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-phase-thick-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-phase-thick-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-1 text-center">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-insul-phase-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-phase-thick-val`]: val }))}
+              value={specEdits[`${item.params.id || idx}-insul-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-thick-val`]: val }))}
             />
           </td>
         ))}
       </tr>
       <tr>
         <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8">
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-insul-messenger-thick-label`] ?? "Thickness Neutral (Nom.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-messenger-thick-label`]: val }))}
+            value={specEdits[`${groupKey}-core-diam-label`] ?? "- Outer Diameter Core (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-core-diam-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-insul-messenger-thick-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-messenger-thick-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-1 text-center">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-insul-messenger-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-messenger-thick-val`]: val }))}
+              value={specEdits[`${item.params.id || idx}-core-diam-val`] ?? item.result.spec.coreDiameter.toFixed(1).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-core-diam-val`]: val }))}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
+      <tr className="bg-slate-50 font-bold">
         <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4">
+        <td className="border border-slate-400 p-2 pl-4 text-slate-900">
           <EditableCell
-            value={specEdits[`${groupKey}-marking-label`] ?? "Marking on Neutral surface"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-marking-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          {(() => {
-            const firstItem = items[0];
-            const defaultMarking = `SPLN D3.010-1:2014  MULTI KABEL  NFA2X-T  ${firstItem.params.cores}x${firstItem.params.size} + ${firstItem.params.earthingSize} mm²  0.6/1 (1.2) kV   <>LMK<>`;
-            return (
-              <EditableCell
-                value={specEdits[`${groupKey}-marking-group`] ?? defaultMarking}
-                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-marking-group`]: val }))}
-                bold={true}
-              />
-            );
-          })()}
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">7</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-label`] ?? "Calculated Breaking Load"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-label`]: val }))}
+            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-unit`] ?? "kN"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">mm</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center text-blue-900">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-breaking-load-val`] ?? (item.result.spec.breakingLoad?.toFixed(2).replace('.', ',') || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-breaking-load-val`]: val }))}
+              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(1).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
+              bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">8</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">7</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-ac-test-label`] ?? "AC Test Voltage"}
+            value={specEdits[`${groupKey}-tech-data-label`] ?? "TECHNICAL DATA"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-tech-data-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">7.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-dc-res-label`] ?? "Max. DC Resistance at 20°C"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center font-mono">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(4).replace('.', ',') || '-')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center">7.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-ac-test-label`] ?? "AC Test Voltage (5 mins)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ac-test-unit`] ?? "kV/5Mins"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
             value={specEdits[`${groupKey}-ac-test-val`] ?? "3,5"}
@@ -1255,97 +378,38 @@ function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, 
           />
         </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">9</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">8</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-dc-res-label`] ?? "DC Conductor Resistance at 20°C (Max.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-dc-res-unit`] ?? "Ohm/km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(2).replace('.', ',') || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">10</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-amp-air-label`] ?? "Current Carrying Capacity in air at 30°C"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-amp-air-label`]: val }))}
-            align="left"
-            bold={true}
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-amp-air-unit`] ?? "A"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-amp-air-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-amp-air-val`] ?? (item.result.electrical.currentCapacityAir || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-amp-air-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">11</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-label`] ?? "Net Weight (Approx.)"}
+            value={specEdits[`${groupKey}-net-weight-label`] ?? "NET WEIGHT (APPROX.)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-unit`] ?? "Kg/Km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">kg/km</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-700">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? item.result.bom.totalWeight.toFixed(1).replace('.', ',')}
+              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? Math.round(item.result.bom.totalWeight).toLocaleString('id-ID')}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-net-weight-val`]: val }))}
+              bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">12</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">9</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-std-length-label`] ?? "Standard length Per Haspel"}
+            value={specEdits[`${groupKey}-std-length-label`] ?? "STANDARD LENGTH"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-std-length-unit`] ?? "Meter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">m</td>
         {items.map((item, idx) => {
           const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
           return (
@@ -1360,22 +424,363 @@ function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, 
         })}
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">13</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">10</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-packaging-label`] ?? "Packaging"}
+            value={specEdits[`${groupKey}-packaging-label`] ?? "PACKAGING"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-packaging-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-unit`]: val }))}
+            value={specEdits[`${groupKey}-packaging-val`] ?? "Wooden Drum"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-val`]: val }))}
+            bold={true}
           />
         </td>
+      </tr>
+    </>
+  );
+}
+function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[]) {
+  const firstItem = items[0];
+  
+  return (
+    <>
+      <tr className="bg-slate-100/50">
+        <td className="border border-slate-400 p-2 text-center font-bold">1</td>
+        <td className="border border-slate-400 p-2 font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-manufactured-label`] ?? "Manufactured"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
+          <EditableCell
+            value={specEdits[`${groupKey}-manufactured-val`] ?? "MULTI KABEL"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-val`]: val }))}
+            bold={true}
+            uppercase={true}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center font-bold">2</td>
+        <td className="border border-slate-400 p-2 font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-ref-standard-label`] ?? "Reference Standard"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+          <EditableCell
+            value={specEdits[`${groupKey}-ref-standard-val`] ?? "SPLN D3.010-1:2014 & ADD. 2015"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-val`]: val }))}
+          />
+        </td>
+      </tr>
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">3</td>
+        <td className="border border-slate-400 p-2 font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-type-label`] ?? "Type"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-blue-700 uppercase">
+          <EditableCell
+            value={specEdits[`${groupKey}-type-val`] ?? "NFA2X-T"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-val`]: val }))}
+            bold={true}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center font-bold">4</td>
+        <td className="border border-slate-400 p-2 font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-size-label`] ?? "Dimensions"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">mm²</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-size-val`] ?? `${item.params.cores}x${item.params.size} + ${item.params.earthingSize}`}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-size-val`]: val }))}
+              bold={true}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">5</td>
+        <td className="border border-slate-400 p-2 font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage (Uo/U)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-voltage-val`] ?? "0,6/1 (1,2)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-val`]: val }))}
+            bold={true}
+          />
+        </td>
+      </tr>
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">6</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-construction-data-label`] ?? "CONSTRUCTIONAL DATA"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-construction-data-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+      </tr>
+      {/* Conductor Phase */}
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">6.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-phase-label`] ?? "Conductor (Phase)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-phase-val`] ?? "Aluminium EC Grade"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-phase-val`]: val }))}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-shape-label`] ?? "- Shape"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-1 text-center italic">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-shape-val`] ?? "Round Stranded (rm)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-val`]: val }))}
+          />
+        </td>
+      </tr>
+
+      {/* Conductor Neutral / Messenger */}
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">6.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-neutral-label`] ?? "Conductor (Messenger)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-neutral-val`] ?? "Aluminium Alloy"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-neutral-val`]: val }))}
+          />
+        </td>
+      </tr>
+
+      {/* Insulation */}
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">6.3</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-label`] ?? "Insulation"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center uppercase">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-val`] ?? "Extruded XLPE"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-val`]: val }))}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-thick-label`] ?? "- Thickness (Nominal)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-thick-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-1 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-insul-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-thick-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr className="bg-slate-50 font-bold">
+        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 pl-4 text-slate-900">
+          <EditableCell
+            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center text-blue-900">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(1).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
+              bold={true}
+            />
+          </td>
+        ))}
+      </tr>
+
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">7</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-tech-data-label`] ?? "TECHNICAL DATA"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-tech-data-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">7.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-dc-res-label`] ?? "Max. DC Resistance at 20°C"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center font-mono">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(4).replace('.', ',') || '-')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center">7.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-ac-test-label`] ?? "AC Test Voltage (5 mins)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+          <EditableCell
+            value={specEdits[`${groupKey}-ac-test-val`] ?? "3,5"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-val`]: val }))}
+          />
+        </td>
+      </tr>
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">8</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-net-weight-label`] ?? "NET WEIGHT (APPROX.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">kg/km</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-700">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? Math.round(item.result.bom.totalWeight).toLocaleString('id-ID')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-net-weight-val`]: val }))}
+              bold={true}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">9</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-std-length-label`] ?? "STANDARD LENGTH"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">m</td>
+        {items.map((item, idx) => {
+          const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
+          return (
+            <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
+              <EditableCell
+                value={specEdits[`${item.params.id || idx}-std-length-val`] ?? String(packing.standardLength)}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-std-length-val`]: val }))}
+                bold={true}
+              />
+            </td>
+          );
+        })}
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center font-bold">10</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-packaging-label`] ?? "PACKAGING"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-slate-600">
           <EditableCell
             value={specEdits[`${groupKey}-packaging-val`] ?? "Wooden Drum"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-val`]: val }))}
@@ -1388,11 +793,13 @@ function renderNFA2XTSpec(groupKey: string, items: { params: CableDesignParams, 
 }
 
 function renderAACSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[]) {
+  const firstItem = items[0];
+  
   return (
     <>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">1</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-100/50">
+        <td className="border border-slate-400 p-2 text-center font-bold">1</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-label`] ?? "Manufactured"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-label`]: val }))}
@@ -1400,12 +807,7 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-val`] ?? "MULTI KABEL"}
@@ -1416,8 +818,8 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-1 text-center">2</td>
-        <td className="border border-slate-400 p-1 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">2</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-ref-standard-label`] ?? "Reference Standard"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-label`]: val }))}
@@ -1425,22 +827,17 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
             value={specEdits[`${groupKey}-ref-standard-val`] ?? "SPLN 41-6 : 1981"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-val`]: val }))}
           />
         </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">3</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">3</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-type-label`] ?? "Type"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-label`]: val }))}
@@ -1448,51 +845,41 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-blue-700 uppercase">
           <EditableCell
-            value={specEdits[`${groupKey}-type-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
-          <EditableCell
-            value={specEdits[`${groupKey}-type-val`] ?? "All Aluminium Bare Conductor (AAC)"}
+            value={specEdits[`${groupKey}-type-val`] ?? "AAC"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-val`]: val }))}
             bold={true}
           />
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">4</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">4</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-size-label`] ?? "Size"}
+            value={specEdits[`${groupKey}-size-label`] ?? "Nominal Cross Section"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-size-unit`] ?? "mm²"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">mm²</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-size-val`] ?? String(item.params.size)}
+              value={specEdits[`${item.params.id || idx}-size-val`] ?? `${item.params.size}`}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-size-val`]: val }))}
               bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">5</td>
-        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">5</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-construction-data-label`] ?? "Constructional Data :"}
+            value={specEdits[`${groupKey}-construction-data-label`] ?? "CONSTRUCTIONAL DATA"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-construction-data-label`]: val }))}
             align="left"
             bold={true}
@@ -1500,116 +887,78 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
+        <td className="border border-slate-400 p-2 text-center">5.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-material-label`] ?? "- Material Conductor"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-material-label`]: val }))}
+            value={specEdits[`${groupKey}-cond-label`] ?? "Material"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-material-val`] ?? "Aluminium EC Grade"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-material-val`]: val }))}
-          />
-        </td>
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-shape-label`] ?? "Shape"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-shape-val`] ?? "Round Stranded (rm)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-val`]: val }))}
+            value={specEdits[`${groupKey}-cond-val`] ?? "Aluminium EC Grade"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
         <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-wire-label`] ?? "Number and Diameter of Wires (Nom.)"}
+            value={specEdits[`${groupKey}-cond-wire-label`] ?? "- No. / Dia of Wires (Nom.)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-wire-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-cond-wire-unit`] ?? "dia/pcs"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-wire-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-1 text-center">pcs/mm</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-1 text-center">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-cond-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter?.toFixed(2).replace('.', ',')}`}
+              value={specEdits[`${item.params.id || idx}-cond-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}`}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-wire-val`]: val }))}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8">
+      <tr className="bg-slate-50 font-bold">
+        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 pl-4 text-slate-900">
           <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter (Nom.)"}
+            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter (Approx.)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
-            align="left"
-          />
-        </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-unit`]: val }))}
-          />
-        </td>
-        {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-1 text-center">
-            <EditableCell
-              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(2).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
-            />
-          </td>
-        ))}
-      </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">6</td>
-        <td className="border border-slate-400 p-2 font-medium">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-label`] ?? "Min. Calculated Breaking Load"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-breaking-load-unit`] ?? "kN"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">mm</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center text-blue-900">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-breaking-load-val`] ?? (item.result.spec.breakingLoad?.toFixed(2).replace('.', ',') || '-')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-breaking-load-val`]: val }))}
+              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(1).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
+              bold={true}
             />
           </td>
         ))}
       </tr>
+
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">6</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-tech-data-label`] ?? "TECHNICAL DATA"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-tech-data-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+      </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">7</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center">6.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
             value={specEdits[`${groupKey}-dc-res-label`] ?? "Max. DC Resistance at 20°C"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
@@ -1617,14 +966,9 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-dc-res-unit`] ?? "Ohm/km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center font-mono">
             <EditableCell
               value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(4).replace('.', ',') || '-')}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
@@ -1633,46 +977,58 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
         ))}
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">8</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center">6.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
-            value={specEdits[`${groupKey}-net-weight-label`] ?? "Net Weight (Approx.)"}
+            value={specEdits[`${groupKey}-breaking-load-label`] ?? "Calculated Breaking Load"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-breaking-load-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">kN</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-breaking-load-val`] ?? (Number(item.params.size || 0) * 0.16).toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-breaking-load-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">7</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-net-weight-label`] ?? "NET WEIGHT (APPROX.)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-unit`] ?? "Kg/Km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">kg/km</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-700">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? item.result.bom.totalWeight.toFixed(1).replace('.', ',')}
+              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? Math.round(item.result.bom.totalWeight).toLocaleString('id-ID')}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-net-weight-val`]: val }))}
+              bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">9</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">8</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-std-length-label`] ?? "Standard length Per Haspel"}
+            value={specEdits[`${groupKey}-std-length-label`] ?? "STANDARD LENGTH"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-std-length-unit`] ?? "Meter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">m</td>
         {items.map((item, idx) => {
           const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
           return (
@@ -1687,22 +1043,17 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
         })}
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">10</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">9</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-packaging-label`] ?? "Packaging"}
+            value={specEdits[`${groupKey}-packaging-label`] ?? "PACKAGING"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-packaging-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-slate-600">
           <EditableCell
             value={specEdits[`${groupKey}-packaging-val`] ?? "Wooden Drum"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-val`]: val }))}
@@ -1715,11 +1066,15 @@ function renderAACSpec(groupKey: string, items: { params: CableDesignParams, res
 }
 
 function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[], isMV: boolean) {
+
+  const firstItem = items[0];
+  const isLV = !isMV;
+
   return (
     <>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">1</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-100/50">
+        <td className="border border-slate-400 p-2 text-center font-bold">1</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-label`] ?? "Manufactured"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-label`]: val }))}
@@ -1727,12 +1082,7 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-manufactured-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-manufactured-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold uppercase">
           <EditableCell
             value={specEdits[`${groupKey}-manufactured-val`] ?? "MULTI KABEL"}
@@ -1743,8 +1093,8 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-1 text-center">2</td>
-        <td className="border border-slate-400 p-1 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">2</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-ref-standard-label`] ?? "Reference Standard"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-label`]: val }))}
@@ -1752,221 +1102,393 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-ref-standard-val`] ?? items[0].params.standard}
+            value={specEdits[`${groupKey}-ref-standard-val`] ?? firstItem.params.standard}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ref-standard-val`]: val }))}
           />
         </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">3</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">3</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-type-label`] ?? "Type"}
+            value={specEdits[`${groupKey}-type-label`] ?? (isMV ? "Cable Type" : "Type")}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold text-blue-700">
           <EditableCell
-            value={specEdits[`${groupKey}-type-unit`] ?? "-"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-unit`]: val }))}
-          />
-        </td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
-          <EditableCell
-            value={specEdits[`${groupKey}-type-val`] ?? getCableDesignation(items[0].params, items[0].result)}
+            value={specEdits[`${groupKey}-type-val`] ?? getCableDesignation(firstItem.params, firstItem.result)}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-type-val`]: val }))}
             bold={true}
           />
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">4</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center font-bold">4</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-size-label`] ?? "Size"}
+            value={specEdits[`${groupKey}-size-label`] ?? "Size / No. of Cores"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-size-unit`] ?? "mm²"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-size-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">mm²</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-2 text-center font-bold">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-size-val`] ?? `${item.params.cores}x${item.params.size}`}
+              value={specEdits[`${item.params.id || idx}-size-val`] ?? `${item.params.cores}x${item.params.size}${item.params.earthingSize ? `+${item.params.earthingSize}` : ''}`}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-size-val`]: val }))}
               bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">5</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">5</td>
+        <td className="border border-slate-400 p-2 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage"}
+            value={specEdits[`${groupKey}-voltage-label`] ?? "Rated Voltage (Uo/U)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-voltage-unit`] ?? "kV"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-voltage-val`] ?? items[0].params.voltage}
+            value={specEdits[`${groupKey}-voltage-val`] ?? firstItem.params.voltage}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-voltage-val`]: val }))}
           />
         </td>
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">6</td>
-        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase">
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">6</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-construction-data-label`] ?? "Constructional Data :"}
+            value={specEdits[`${groupKey}-construction-data-label`] ?? "CONSTRUCTIONAL DATA"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-construction-data-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
       </tr>
+      {/* 6.1 Conductor */}
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
+        <td className="border border-slate-400 p-2 text-center">6.1</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-label`] ?? "- Conductor"}
+            value={specEdits[`${groupKey}-cond-label`] ?? "Conductor"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-val`] ?? (items[0].params.conductorMaterial === 'Copper' ? 'Plain Annealed Copper Wire' : 'Aluminium EC Grade')}
+            value={specEdits[`${groupKey}-cond-val`] ?? (firstItem.params.conductorMaterial === 'Cu' ? 'Plain Annealed Copper Wire' : 'Aluminium EC Grade')}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-8 font-medium">
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-shape-label`] ?? "Shape"}
+            value={specEdits[`${groupKey}-cond-shape-label`] ?? "- Shape"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+        <td className="border border-slate-400 p-1 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-1 text-center italic">
           <EditableCell
-            value={specEdits[`${groupKey}-cond-shape-val`] ?? "Round / Sector stranded rm/sm"}
+            value={specEdits[`${groupKey}-cond-shape-val`] ?? (firstItem.params.conductorType === 'rm' ? 'Round Stranded' : (firstItem.params.conductorType === 're' ? 'Round Solid' : (firstItem.params.conductorType === 'sm' ? 'Sector Stranded' : 'Stranded')))}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-shape-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-insul-label`] ?? "- Insulation"}
+            value={specEdits[`${groupKey}-cond-wire-label`] ?? "- No. / Dia of Wires (Nom.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-wire-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">pcs/mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-1 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-cond-wire-val`] ?? `${item.result.spec.wireCount} / ${item.result.spec.phaseCore.wireDiameter.toFixed(2).replace('.', ',')}`}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-wire-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+          <EditableCell
+            value={specEdits[`${groupKey}-cond-diam-label`] ?? "- Conductor Diameter (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-cond-diam-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-1 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-cond-diam-val`] ?? item.result.spec.conductorDiameter.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-cond-diam-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+
+      {/* 6.2 Insulation */}
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">6.2</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-label`] ?? "Insulation"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-insul-val`] ?? (items[0].params.insulationMaterial === 'XLPE' ? 'Extruded XLPE' : 'Extruded PVC')}
+            value={specEdits[`${groupKey}-insul-val`] ?? (firstItem.params.insulationMaterial === 'XLPE' ? 'Extruded XLPE' : 'Extruded PVC')}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-val`]: val }))}
           />
         </td>
       </tr>
-      {items[0].params.armorType !== 'Unarmored' && (
-        <tr>
-          <td className="border border-slate-400 p-2 text-center"></td>
-          <td className="border border-slate-400 p-2 pl-4 font-medium">
-            <EditableCell
-              value={specEdits[`${groupKey}-armour-label`] ?? "- Armour"}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armour-label`]: val }))}
-              align="left"
-              bold={true}
-            />
-          </td>
-          <td className="border border-slate-400 p-2 text-center"></td>
-          <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
-            <EditableCell
-              value={specEdits[`${groupKey}-armour-val`] ?? items[0].params.armorType}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armour-val`]: val }))}
-            />
-          </td>
-        </tr>
-      )}
       <tr>
-        <td className="border border-slate-400 p-2 text-center"></td>
-        <td className="border border-slate-400 p-2 pl-4 font-medium">
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-sheath-label`] ?? (items[0].params.cores === 1 ? "- Sheath" : "- Outer Sheath")}
+            value={specEdits[`${groupKey}-insul-thick-label`] ?? "- Thickness (Nominal)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-thick-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-1 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-insul-thick-val`] ?? item.result.spec.insulationThickness.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-thick-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-diam-label`] ?? "- Diameter Over Insulation (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-diam-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-1 text-center">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-insul-diam-val`] ?? item.result.spec.coreDiameter.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-insul-diam-val`]: val }))}
+            />
+          </td>
+        ))}
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-1 text-center"></td>
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-color-label`] ?? "- Core Identification"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-color-label`]: val }))}
+            align="left"
+          />
+        </td>
+        <td className="border border-slate-400 p-1 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-1 text-center italic">
+          <EditableCell
+            value={specEdits[`${groupKey}-insul-color-val`] ?? getDefaultInsulationColor(firstItem.params.cores, (firstItem.params.earthingSize || 0) > 0, isMV, false, firstItem.params.formationType)}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-insul-color-val`]: val }))}
+          />
+        </td>
+      </tr>
+
+      {/* 6.3 Assembly & Inner Sheath */}
+      {firstItem.params.cores > 1 && (
+        <>
+          <tr>
+            <td className="border border-slate-400 p-2 text-center">6.3</td>
+            <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+              <EditableCell
+                value={specEdits[`${groupKey}-inner-sheath-label`] ?? "Inner Sheath / Filler"}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-label`]: val }))}
+                align="left"
+                bold={true}
+              />
+            </td>
+            <td className="border border-slate-400 p-2 text-center">-</td>
+            <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+              <EditableCell
+                value={specEdits[`${groupKey}-inner-sheath-val`] ?? "Extruded PVC"}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-sheath-val`]: val }))}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td className="border border-slate-400 p-1 text-center"></td>
+            <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+              <EditableCell
+                value={specEdits[`${groupKey}-inner-diam-label`] ?? "- Diameter Over Inner Sheath"}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-inner-diam-label`]: val }))}
+                align="left"
+              />
+            </td>
+            <td className="border border-slate-400 p-1 text-center">mm</td>
+            {items.map((item, idx) => (
+              <td key={idx} className="border border-slate-400 p-1 text-center">
+                <EditableCell
+                  value={specEdits[`${item.params.id || idx}-inner-diam-val`] ?? item.result.spec.laidUpDiameter.toFixed(1).replace('.', ',')}
+                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-inner-diam-val`]: val }))}
+                />
+              </td>
+            ))}
+          </tr>
+        </>
+      )}
+
+      {/* 6.4 Armour */}
+      {firstItem.params.armorType !== 'Unarmored' && (
+        <>
+          <tr>
+            <td className="border border-slate-400 p-2 text-center">6.4</td>
+            <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+              <EditableCell
+                value={specEdits[`${groupKey}-armour-label`] ?? "Armour"}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armour-label`]: val }))}
+                align="left"
+                bold={true}
+              />
+            </td>
+            <td className="border border-slate-400 p-2 text-center">-</td>
+            <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+              <EditableCell
+                value={specEdits[`${groupKey}-armour-val`] ?? firstItem.params.armorType}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armour-val`]: val }))}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td className="border border-slate-400 p-1 text-center"></td>
+            <td className="border border-slate-400 p-1 pl-8 text-slate-600">
+              <EditableCell
+                value={specEdits[`${groupKey}-armour-size-label`] ?? "- Armour Size"}
+                onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-armour-size-label`]: val }))}
+                align="left"
+              />
+            </td>
+            <td className="border border-slate-400 p-1 text-center">mm</td>
+            {items.map((item, idx) => (
+              <td key={idx} className="border border-slate-400 p-1 text-center">
+                <EditableCell
+                  value={specEdits[`${item.params.id || idx}-armour-size-val`] ?? item.result.spec.armorWireDiameter.toFixed(2).replace('.', ',')}
+                  onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-armour-size-val`]: val }))}
+                />
+              </td>
+            ))}
+          </tr>
+        </>
+      )}
+
+      {/* 6.5 Outer Sheath */}
+      <tr>
+        <td className="border border-slate-400 p-2 text-center">{firstItem.params.armorType !== 'Unarmored' ? '6.5' : (firstItem.params.cores > 1 ? '6.4' : '6.3')}</td>
+        <td className="border border-slate-400 p-2 pl-4 font-bold text-slate-700">
+          <EditableCell
+            value={specEdits[`${groupKey}-sheath-label`] ?? "Outer Sheath"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-sheath-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
         <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
           <EditableCell
-            value={specEdits[`${groupKey}-sheath-val`] ?? "Extruded PVC / PE"}
+            value={specEdits[`${groupKey}-sheath-val`] ?? `Extruded ${firstItem.params.sheathMaterial}`}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-sheath-val`]: val }))}
           />
         </td>
       </tr>
       <tr>
         <td className="border border-slate-400 p-1 text-center"></td>
-        <td className="border border-slate-400 p-1 pl-8 font-medium">
+        <td className="border border-slate-400 p-1 pl-8 text-slate-600">
           <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-label`] ?? "Overall Diameter (Approx.)"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
+            value={specEdits[`${groupKey}-sheath-thick-label`] ?? "- Thickness (Nominal)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-sheath-thick-label`]: val }))}
             align="left"
           />
         </td>
-        <td className="border border-slate-400 p-1 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-overall-diam-unit`] ?? "mm"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-1 text-center">mm</td>
         {items.map((item, idx) => (
           <td key={idx} className="border border-slate-400 p-1 text-center">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(1).replace('.', ',')}
-              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
+              value={specEdits[`${item.params.id || idx}-sheath-thick-val`] ?? item.result.spec.sheathThickness.toFixed(2).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-sheath-thick-val`]: val }))}
             />
           </td>
         ))}
       </tr>
+      <tr className="bg-slate-50 font-bold">
+        <td className="border border-slate-400 p-2 text-center"></td>
+        <td className="border border-slate-400 p-2 pl-8 text-slate-900">
+          <EditableCell
+            value={specEdits[`${groupKey}-overall-diam-label`] ?? "- Overall Diameter (Approx.)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-overall-diam-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center italic">mm</td>
+        {items.map((item, idx) => (
+          <td key={idx} className="border border-slate-400 p-2 text-center text-blue-900">
+            <EditableCell
+              value={specEdits[`${item.params.id || idx}-overall-diam-val`] ?? item.result.spec.overallDiameter.toFixed(1).replace('.', ',')}
+              onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-overall-diam-val`]: val }))}
+              bold={true}
+            />
+          </td>
+        ))}
+      </tr>
+
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">7</td>
+        <td colSpan={2 + items.length} className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-tech-data-label`] ?? "TECHNICAL DATA"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-tech-data-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+      </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">7</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center">7.1</td>
+        <td className="border border-slate-400 p-2 pl-4 text-slate-700 font-bold">
           <EditableCell
             value={specEdits[`${groupKey}-dc-res-label`] ?? "Max. DC Resistance at 20°C"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-label`]: val }))}
@@ -1974,14 +1496,9 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-dc-res-unit`] ?? "Ohm/km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-dc-res-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center">Ohm/km</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center font-mono">
             <EditableCell
               value={specEdits[`${item.params.id || idx}-dc-res-val`] ?? (item.result.electrical.maxDcResistance?.toFixed(4).replace('.', ',') || '-')}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-dc-res-val`]: val }))}
@@ -1990,46 +1507,56 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
         ))}
       </tr>
       <tr>
-        <td className="border border-slate-400 p-2 text-center">8</td>
-        <td className="border border-slate-400 p-2 font-medium">
+        <td className="border border-slate-400 p-2 text-center">7.2</td>
+        <td className="border border-slate-400 p-2 pl-4 text-slate-700 font-bold">
           <EditableCell
-            value={specEdits[`${groupKey}-net-weight-label`] ?? "Net Weight (Approx.)"}
+            value={specEdits[`${groupKey}-ac-test-label`] ?? "AC Test Voltage (5 mins)"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">kV</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center">
+          <EditableCell
+            value={specEdits[`${groupKey}-ac-test-val`] ?? (isMV ? 'See Standard' : '3,5')}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-ac-test-val`]: val }))}
+          />
+        </td>
+      </tr>
+
+      <tr className="bg-slate-100">
+        <td className="border border-slate-400 p-2 text-center font-bold">8</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-net-weight-label`] ?? "NET WEIGHT (APPROX.)"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-net-weight-unit`] ?? "Kg/Km"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-net-weight-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">kg/km</td>
         {items.map((item, idx) => (
-          <td key={idx} className="border border-slate-400 p-2 text-center">
+          <td key={idx} className="border border-slate-400 p-2 text-center font-bold text-indigo-700">
             <EditableCell
-              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? item.result.bom.totalWeight.toFixed(0).replace('.', ',')}
+              value={specEdits[`${item.params.id || idx}-net-weight-val`] ?? Math.round(item.result.bom.totalWeight).toLocaleString('id-ID')}
               onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${item.params.id || idx}-net-weight-val`]: val }))}
+              bold={true}
             />
           </td>
         ))}
       </tr>
-      <tr>
-        <td className="border border-slate-400 p-2 text-center">9</td>
-        <td className="border border-slate-400 p-2 font-medium">
+      <tr className="bg-slate-50">
+        <td className="border border-slate-400 p-2 text-center font-bold">9</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
           <EditableCell
-            value={specEdits[`${groupKey}-std-length-label`] ?? "Standard length"}
+            value={specEdits[`${groupKey}-std-length-label`] ?? "STANDARD LENGTH"}
             onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-label`]: val }))}
             align="left"
             bold={true}
           />
         </td>
-        <td className="border border-slate-400 p-2 text-center">
-          <EditableCell
-            value={specEdits[`${groupKey}-std-length-unit`] ?? "Meter"}
-            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-std-length-unit`]: val }))}
-          />
-        </td>
+        <td className="border border-slate-400 p-2 text-center font-bold">m</td>
         {items.map((item, idx) => {
           const packing = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
           return (
@@ -2042,6 +1569,25 @@ function renderGeneralSpec(groupKey: string, items: { params: CableDesignParams,
             </td>
           );
         })}
+      </tr>
+      <tr>
+        <td className="border border-slate-400 p-2 text-center font-bold">10</td>
+        <td className="border border-slate-400 p-2 font-bold uppercase tracking-wider">
+          <EditableCell
+            value={specEdits[`${groupKey}-packaging-label`] ?? "PACKAGING"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-label`]: val }))}
+            align="left"
+            bold={true}
+          />
+        </td>
+        <td className="border border-slate-400 p-2 text-center">-</td>
+        <td colSpan={items.length} className="border border-slate-400 p-2 text-center font-bold">
+          <EditableCell
+            value={specEdits[`${groupKey}-packaging-val`] ?? "Non-Returnable Wooden Drum"}
+            onChange={(val) => setSpecEdits(prev => ({ ...prev, [`${groupKey}-packaging-val`]: val }))}
+            bold={true}
+          />
+        </td>
       </tr>
     </>
   );
