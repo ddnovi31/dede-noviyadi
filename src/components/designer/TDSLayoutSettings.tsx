@@ -120,6 +120,13 @@ const AVAILABLE_KEYS = [
   { label: 'Armor Weight', value: 'result.bom.armorWeight' },
   { label: 'Sheath Weight', value: 'result.bom.sheathWeight' },
   { label: 'Total Weight', value: 'result.bom.totalWeight' },
+  
+  { label: '--- Detailed Spec ---', value: 'group:det' },
+  { label: 'Diameter Under Armor', value: 'result.spec.diameterUnderArmor' },
+  { label: 'Diameter Over Armor', value: 'result.spec.diameterOverArmor' },
+  { label: 'Average Core Diameter', value: 'params.coreDiameter' },
+  { label: 'Earthing Size', value: 'params.earthingSize' },
+  { label: 'Packing ID', value: 'packing.selectedDrum.id' },
 ];
 
 export default function TDSLayoutDesigner() {
@@ -144,11 +151,14 @@ export default function TDSLayoutDesigner() {
     };
   };
 
-  const currentLayout = layouts[selectedStandard] || { 
-    standard: selectedStandard, 
-    rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
-    letterhead: normalizeLetterhead({})
-  };
+  const rawLayout = layouts[selectedStandard];
+  const currentLayout: TDSLayoutConfig = rawLayout 
+    ? { ...rawLayout, letterhead: normalizeLetterhead(rawLayout.letterhead) }
+    : { 
+        standard: selectedStandard, 
+        rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
+        letterhead: normalizeLetterhead({})
+      };
 
   const saveLayout = (newRows: TDSRowConfig[], newLetterhead?: TDSLetterhead) => {
     setLayouts(prev => {
@@ -179,9 +189,9 @@ export default function TDSLayoutDesigner() {
       };
       
       const newRow: TDSRowConfig = {
-        id: `row-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         index: (existing.rows.length + 1).toString(),
-        label: 'New Row',
+        label: 'New Technical Row',
         unit: '-',
         valueKey: 'params.size',
         colSpan: 1
@@ -191,11 +201,20 @@ export default function TDSLayoutDesigner() {
         ...prev,
         [selectedStandard]: {
           ...existing,
-          rows: [...existing.rows, newRow] // Ensure it's at the VERY end
+          rows: [...existing.rows, newRow]
         }
       };
-      console.log("Adding new row to standard:", selectedStandard, newRow);
+      
       safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+      
+      // Scroll into view logic (using timeout to ensure DOM update)
+      setTimeout(() => {
+        const table = document.querySelector('table');
+        if (table) {
+          table.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, 100);
+
       return updated;
     });
   };
@@ -308,7 +327,7 @@ export default function TDSLayoutDesigner() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
@@ -358,12 +377,12 @@ export default function TDSLayoutDesigner() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Sidebar - Standards Select */}
           <div className="xl:col-span-2 space-y-4">
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 sticky top-8">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Settings className="w-3 h-3" />
                 Standards
               </h3>
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+              <div className="space-y-2 max-h-[75vh] overflow-y-auto pr-1 custom-scrollbar">
                 {CABLE_STANDARDS.map((std) => (
                   <button
                     key={std.value}
@@ -379,152 +398,181 @@ export default function TDSLayoutDesigner() {
                 ))}
               </div>
             </div>
-
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <FileJson className="w-3 h-3" />
-                Configuration
-              </h3>
-              <div className="space-y-4">
-                {/* Header Management */}
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">HEADER SECTIONS</h4>
-                  {['left', 'center', 'right'].map((pos) => (
-                    <div key={pos} className="mb-3 last:mb-0">
-                      <label className="text-[9px] font-bold text-indigo-600 uppercase mb-1 block">{pos}</label>
-                      <textarea
-                        value={currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.text || ''}
-                        onChange={(e) => updateSectionText('header', pos as 'left'|'center'|'right', e.target.value)}
-                        placeholder={`Header ${pos} text...`}
-                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-12 mb-1"
-                      />
-                      <div className="flex items-center gap-2">
-                        <label className="px-2 py-1 bg-white border border-slate-200 rounded text-[8px] font-bold cursor-pointer hover:bg-slate-50">
-                          {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image ? 'Change Img' : 'Add Img'}
-                          <input type="file" accept="image/*" onChange={(e) => handleImageUpload('header', pos as 'left'|'center'|'right', e)} className="hidden" />
-                        </label>
-                        {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image && (
-                          <button 
-                            onClick={() => {
-                              const lh = { ...currentLayout.letterhead };
-                              if (lh.header?.[pos as 'left'|'center'|'right']) lh.header[pos as 'left'|'center'|'right'].image = undefined;
-                              updateLetterhead(lh);
-                            }}
-                            className="text-[8px] text-rose-500 font-bold"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Main Labels Compatibility */}
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">TABLE LABELS</h4>
-                  <div className="space-y-2">
-                    <input 
-                      type="text" 
-                      value={currentLayout.letterhead?.title || ''} 
-                      onChange={(e) => updateLetterhead({ title: e.target.value })}
-                      placeholder="Main Title (e.g. TDS)"
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold"
-                    />
-                    <input 
-                      type="text" 
-                      value={currentLayout.letterhead?.subtitle || ''} 
-                      onChange={(e) => updateLetterhead({ subtitle: e.target.value })}
-                      placeholder="Subtitle"
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold"
-                    />
-                  </div>
-                </div>
-
-                {/* Footer Management */}
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">FOOTER SECTIONS</h4>
-                  {['left', 'center', 'right'].map((pos) => (
-                    <div key={pos} className="mb-3 last:mb-0">
-                      <label className="text-[9px] font-bold text-indigo-600 uppercase mb-1 block">{pos}</label>
-                      <textarea
-                        value={currentLayout.letterhead?.footer?.[pos as 'left'|'center'|'right']?.text || ''}
-                        onChange={(e) => updateSectionText('footer', pos as 'left'|'center'|'right', e.target.value)}
-                        placeholder={`Footer ${pos} text...`}
-                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-12 mb-1"
-                      />
-                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload('footer', pos as 'left'|'center'|'right', e)} className="text-[8px] block w-full" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
-          {/* Main Content - Row Editor */}
-          <div className="xl:col-span-6 space-y-4">
-            <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden">
+          {/* Main Content Area */}
+          <div className="xl:col-span-10 space-y-6">
+            {/* 1. Konfigurasi Kop Surat */}
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <FileJson className="w-3 h-3" />
+                 KONFIGURASI KOP SURAT
+               </h3>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 {/* Header Sections */}
+                 <div className="space-y-4">
+                   <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+                     Header Sections
+                   </h4>
+                   <div className="grid grid-cols-3 gap-3">
+                     {['left', 'center', 'right'].map((pos) => (
+                       <div key={pos} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                         <label className="text-[9px] font-bold text-slate-500 uppercase mb-2 block">{pos} Side</label>
+                         <textarea
+                           value={currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.text || ''}
+                           onChange={(e) => updateSectionText('header', pos as 'left'|'center'|'right', e.target.value)}
+                           placeholder="Text..."
+                           className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-20 mb-2"
+                         />
+                         <div className="flex flex-col gap-1.5">
+                           <label className="flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[8px] font-black cursor-pointer hover:bg-indigo-100 transition-colors">
+                             {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image ? 'CHANGE IMG' : 'UPLOAD IMG'}
+                             <input type="file" accept="image/*" onChange={(e) => handleImageUpload('header', pos as 'left'|'center'|'right', e)} className="hidden" />
+                           </label>
+                           {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image && (
+                             <button 
+                               onClick={() => {
+                                 const lh = { ...currentLayout.letterhead };
+                                 if (lh.header?.[pos as 'left'|'center'|'right']) lh.header[pos as 'left'|'center'|'right'].image = undefined;
+                                 updateLetterhead(lh);
+                               }}
+                               className="text-[8px] text-rose-500 font-bold hover:underline"
+                             >
+                               Remove
+                             </button>
+                           )}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Footer Sections */}
+                 <div className="space-y-4">
+                   <h4 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 bg-rose-600 rounded-full"></div>
+                     Footer Sections
+                   </h4>
+                   <div className="grid grid-cols-3 gap-3">
+                     {['left', 'center', 'right'].map((pos) => (
+                       <div key={pos} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                         <label className="text-[9px] font-bold text-slate-500 uppercase mb-2 block">{pos} Side</label>
+                         <textarea
+                           value={currentLayout.letterhead?.footer?.[pos as 'left'|'center'|'right']?.text || ''}
+                           onChange={(e) => updateSectionText('footer', pos as 'left'|'center'|'right', e.target.value)}
+                           placeholder="Text..."
+                           className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-20 mb-2"
+                         />
+                         <label className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[8px] font-black cursor-pointer hover:bg-rose-100 transition-colors">
+                           UPLOAD IMG
+                           <input type="file" accept="image/*" onChange={(e) => handleImageUpload('footer', pos as 'left'|'center'|'right', e)} className="hidden" />
+                         </label>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               </div>
+            </div>
+
+            {/* 2. Table Labels */}
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <Settings className="w-3 h-3" />
+                 TABLE LABEL
+               </h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                   <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-widest">Main Title (e.g. TECHNICAL DATA SHEET)</label>
+                   <input 
+                     type="text" 
+                     value={currentLayout.letterhead?.title || ''} 
+                     onChange={(e) => updateLetterhead({ title: e.target.value })}
+                     placeholder="Table Main Title..."
+                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                   />
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-widest">Subtitle (e.g. Low Voltage Cable)</label>
+                   <input 
+                     type="text" 
+                     value={currentLayout.letterhead?.subtitle || ''} 
+                     onChange={(e) => updateLetterhead({ subtitle: e.target.value })}
+                     placeholder="Table Subtitle..."
+                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                   />
+                 </div>
+               </div>
+            </div>
+
+            {/* 3. Layout Configuration (Row Editor) */}
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none select-none">
                 <FileJson className="w-24 h-24 text-indigo-600" />
               </div>
 
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div>
-                  <h2 className="text-lg font-black text-slate-900">{selectedStandard}</h2>
-                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Layout Configuration</p>
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex flex-col">
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">{selectedStandard}</h2>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
+                    <p className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-[0.2em]">LAYOUT CONFIGURATION</p>
+                  </div>
                 </div>
+                
                 <button 
                   onClick={addRow}
                   type="button"
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100 cursor-pointer"
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black hover:bg-indigo-700 active:scale-95 transition-all shadow-xl shadow-indigo-100 cursor-pointer border-0"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Row
+                  ADD NEW ROW
                 </button>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Index</th>
-                      <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Label</th>
-                      <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
-                      <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Source / Value</th>
-                      <th className="p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Formatting</th>
-                      <th className="p-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                    <tr className="bg-slate-50/50">
+                      <th className="p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Index</th>
+                      <th className="p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 w-1/4">Label Description</th>
+                      <th className="p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
+                      <th className="p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Source Value Mapping</th>
+                      <th className="p-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Style</th>
+                      <th className="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentLayout.rows.map((row, idx) => (
-                      <tr key={row.id} className={`group hover:bg-slate-50/50 transition-colors ${row.isHeader ? 'bg-indigo-50/30' : ''}`}>
-                        <td className="p-2 border-b border-slate-100">
+                      <tr key={row.id} className={`group hover:bg-slate-50/80 transition-all ${row.isHeader ? 'bg-indigo-50/20' : ''}`}>
+                        <td className="p-4 border-b border-slate-100">
                           <input 
                             type="text" 
                             value={row.index} 
                             onChange={(e) => updateRow(row.id, { index: e.target.value })}
-                            className="w-12 bg-transparent border-none focus:ring-0 text-[10px] font-bold text-slate-900 p-1"
+                            className="w-16 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-900 p-2 focus:ring-1 focus:ring-indigo-500"
                           />
                         </td>
-                        <td className="p-2 border-b border-slate-100">
+                        <td className="p-4 border-b border-slate-100">
                           <input 
                             type="text" 
                             value={row.label} 
                             onChange={(e) => updateRow(row.id, { label: e.target.value })}
-                            className={`w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold p-1 ${row.isHeader ? 'text-indigo-700 uppercase' : 'text-slate-700'}`}
+                            className={`w-full bg-white border border-slate-200 rounded-lg text-[10px] font-bold p-2 focus:ring-1 focus:ring-indigo-500 ${row.isHeader ? 'text-indigo-700 uppercase' : 'text-slate-700'}`}
                           />
                         </td>
-                        <td className="p-2 border-b border-slate-100">
+                        <td className="p-4 border-b border-slate-100">
                           {!row.isHeader && (
                             <input 
                               type="text" 
                               value={row.unit} 
                               onChange={(e) => updateRow(row.id, { unit: e.target.value })}
-                              className="w-12 bg-transparent border-none focus:ring-0 text-[10px] text-slate-500 p-1"
+                              className="w-16 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-500 p-2 font-bold"
                             />
                           )}
                         </td>
-                        <td className="p-2 border-b border-slate-100">
+                        <td className="p-4 border-b border-slate-100">
                           {!row.isHeader && (
                             <div className="flex flex-col gap-1">
                               <select 
@@ -538,7 +586,7 @@ export default function TDSLayoutDesigner() {
                                     updateRow(row.id, { valueKey: val });
                                   }
                                 }}
-                                className="bg-white border border-slate-200 rounded-md text-[10px] font-bold p-1 outline-none"
+                                className="bg-white border border-slate-200 rounded-lg text-[10px] font-bold p-2 outline-none focus:ring-1 focus:ring-indigo-500"
                               >
                                 {AVAILABLE_KEYS.map(k => (
                                   <option key={k.value} value={k.value} disabled={k.value.startsWith('group:')}>
@@ -551,59 +599,58 @@ export default function TDSLayoutDesigner() {
                                   type="text" 
                                   value={row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : row.valueKey}
                                   onChange={(e) => updateRow(row.id, { valueKey: `const:${e.target.value}` })}
-                                  placeholder="Manual value..."
-                                  className="w-full bg-slate-50 border border-slate-100 rounded-md text-[10px] p-1 font-mono"
+                                  placeholder="Type manual text..."
+                                  className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[9px] p-2 font-mono text-indigo-600"
                                 />
                               )}
                             </div>
                           )}
                         </td>
-                        <td className="p-2 border-b border-slate-100">
-                          <div className="flex flex-wrap items-center gap-1 justify-center max-w-[120px]">
+                        <td className="p-4 border-b border-slate-100">
+                          <div className="flex flex-wrap items-center gap-1.5 justify-center">
                             <button 
                               onClick={() => updateRow(row.id, { isHeader: !row.isHeader })}
-                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.isHeader ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
-                              title="Toggle Header"
+                              className={`px-2 py-1.5 rounded-lg text-[8px] font-black transition-all ${row.isHeader ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                             >
                               HEAD
                             </button>
                             <button 
                               onClick={() => updateRow(row.id, { bold: !row.bold })}
-                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.bold ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
-                              title="Bold"
+                              className={`px-2 py-1.5 rounded-lg text-[8px] font-black transition-all ${row.bold ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                             >
-                              B
+                              BOLD
                             </button>
                             <button 
                               onClick={() => updateRow(row.id, { colSpan: row.colSpan === 3 ? 1 : 3 })}
-                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.colSpan === 3 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
-                              title="Merge Cell (Span 3)"
+                              className={`px-2 py-1.5 rounded-lg text-[8px] font-black transition-all ${row.colSpan === 3 ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                             >
                               MERGE
                             </button>
                           </div>
                         </td>
-                        <td className="p-2 border-b border-slate-100">
+                        <td className="p-4 border-b border-slate-100">
                           <div className="flex items-center justify-end gap-1">
-                            <button 
-                              onClick={() => moveRow(idx, 'up')} 
-                              disabled={idx === 0}
-                              className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30"
-                            >
-                              <MoveUp className="w-3 h-3" />
-                            </button>
-                            <button 
-                              onClick={() => moveRow(idx, 'down')}
-                              disabled={idx === currentLayout.rows.length - 1}
-                              className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30"
-                            >
-                              <MoveDown className="w-3 h-3" />
-                            </button>
+                            <div className="flex flex-col">
+                              <button 
+                                onClick={() => moveRow(idx, 'up')} 
+                                disabled={idx === 0}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-colors"
+                              >
+                                <MoveUp className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={() => moveRow(idx, 'down')}
+                                disabled={idx === currentLayout.rows.length - 1}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-colors"
+                              >
+                                <MoveDown className="w-3 h-3" />
+                              </button>
+                            </div>
                             <button 
                               onClick={() => deleteRow(row.id)}
-                              className="p-2 text-slate-300 hover:text-rose-600"
+                              className="p-2.5 bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-all"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -613,70 +660,64 @@ export default function TDSLayoutDesigner() {
                 </table>
               </div>
 
-              <div className="mt-8 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1 flex items-center gap-2">
+              <div className="mt-8 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                <p className="text-[10px] text-indigo-600/70 leading-relaxed font-bold italic flex items-center gap-2">
                   <Database className="w-3 h-3" />
-                  Implementation Note
-                </h4>
-                <p className="text-[10px] text-amber-600 leading-relaxed font-bold">
-                  These settings will override the standard TDS layout in the Project Review tab for the selected cable standard. 
-                  Static values can be prefixed with <code className="bg-amber-100 px-1 rounded font-mono">const:</code> to display literal text.
+                  Tip: Use const: prefix for literal text values (e.g. const:PT MULTI KABEL)
                 </p>
               </div>
             </div>
-          </div>
 
-          {/* Right Content - Live Preview */}
-          <div className="xl:col-span-4 space-y-4">
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 sticky top-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+            {/* 4. LIVE PREVIEW */}
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10 flex items-center gap-2">
                 <BarChart3 className="w-3 h-3 text-indigo-600" />
-                Live Preview (TDS Mockup)
+                LIVE PREVIEW
               </h3>
               
-              <div className="border border-slate-300 p-6 rounded shadow-sm bg-white overflow-hidden text-[9px]">
+              <div className="max-w-4xl mx-auto border-2 border-slate-200 p-10 rounded-xl bg-white shadow-2xl overflow-hidden relative">
                 {/* Header Mockup */}
-                <div className="grid grid-cols-3 gap-2 pb-4 border-b-2 border-slate-800 mb-4 items-start">
+                <div className="grid grid-cols-3 gap-6 pb-6 border-b-2 border-slate-800 mb-6 items-start">
                   {['left', 'center', 'right'].map((pos) => {
                     const section = currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right'];
                     return (
                       <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
-                        {section?.image && <img src={section.image} alt={pos} className="max-h-12 w-auto mb-1" />}
-                        <p className="text-[7px] text-slate-800 whitespace-pre-line font-bold leading-tight">{section?.text}</p>
+                        {section?.image && <img src={section.image} alt={pos} className="max-h-20 w-auto mb-2" />}
+                        <p className="text-[10px] text-slate-800 whitespace-pre-line font-black leading-tight tracking-tight">{section?.text}</p>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="text-center mb-4">
-                  <h3 className="font-black text-[10px] uppercase underline decoration-1 underline-offset-2 tracking-wide">{currentLayout.letterhead?.title}</h3>
-                  <p className="font-bold text-slate-600 text-[8px]">{currentLayout.letterhead?.subtitle}</p>
+                <div className="text-center mb-6">
+                  <h3 className="font-black text-sm uppercase underline underline-offset-4 decoration-2 tracking-widest">{currentLayout.letterhead?.title}</h3>
+                  <p className="font-bold text-slate-600 text-xs mt-1">{currentLayout.letterhead?.subtitle}</p>
                 </div>
 
-                <table className="w-full border-collapse border border-slate-800">
+                <table className="w-full border-collapse border-2 border-slate-800 text-[10px]">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="border border-slate-800 p-1 w-6">No</th>
-                      <th className="border border-slate-800 p-1 text-left">Description</th>
-                      <th className="border border-slate-800 p-1 w-10">Unit</th>
-                      <th className="border border-slate-800 p-1 text-center">Spec</th>
+                      <th className="border-2 border-slate-800 p-2 w-10 font-black">No</th>
+                      <th className="border-2 border-slate-800 p-2 text-left font-black">Description of Requirements</th>
+                      <th className="border-2 border-slate-800 p-2 w-20 font-black">Unit</th>
+                      <th className="border-2 border-slate-800 p-2 text-center font-black">Cable Specifications</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentLayout.rows.map((row) => (
-                      <tr key={row.id} className={row.isHeader ? 'bg-slate-100' : ''}>
-                        <td className="border border-slate-800 p-1 text-center font-bold">{row.index}</td>
+                      <tr key={row.id} className={row.isHeader ? 'bg-slate-100/50' : ''}>
+                        <td className="border-2 border-slate-800 p-2 text-center font-black">{row.index}</td>
                         <td 
-                          className={`border border-slate-800 p-1 ${row.isHeader ? 'font-black uppercase' : ''} ${row.bold ? 'font-black' : ''}`}
+                          className={`border-2 border-slate-800 p-2 ${row.isHeader ? 'font-black uppercase bg-slate-50' : ''} ${row.bold ? 'font-black' : ''}`}
                           colSpan={row.colSpan === 3 ? 3 : 1}
                         >
                           {row.label}
                         </td>
                         {row.colSpan !== 3 && (
                           <>
-                            <td className="border border-slate-800 p-1 text-center">{row.unit}</td>
-                            <td className="border border-slate-800 p-1 text-center text-slate-400 italic">
-                               {row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : '[Value]'}
+                            <td className="border-2 border-slate-800 p-2 text-center font-bold">{row.unit}</td>
+                            <td className="border-2 border-slate-800 p-2 text-center text-indigo-600 font-bold italic">
+                               {row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : '[Value Data]'}
                             </td>
                           </>
                         )}
@@ -686,23 +727,17 @@ export default function TDSLayoutDesigner() {
                 </table>
 
                 {/* Footer Mockup */}
-                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-200 mt-6 items-start">
+                <div className="grid grid-cols-3 gap-6 pt-6 border-t border-slate-200 mt-10 items-start">
                   {['left', 'center', 'right'].map((pos) => {
                     const section = currentLayout.letterhead?.footer?.[pos as 'left'|'center'|'right'];
                     return (
                       <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
-                        {section?.image && <img src={section.image} alt={pos} className="max-h-12 w-auto mb-1" />}
-                        <p className="text-[7px] text-slate-600 whitespace-pre-line font-medium leading-tight">{section?.text}</p>
+                        {section?.image && <img src={section.image} alt={pos} className="max-h-16 w-auto mb-2" />}
+                        <p className="text-[9px] text-slate-500 whitespace-pre-line font-bold leading-relaxed">{section?.text}</p>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="mt-6 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <p className="text-[9px] text-indigo-600 font-bold italic">
-                  This preview uses placeholder values to show the layout and formatting. Colors and fonts will match the final TDS document.
-                </p>
               </div>
             </div>
           </div>
