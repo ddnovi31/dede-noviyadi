@@ -6889,20 +6889,20 @@ export default function CableDesigner() {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Drum List</h4>
-                      <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2 px-1">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest shrink-0">Drum List</h4>
+                      <div className="flex flex-wrap gap-1.5 md:gap-2 justify-start sm:justify-end">
                         <button 
                           onClick={handleExportDrums}
-                          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 transition-all"
+                          className="text-[10px] md:text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-emerald-200 transition-all"
                           title="Export Drum Data (.drums)"
                         >
                           <Download className="w-3 h-3" />
-                          Export
+                          <span>Export</span>
                         </button>
-                        <label className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 transition-all cursor-pointer">
+                        <label className="text-[10px] md:text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-amber-200 transition-all cursor-pointer">
                           <Upload className="w-3 h-3" />
-                          Import
+                          <span>Import</span>
                           <input 
                             type="file" 
                             accept=".drums" 
@@ -6923,17 +6923,17 @@ export default function CableDesigner() {
                             };
                             setDrumData([...drumData, newDrum]);
                           }}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 transition-all"
+                          className="text-[10px] md:text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-indigo-200 transition-all"
                         >
                           <Plus className="w-3 h-3" />
-                          Add New Drum
+                          <span>Drum</span>
                         </button>
                         <button 
                           onClick={() => setDrumData(INITIAL_DRUM_DATA)}
-                          className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 transition-all"
+                          className="text-[10px] md:text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 bg-slate-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-slate-200 transition-all"
                         >
                           <Trash2 className="w-3 h-3" />
-                          Reset to Default
+                          <span>Reset</span>
                         </button>
                       </div>
                     </div>
