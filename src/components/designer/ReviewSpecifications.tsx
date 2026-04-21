@@ -52,30 +52,69 @@ export function ReviewSpecifications({
 
         return (
           <div key={groupKey} className={`bg-white p-8 rounded-sm shadow-sm border border-slate-300 overflow-x-auto print:shadow-none print:border-none print:p-2 print:m-0 print:overflow-visible print-scale ${groupIdx < groupedItemsList.length - 1 ? 'break-after-page' : ''} ${items.length > 4 ? 'print-landscape-page' : ''} ${printingGroupId === groupIdx ? 'is-printing' : ''} ${printingGroupId !== null && printingGroupId !== groupIdx ? 'print:hidden' : ''}`}>
-            <div className="flex justify-between items-center mb-6 print:hidden">
-              <div>
-                {printedSheets.has(groupIdx) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-md uppercase tracking-wider">
-                    <CheckCircle2 className="w-3 h-3" /> Printed
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => handlePrintSheet(groupIdx)}
-                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
-              >
-                <Printer className="w-3 h-3" /> Print This Sheet
-              </button>
-            </div>
-            
-            <div className="text-center mb-4 print:mb-2 space-y-1">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">
-                {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'TECHNICAL SPECIFICATION' : 'Technical Specifications'}
-              </h2>
-              <p className="text-xs text-slate-600 font-medium print:text-[10px]">
-                {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'All Aluminium Bare Conductor' : (p.standard === 'BS EN 50288-7' ? 'Instrument Cable' : (isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'))} {p.standard !== 'BS EN 50288-7' && p.standard !== 'SPLN 41-6 : 1981 AAC' && `(${p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)`}
-              </p>
-            </div>
+            {(() => {
+              let customLayout = null;
+              try {
+                const savedLayouts = typeof window !== 'undefined' ? JSON.parse(safeLocalStorage.getItem('tds_layouts') || '{}') : {};
+                customLayout = savedLayouts[p.standard];
+              } catch (e) {}
+
+              if (customLayout && customLayout.letterhead) {
+                const lh = customLayout.letterhead;
+                return (
+                  <div className="flex flex-col mb-6">
+                    <div className="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-4">
+                      {lh.showLogo && (
+                         <div className="w-20">
+                            {/* Logo Placeholder or User Image */}
+                            <img src="/logo.png" alt="Logo" className="w-full h-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                         </div>
+                      )}
+                      <div className="text-center flex-1">
+                        <h1 className="text-xl font-bold uppercase tracking-tight">{lh.companyName}</h1>
+                        <p className="text-[10px] text-slate-600 font-medium whitespace-pre-line">{lh.address}</p>
+                      </div>
+                      <div className="w-20 text-right text-[10px] font-bold">
+                        ORIGINAL
+                      </div>
+                    </div>
+                    <div className="text-center space-y-1">
+                       <h2 className="text-sm font-bold uppercase underline decoration-2 underline-offset-4">{lh.title}</h2>
+                       <p className="text-[10px] font-bold text-slate-700">{lh.subtitle}</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <div className="flex justify-between items-center mb-6 print:hidden">
+                    <div>
+                      {printedSheets.has(groupIdx) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-md uppercase tracking-wider">
+                          <CheckCircle2 className="w-3 h-3" /> Printed
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handlePrintSheet(groupIdx)}
+                      className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
+                    >
+                      <Printer className="w-3 h-3" /> Print This Sheet
+                    </button>
+                  </div>
+                  
+                  <div className="text-center mb-4 print:mb-2 space-y-1">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 print:text-xs">
+                      {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'TECHNICAL SPECIFICATION' : 'Technical Specifications'}
+                    </h2>
+                    <p className="text-xs text-slate-600 font-medium print:text-[10px]">
+                      {p.standard === 'SPLN 41-6 : 1981 AAC' ? 'All Aluminium Bare Conductor' : (p.standard === 'BS EN 50288-7' ? 'Instrument Cable' : (isMV ? 'Medium Voltage Cable' : 'Low Voltage Cable'))} {p.standard !== 'BS EN 50288-7' && p.standard !== 'SPLN 41-6 : 1981 AAC' && `(${p.cores > 1 ? 'Multi Core' : 'Single Core'} Power Cable)`}
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
 
             <table className="w-full border-collapse border border-slate-400 text-[10px] print:text-[9px] [&_td]:!py-2 [&_th]:!py-2 print:[&_td]:!py-1 print:[&_th]:!py-1">
               <thead>
@@ -152,16 +191,19 @@ function renderDynamicSpec(groupKey: string, items: { params: CableDesignParams,
       {layout.rows.map((row) => (
         <tr key={row.id} className={row.isHeader ? 'bg-slate-100' : ''}>
           <td className="border border-slate-400 p-2 text-center font-bold">{row.index}</td>
-          <td className={`border border-slate-400 p-2 font-bold ${row.isHeader ? 'uppercase tracking-wider' : 'pl-4'}`} colSpan={row.isHeader ? items.length + 2 : 1}>
+          <td 
+            className={`border border-slate-400 p-2 font-bold ${row.isHeader ? 'uppercase tracking-wider' : 'pl-4'} ${row.bold ? 'font-black' : ''}`} 
+            colSpan={(row.isHeader || row.colSpan === 3) ? items.length + 2 : 1}
+          >
             <EditableCell
               value={specEdits[`${groupKey}-${row.id}-label`] ?? row.label}
               onChange={(val) => setSpecEdits((prev: any) => ({ ...prev, [`${groupKey}-${row.id}-label`]: val }))}
               align="left"
               bold={true}
-              uppercase={row.isHeader}
+              uppercase={row.isHeader || row.uppercase}
             />
           </td>
-          {!row.isHeader && (
+          {!(row.isHeader || row.colSpan === 3) && (
             <>
               <td className="border border-slate-400 p-2 text-center">{row.unit}</td>
               {items.map((item, idx) => {

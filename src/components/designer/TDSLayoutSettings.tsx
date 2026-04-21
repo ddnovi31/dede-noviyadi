@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, ArrowLeft, MoveUp, MoveDown, Layout, FileJson, Settings, Database } from 'lucide-react';
+import { Save, Plus, Trash2, ArrowLeft, MoveUp, MoveDown, Layout, FileJson, Settings, Database, BarChart3 } from 'lucide-react';
 import { CABLE_STANDARDS } from '../../utils/designerData';
 import { safeLocalStorage } from '../../utils/safeLocalStorage';
 
@@ -13,12 +13,31 @@ export interface TDSRowConfig {
   bold?: boolean;
   uppercase?: boolean;
   color?: string;
+  colSpan?: number;
+}
+
+export interface TDSLetterhead {
+  companyName: string;
+  address: string;
+  title: string;
+  subtitle: string;
+  logoUrl?: string;
+  showLogo: boolean;
 }
 
 export interface TDSLayoutConfig {
   standard: string;
   rows: TDSRowConfig[];
+  letterhead: TDSLetterhead;
 }
+
+const DEFAULT_LETTERHEAD: TDSLetterhead = {
+  companyName: 'PT. MULTI KABEL',
+  address: 'Jl. Kawasan Industri No. 1, Jakarta, Indonesia',
+  title: 'TECHNICAL DATA SHEET',
+  subtitle: 'Power Cable Specifications',
+  showLogo: true
+};
 
 const DEFAULT_ROWS: TDSRowConfig[] = [
   { id: '1', index: '1', label: 'Manufactured', unit: '-', valueKey: 'const:MULTI KABEL', bold: true, uppercase: true },
@@ -35,30 +54,49 @@ const DEFAULT_ROWS: TDSRowConfig[] = [
 ];
 
 const AVAILABLE_KEYS = [
+  { label: '--- Static & Special ---', value: 'group:static' },
   { label: 'Static Text (use const:Prefix)', value: 'const:' },
   { label: 'Cable Designation', value: 'designation' },
+  { label: 'Packing Length (Drum)', value: 'packing.standardLength' },
+  { label: 'Drum Type', value: 'packing.selectedDrum.type' },
+  
+  { label: '--- Parameters ---', value: 'group:params' },
   { label: 'Standard', value: 'params.standard' },
   { label: 'Voltage', value: 'params.voltage' },
   { label: 'Cores', value: 'params.cores' },
   { label: 'Size', value: 'params.size' },
   { label: 'Conductor Material', value: 'params.conductorMaterial' },
   { label: 'Conductor Type', value: 'params.conductorType' },
-  { label: 'Overall Diameter', value: 'result.spec.overallDiameter' },
-  { label: 'Total Weight', value: 'result.bom.totalWeight' },
-  { label: 'DC Resistance', value: 'result.electrical.maxDcResistance' },
-  { label: 'Short Circuit Capacity', value: 'result.electrical.shortCircuitCapacity' },
-  { label: 'Current Air', value: 'result.electrical.currentCapacityAir' },
-  { label: 'Current Ground', value: 'result.electrical.currentCapacityGround' },
+  { label: 'Insulation Material', value: 'params.insulationMaterial' },
+  { label: 'Armor Type', value: 'params.armorType' },
+  { label: 'Sheath Material', value: 'params.sheathMaterial' },
+  
+  { label: '--- Construction (Spec) ---', value: 'group:spec' },
+  { label: 'Conductor Diameter', value: 'result.spec.conductorDiameter' },
+  { label: 'Wire Count', value: 'result.spec.wireCount' },
+  { label: 'Insulation Thickness', value: 'result.spec.insulationThickness' },
+  { label: 'Core Diameter', value: 'result.spec.coreDiameter' },
   { label: 'Laid up Diameter', value: 'result.spec.laidUpDiameter' },
   { label: 'Inner Sheath Thickness', value: 'result.spec.innerCoveringThickness' },
   { label: 'Armor Thickness', value: 'result.spec.armorThickness' },
   { label: 'Outer Sheath Thickness', value: 'result.spec.sheathThickness' },
-  { label: 'Wire Count (Phase)', value: 'result.spec.phaseCore.wireCount' },
-  { label: 'Wire Diameter (Phase)', value: 'result.spec.phaseCore.wireDiameter' },
-  { label: 'Insulation Thickness (Phase)', value: 'result.spec.phaseCore.insulationThickness' },
-  { label: 'Messenger Size', value: 'params.earthingSize' },
-  { label: 'Standard Length', value: 'packing.standardLength' },
-  { label: 'Drum Type', value: 'packing.selectedDrum.type' },
+  { label: 'Overall Diameter', value: 'result.spec.overallDiameter' },
+  { label: 'Overall Diameter (Min)', value: 'result.spec.overallDiameterMin' },
+  { label: 'Overall Diameter (Max)', value: 'result.spec.overallDiameterMax' },
+  
+  { label: '--- Electrical Data ---', value: 'group:elec' },
+  { label: 'DC Resistance 20°C', value: 'result.electrical.maxDcResistance' },
+  { label: 'AC Resistance 70/90°C', value: 'result.electrical.maxAcResistance' },
+  { label: 'Current Air', value: 'result.electrical.currentCapacityAir' },
+  { label: 'Current Ground', value: 'result.electrical.currentCapacityGround' },
+  { label: 'Short Circuit Capacity (1s)', value: 'result.electrical.shortCircuitCapacity' },
+  
+  { label: '--- Weights (BOM) ---', value: 'group:bom' },
+  { label: 'Conductor Weight', value: 'result.bom.conductorWeight' },
+  { label: 'Insulation Weight', value: 'result.bom.insulationWeight' },
+  { label: 'Armor Weight', value: 'result.bom.armorWeight' },
+  { label: 'Sheath Weight', value: 'result.bom.sheathWeight' },
+  { label: 'Total Weight', value: 'result.bom.totalWeight' },
 ];
 
 export default function TDSLayoutDesigner() {
@@ -73,10 +111,21 @@ export default function TDSLayoutDesigner() {
     }
   });
 
-  const currentLayout = layouts[selectedStandard] || { standard: selectedStandard, rows: [...DEFAULT_ROWS] };
+  const currentLayout = layouts[selectedStandard] || { 
+    standard: selectedStandard, 
+    rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
+    letterhead: { ...DEFAULT_LETTERHEAD }
+  };
 
-  const saveLayout = (newRows: TDSRowConfig[]) => {
-    const updated = { ...layouts, [selectedStandard]: { standard: selectedStandard, rows: newRows } };
+  const saveLayout = (newRows: TDSRowConfig[], newLetterhead?: TDSLetterhead) => {
+    const updated = { 
+      ...layouts, 
+      [selectedStandard]: { 
+        standard: selectedStandard, 
+        rows: newRows,
+        letterhead: newLetterhead || currentLayout.letterhead || { ...DEFAULT_LETTERHEAD }
+      } 
+    };
     setLayouts(updated);
     safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
   };
@@ -87,7 +136,8 @@ export default function TDSLayoutDesigner() {
       index: (currentLayout.rows.length + 1).toString(),
       label: 'New Row',
       unit: '-',
-      valueKey: 'params.size'
+      valueKey: 'params.size',
+      colSpan: 1
     };
     saveLayout([...currentLayout.rows, newRow]);
   };
@@ -110,12 +160,44 @@ export default function TDSLayoutDesigner() {
     }
   };
 
+  const exportToDisk = () => {
+    const dataStr = JSON.stringify(layouts, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = 'cable_tds_layouts.json';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const importFromDisk = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = JSON.parse(ev.target?.result as string);
+        if (confirm('Replace current layouts with imported file?')) {
+          setLayouts(imported);
+          safeLocalStorage.setItem('tds_layouts', JSON.stringify(imported));
+        }
+      } catch (err) {
+        alert('Invalid JSON file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const resetToDefault = () => {
     if (confirm('Reset to default layout for this standard?')) {
       const { [selectedStandard]: _, ...rest } = layouts;
       setLayouts(rest);
       safeLocalStorage.setItem('tds_layouts', JSON.stringify(rest));
     }
+  };
+
+  const updateLetterhead = (updates: Partial<TDSLetterhead>) => {
+    saveLayout(currentLayout.rows, { ...currentLayout.letterhead, ...updates });
   };
 
   return (
@@ -133,6 +215,18 @@ export default function TDSLayoutDesigner() {
           </div>
           
           <div className="flex items-center gap-2">
+            <label className="px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all flex items-center gap-2 cursor-pointer">
+              <Database className="w-4 h-4" />
+              Load Layout
+              <input type="file" accept=".json" onChange={importFromDisk} className="hidden" />
+            </label>
+            <button 
+              onClick={exportToDisk} 
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save to Hardisk
+            </button>
             <button 
               onClick={() => {
                 if (window.opener) {
@@ -155,20 +249,20 @@ export default function TDSLayoutDesigner() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Sidebar - Standards Select */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="xl:col-span-2 space-y-4">
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Settings className="w-3 h-3" />
-                Cable Standards
+                Standards
               </h3>
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
                 {CABLE_STANDARDS.map((std) => (
                   <button
                     key={std.value}
                     onClick={() => setSelectedStandard(std.value)}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                    className={`w-full text-left px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all ${
                       selectedStandard === std.value 
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 italic' 
                         : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -179,10 +273,45 @@ export default function TDSLayoutDesigner() {
                 ))}
               </div>
             </div>
+
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <FileJson className="w-3 h-3" />
+                Kop Surat
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 mb-1 block">COMPANY NAME</label>
+                  <input 
+                    type="text" 
+                    value={currentLayout.letterhead?.companyName || ''} 
+                    onChange={(e) => updateLetterhead({ companyName: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 mb-1 block">ADDRESS</label>
+                  <textarea 
+                    value={currentLayout.letterhead?.address || ''} 
+                    onChange={(e) => updateLetterhead({ address: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-[10px] font-bold h-20"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 mb-1 block">TITLE</label>
+                  <input 
+                    type="text" 
+                    value={currentLayout.letterhead?.title || ''} 
+                    onChange={(e) => updateLetterhead({ title: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs font-bold"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Main Content - Row Editor */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="xl:col-span-6 space-y-4">
             <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5">
                 <FileJson className="w-24 h-24 text-indigo-600" />
@@ -210,7 +339,7 @@ export default function TDSLayoutDesigner() {
                       <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Label</th>
                       <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Unit</th>
                       <th className="p-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Source / Value</th>
-                      <th className="p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Options</th>
+                      <th className="p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Formatting</th>
                       <th className="p-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
                     </tr>
                   </thead>
@@ -222,7 +351,7 @@ export default function TDSLayoutDesigner() {
                             type="text" 
                             value={row.index} 
                             onChange={(e) => updateRow(row.id, { index: e.target.value })}
-                            className="w-12 bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-900 p-1"
+                            className="w-12 bg-transparent border-none focus:ring-0 text-[10px] font-bold text-slate-900 p-1"
                           />
                         </td>
                         <td className="p-2 border-b border-slate-100">
@@ -230,61 +359,75 @@ export default function TDSLayoutDesigner() {
                             type="text" 
                             value={row.label} 
                             onChange={(e) => updateRow(row.id, { label: e.target.value })}
-                            className={`w-full bg-transparent border-none focus:ring-0 text-xs font-bold p-1 ${row.isHeader ? 'text-indigo-700' : 'text-slate-700'}`}
+                            className={`w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold p-1 ${row.isHeader ? 'text-indigo-700 uppercase' : 'text-slate-700'}`}
                           />
                         </td>
                         <td className="p-2 border-b border-slate-100">
-                          <input 
-                            type="text" 
-                            value={row.unit} 
-                            onChange={(e) => updateRow(row.id, { unit: e.target.value })}
-                            className="w-16 bg-transparent border-none focus:ring-0 text-xs text-slate-500 p-1"
-                          />
+                          {!row.isHeader && (
+                            <input 
+                              type="text" 
+                              value={row.unit} 
+                              onChange={(e) => updateRow(row.id, { unit: e.target.value })}
+                              className="w-12 bg-transparent border-none focus:ring-0 text-[10px] text-slate-500 p-1"
+                            />
+                          )}
                         </td>
                         <td className="p-2 border-b border-slate-100">
-                          <div className="flex flex-col gap-1">
-                            <select 
-                              value={AVAILABLE_KEYS.some(k => k.value === row.valueKey) ? (row.valueKey.startsWith('const:') ? 'const:' : row.valueKey) : 'const:'}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === 'const:') {
-                                  updateRow(row.id, { valueKey: 'const:' });
-                                } else {
-                                  updateRow(row.id, { valueKey: val });
-                                }
-                              }}
-                              className="bg-white border border-slate-200 rounded-lg text-[10px] font-bold p-1 outline-none"
-                            >
-                              {AVAILABLE_KEYS.map(k => (
-                                <option key={k.value} value={k.value}>{k.label}</option>
-                              ))}
-                            </select>
-                            {(row.valueKey.startsWith('const:') || !AVAILABLE_KEYS.some(k => k.value === row.valueKey)) && (
-                              <input 
-                                type="text" 
-                                value={row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : row.valueKey}
-                                onChange={(e) => updateRow(row.id, { valueKey: `const:${e.target.value}` })}
-                                placeholder="Manual value..."
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg text-[10px] p-1.5 font-mono"
-                              />
-                            )}
-                          </div>
+                          {!row.isHeader && (
+                            <div className="flex flex-col gap-1">
+                              <select 
+                                value={AVAILABLE_KEYS.some(k => k.value === row.valueKey) ? (row.valueKey.startsWith('const:') ? 'const:' : row.valueKey) : 'const:'}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val.startsWith('group:')) return;
+                                  if (val === 'const:') {
+                                    updateRow(row.id, { valueKey: 'const:' });
+                                  } else {
+                                    updateRow(row.id, { valueKey: val });
+                                  }
+                                }}
+                                className="bg-white border border-slate-200 rounded-md text-[10px] font-bold p-1 outline-none"
+                              >
+                                {AVAILABLE_KEYS.map(k => (
+                                  <option key={k.value} value={k.value} disabled={k.value.startsWith('group:')}>
+                                    {k.label}
+                                  </option>
+                                ))}
+                              </select>
+                              {(row.valueKey.startsWith('const:') || !AVAILABLE_KEYS.some(k => k.value === row.valueKey)) && (
+                                <input 
+                                  type="text" 
+                                  value={row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : row.valueKey}
+                                  onChange={(e) => updateRow(row.id, { valueKey: `const:${e.target.value}` })}
+                                  placeholder="Manual value..."
+                                  className="w-full bg-slate-50 border border-slate-100 rounded-md text-[10px] p-1 font-mono"
+                                />
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="p-2 border-b border-slate-100">
-                          <div className="flex items-center gap-2 justify-center">
+                          <div className="flex flex-wrap items-center gap-1 justify-center max-w-[120px]">
                             <button 
                               onClick={() => updateRow(row.id, { isHeader: !row.isHeader })}
-                              className={`p-1.5 rounded-lg text-[8px] font-black transition-all ${row.isHeader ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}
-                              title="Toggle Header Row"
+                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.isHeader ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
+                              title="Toggle Header"
                             >
                               HEAD
                             </button>
                             <button 
                               onClick={() => updateRow(row.id, { bold: !row.bold })}
-                              className={`p-1.5 rounded-lg text-[8px] font-black transition-all ${row.bold ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}
-                              title="Toggle Bold"
+                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.bold ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
+                              title="Bold"
                             >
-                              BOLD
+                              B
+                            </button>
+                            <button 
+                              onClick={() => updateRow(row.id, { colSpan: row.colSpan === 3 ? 1 : 3 })}
+                              className={`px-1.5 py-1 rounded text-[8px] font-black transition-all ${row.colSpan === 3 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}
+                              title="Merge Cell (Span 3)"
+                            >
+                              MERGE
                             </button>
                           </div>
                         </td>
@@ -326,6 +469,75 @@ export default function TDSLayoutDesigner() {
                 <p className="text-[10px] text-amber-600 leading-relaxed font-bold">
                   These settings will override the standard TDS layout in the Project Review tab for the selected cable standard. 
                   Static values can be prefixed with <code className="bg-amber-100 px-1 rounded font-mono">const:</code> to display literal text.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Content - Live Preview */}
+          <div className="xl:col-span-4 space-y-4">
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 sticky top-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <BarChart3 className="w-3 h-3 text-indigo-600" />
+                Live Preview (TDS Mockup)
+              </h3>
+              
+              <div className="border border-slate-300 p-6 rounded shadow-sm bg-white overflow-hidden text-[9px]">
+                {/* Header Mockup */}
+                <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-800">
+                  <div className="w-12 h-12 bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 rounded">
+                    Logo
+                  </div>
+                  <div className="text-center flex-1">
+                    <h2 className="font-black text-xs">{currentLayout.letterhead?.companyName}</h2>
+                    <p className="text-[7px] text-slate-500 whitespace-pre-line">{currentLayout.letterhead?.address}</p>
+                  </div>
+                  <div className="w-12 text-right">
+                    Rev. 1
+                  </div>
+                </div>
+
+                <div className="text-center mb-4">
+                  <h3 className="font-black text-[10px] uppercase underline">{currentLayout.letterhead?.title}</h3>
+                  <p className="font-bold text-slate-600">{currentLayout.letterhead?.subtitle}</p>
+                </div>
+
+                <table className="w-full border-collapse border border-slate-800">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="border border-slate-800 p-1 w-6">No</th>
+                      <th className="border border-slate-800 p-1 text-left">Description</th>
+                      <th className="border border-slate-800 p-1 w-10">Unit</th>
+                      <th className="border border-slate-800 p-1 text-center">Spec</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentLayout.rows.map((row) => (
+                      <tr key={row.id} className={row.isHeader ? 'bg-slate-100' : ''}>
+                        <td className="border border-slate-800 p-1 text-center font-bold">{row.index}</td>
+                        <td 
+                          className={`border border-slate-800 p-1 ${row.isHeader ? 'font-black uppercase' : ''} ${row.bold ? 'font-black' : ''}`}
+                          colSpan={row.colSpan === 3 ? 3 : 1}
+                        >
+                          {row.label}
+                        </td>
+                        {row.colSpan !== 3 && (
+                          <>
+                            <td className="border border-slate-800 p-1 text-center">{row.unit}</td>
+                            <td className="border border-slate-800 p-1 text-center text-slate-400 italic">
+                               {row.valueKey.startsWith('const:') ? row.valueKey.substring(6) : '[Value]'}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <p className="text-[9px] text-indigo-600 font-bold italic">
+                  This preview uses placeholder values to show the layout and formatting. Colors and fonts will match the final TDS document.
                 </p>
               </div>
             </div>
