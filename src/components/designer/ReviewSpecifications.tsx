@@ -7,6 +7,8 @@ import { NYCY_DATA } from '../../utils/nycyData';
 import { NFA2XT_DATA } from '../../utils/abcData';
 import { AAC_DATA } from '../../utils/aacData';
 import { DrumData } from '../../utils/drumData';
+import { safeLocalStorage } from '../../utils/safeLocalStorage';
+import { TDSLayoutConfig } from './TDSLayoutSettings';
 
 interface ReviewSpecificationsProps {
   groupedItemsList: { key: string; items: { params: CableDesignParams; result: CalculationResult }[] }[];
@@ -87,13 +89,19 @@ export function ReviewSpecifications({
                 </tr>
               </thead>
               <tbody>
-                {/* Specific logic for each standard should go here - mirroring CableDesigner.tsx */}
-                {/* I will copy the logic in several blocks for manageability if I can't put it all at once */}
-                {/* For now I'll use placeholders for better chunking if needed, but I'll try to put as much as possible */}
-                {p.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' ? renderNFA2XSpec(groupKey, items, specEdits, setSpecEdits, drumData) : 
-                 p.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)' ? renderNFA2XTSpec(groupKey, items, specEdits, setSpecEdits, drumData) :
-                 p.standard === 'SPLN 41-6 : 1981 AAC' ? renderAACSpec(groupKey, items, specEdits, setSpecEdits, drumData) :
-                 renderGeneralSpec(groupKey, items, specEdits, setSpecEdits, drumData, isMV)}
+                {(() => {
+                  const savedLayouts = typeof window !== 'undefined' ? JSON.parse(safeLocalStorage.getItem('tds_layouts') || '{}') : {};
+                  const customLayout = savedLayouts[p.standard];
+                  
+                  if (customLayout) {
+                    return renderDynamicSpec(groupKey, items, specEdits, setSpecEdits, drumData, customLayout);
+                  }
+
+                  return p.standard === 'SPLN D3. 010-1 : 2014 (NFA2X)' ? renderNFA2XSpec(groupKey, items, specEdits, setSpecEdits, drumData) : 
+                         p.standard === 'SPLN D3. 010-1 : 2015 (NFA2X-T)' ? renderNFA2XTSpec(groupKey, items, specEdits, setSpecEdits, drumData) :
+                         p.standard === 'SPLN 41-6 : 1981 AAC' ? renderAACSpec(groupKey, items, specEdits, setSpecEdits, drumData) :
+                         renderGeneralSpec(groupKey, items, specEdits, setSpecEdits, drumData, isMV);
+                })()}
               </tbody>
             </table>
           </div>
@@ -104,6 +112,76 @@ export function ReviewSpecifications({
 }
 
 // Helper render functions
+function resolveValue(path: string, item: { params: CableDesignParams, result: CalculationResult }, drumData: DrumData[]) {
+  if (!path) return '';
+  if (path.startsWith('const:')) return path.substring(6);
+  if (path === 'designation') return getCableDesignation(item.params, item.result);
+  
+  if (path.startsWith('packing.')) {
+     const p = calculatePacking(item.result.spec.overallDiameter, item.result.bom.totalWeight, drumData);
+     const sub = path.substring(8);
+     if (sub === 'standardLength') return p.standardLength;
+     if (sub === 'selectedDrum.type') return p.selectedDrum.type;
+     return '-';
+  }
+
+  const parts = path.split('.');
+  let val: any = item;
+  for (const part of parts) {
+    if (val && typeof val === 'object' && part in val) {
+      val = val[part];
+    } else {
+      return '-';
+    }
+  }
+  
+  if (typeof val === 'number') {
+    return val.toFixed(2).replace('.', ',');
+  }
+  return val !== undefined && val !== null ? String(val) : '-';
+}
+
+function renderDynamicSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[], layout: TDSLayoutConfig) {
+  return (
+    <>
+      {layout.rows.map((row) => (
+        <tr key={row.id} className={row.isHeader ? 'bg-slate-100' : ''}>
+          <td className="border border-slate-400 p-2 text-center font-bold">{row.index}</td>
+          <td className={`border border-slate-400 p-2 font-bold ${row.isHeader ? 'uppercase tracking-wider' : 'pl-4'}`} colSpan={row.isHeader ? items.length + 2 : 1}>
+            <EditableCell
+              value={specEdits[`${groupKey}-${row.id}-label`] ?? row.label}
+              onChange={(val) => setSpecEdits((prev: any) => ({ ...prev, [`${groupKey}-${row.id}-label`]: val }))}
+              align="left"
+              bold={true}
+              uppercase={row.isHeader}
+            />
+          </td>
+          {!row.isHeader && (
+            <>
+              <td className="border border-slate-400 p-2 text-center">{row.unit}</td>
+              {items.map((item, idx) => {
+                const itemKey = `${item.params.id || idx}-${row.id}-val`;
+                const defaultValue = resolveValue(row.valueKey, item, drumData);
+                
+                return (
+                  <td key={idx} className={`border border-slate-400 p-2 text-center ${row.color || ''}`}>
+                    <EditableCell
+                      value={specEdits[itemKey] ?? defaultValue}
+                      onChange={(val) => setSpecEdits((prev: any) => ({ ...prev, [itemKey]: val }))}
+                      bold={row.bold}
+                      uppercase={row.uppercase}
+                    />
+                  </td>
+                );
+              })}
+            </>
+          )}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 function renderNFA2XSpec(groupKey: string, items: { params: CableDesignParams, result: CalculationResult }[], specEdits: any, setSpecEdits: any, drumData: DrumData[]) {
   const firstItem = items[0];
   

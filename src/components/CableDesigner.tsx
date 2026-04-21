@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronLeft, ChevronRight, Ruler, Shield } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, Layout, FileJson, Layers, Calendar, ChevronLeft, ChevronRight, Ruler, Shield } from 'lucide-react';
 import { NYCY_DATA } from '../utils/nycyData';
 import { AAC_SIZES, AAC_DATA, AAACS_SIZES, AAACS_DATA } from '../utils/aacData';
 import { NFA2XT_DATA, getWeightAdditionFactor } from '../utils/abcData';
@@ -7156,6 +7156,18 @@ export default function CableDesigner() {
                             Download Database (.db)
                           </button>
                         </div>
+                      </div>
+
+                      <div className="p-4 border border-indigo-200 rounded-xl bg-indigo-50/30">
+                        <h3 className="text-sm font-bold text-indigo-900 mb-2">TDS Layout Settings</h3>
+                        <p className="text-xs text-indigo-600 mb-4">Customize the structure and data sources for Technical Data Sheets.</p>
+                        <button
+                          onClick={() => window.open(window.location.href + '#tds-layout')}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                        >
+                          <Layout className="w-4 h-4" />
+                          Open TDS Layout Designer
+                        </button>
                       </div>
                     </div>
                   </div>
