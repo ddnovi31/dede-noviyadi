@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronRight, Ruler, Shield } from 'lucide-react';
+import { Settings, FileText, Package, Download, Zap, Info, Plus, Trash2, List, DollarSign, BarChart3, ArrowLeft, Printer, TrendingUp, RotateCcw, Maximize2, Minimize2, CheckCircle2, Database, Save, FolderOpen, Scale, X, Upload, FilePlus, Search, FileJson, Layers, Calendar, ChevronLeft, ChevronRight, Ruler, Shield } from 'lucide-react';
 import { NYCY_DATA } from '../utils/nycyData';
 import { AAC_SIZES, AAC_DATA, AAACS_SIZES, AAACS_DATA } from '../utils/aacData';
 import { NFA2XT_DATA, getWeightAdditionFactor } from '../utils/abcData';
@@ -139,6 +139,18 @@ export default function CableDesigner() {
   const [showStandardPopup, setShowStandardPopup] = useState(false);
   const [standardSearchQuery, setStandardSearchQuery] = useState('');
   const standardPopupRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      scrollRef.current.scrollTo({
+        left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -4443,7 +4455,20 @@ export default function CableDesigner() {
                       ))}
                     </div>
                     {/* Cards Grid Container */}
-                    <div className="flex flex-row flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto w-full snap-x custom-scrollbar snap-mandatory">
+                    <div className="relative group/scroll">
+                      {/* Left Scroll Button */}
+                      <button 
+                        onClick={() => scroll('left')}
+                        className="absolute -left-2 md:-left-4 top-[40%] -translate-y-1/2 z-10 bg-white/90 hover:bg-indigo-600 hover:text-white p-2 md:p-3 rounded-full shadow-xl border border-slate-200 text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 active:scale-90"
+                        title="Scroll Left"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+
+                      <div 
+                        ref={scrollRef}
+                        className="flex flex-row flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto w-full snap-x custom-scrollbar snap-mandatory"
+                      >
                     <div id="design-step-0" className="w-[85vw] md:w-96 shrink-0 snap-start bg-white p-6 rounded-[1.5rem] border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
                         <Settings className="w-4 h-4 text-indigo-500" />
@@ -6556,6 +6581,16 @@ export default function CableDesigner() {
 
                     {/* Close horizontal cards container */}
                     </div>
+
+                    {/* Right Scroll Button */}
+                    <button 
+                      onClick={() => scroll('right')}
+                      className="absolute -right-2 md:-right-4 top-[40%] -translate-y-1/2 z-10 bg-white/90 hover:bg-indigo-600 hover:text-white p-2 md:p-3 rounded-full shadow-xl border border-slate-200 text-indigo-600 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 active:scale-90"
+                      title="Scroll Right"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                  </div>
 
                     {/* Add to Project Button moved to bottom of config */}
                     <div className="pt-4 pb-8 w-full">
