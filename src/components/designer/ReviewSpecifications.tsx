@@ -63,21 +63,19 @@ export function ReviewSpecifications({
                 const lh = customLayout.letterhead;
                 return (
                   <div className="flex flex-col mb-6">
-                    <div className="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-4">
-                      {lh.showLogo && (
-                         <div className="w-20">
-                            {/* Logo Placeholder or User Image */}
-                            <img src="/logo.png" alt="Logo" className="w-full h-auto" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                         </div>
-                      )}
-                      <div className="text-center flex-1">
-                        <h1 className="text-xl font-bold uppercase tracking-tight">{lh.companyName}</h1>
-                        <p className="text-[10px] text-slate-600 font-medium whitespace-pre-line">{lh.address}</p>
-                      </div>
-                      <div className="w-20 text-right text-[10px] font-bold">
-                        ORIGINAL
-                      </div>
+                    {/* Dynamic Header */}
+                    <div className="grid grid-cols-3 gap-4 border-b-2 border-slate-800 pb-4 mb-4 items-start">
+                      {['left', 'center', 'right'].map((pos) => {
+                        const section = lh.header?.[pos as 'left'|'center'|'right'];
+                        return (
+                          <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
+                            {section?.image && <img src={section.image} alt={pos} className="max-h-20 w-auto mb-1" />}
+                            <p className="text-[9px] text-slate-800 whitespace-pre-line font-bold leading-tight">{section?.text}</p>
+                          </div>
+                        );
+                      })}
                     </div>
+                    {/* Main Titles */}
                     <div className="text-center space-y-1">
                        <h2 className="text-sm font-bold uppercase underline decoration-2 underline-offset-4">{lh.title}</h2>
                        <p className="text-[10px] font-bold text-slate-700">{lh.subtitle}</p>
@@ -148,6 +146,32 @@ export function ReviewSpecifications({
                 })()}
               </tbody>
             </table>
+
+            {(() => {
+               let customLayout = null;
+               try {
+                 const savedLayouts = typeof window !== 'undefined' ? JSON.parse(safeLocalStorage.getItem('tds_layouts') || '{}') : {};
+                 customLayout = savedLayouts[p.standard];
+               } catch (e) {}
+
+               if (customLayout && customLayout.letterhead && customLayout.letterhead.footer) {
+                 const lf = customLayout.letterhead.footer;
+                 return (
+                   <div className="grid grid-cols-3 gap-4 border-t border-slate-200 mt-6 pt-4 items-start print:mt-4 print:pt-2">
+                     {['left', 'center', 'right'].map((pos) => {
+                        const section = lf[pos as 'left'|'center'|'right'];
+                        return (
+                          <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
+                            {section?.image && <img src={section.image} alt={pos} className="max-h-16 w-auto mb-1" />}
+                            <p className="text-[8px] text-slate-600 whitespace-pre-line font-medium leading-tight">{section?.text}</p>
+                          </div>
+                        );
+                     })}
+                   </div>
+                 );
+               }
+               return null;
+            })()}
           </div>
         );
       })}

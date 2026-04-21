@@ -16,13 +16,27 @@ export interface TDSRowConfig {
   colSpan?: number;
 }
 
+export interface TDSSection {
+  text: string;
+  image?: string; // Base64 or URL
+}
+
 export interface TDSLetterhead {
+  header: {
+    left: TDSSection;
+    center: TDSSection;
+    right: TDSSection;
+  };
+  footer: {
+    left: TDSSection;
+    center: TDSSection;
+    right: TDSSection;
+  };
+  // Compatibility fields
   companyName: string;
   address: string;
   title: string;
   subtitle: string;
-  logoUrl?: string;
-  showLogo: boolean;
 }
 
 export interface TDSLayoutConfig {
@@ -32,11 +46,20 @@ export interface TDSLayoutConfig {
 }
 
 const DEFAULT_LETTERHEAD: TDSLetterhead = {
+  header: {
+    left: { text: '' },
+    center: { text: 'PT. MULTI KABEL\nJl. Kawasan Industri No. 1, Jakarta' },
+    right: { text: '' }
+  },
+  footer: {
+    left: { text: '' },
+    center: { text: '' },
+    right: { text: '' }
+  },
   companyName: 'PT. MULTI KABEL',
   address: 'Jl. Kawasan Industri No. 1, Jakarta, Indonesia',
   title: 'TECHNICAL DATA SHEET',
-  subtitle: 'Power Cable Specifications',
-  showLogo: true
+  subtitle: 'Power Cable Specifications'
 };
 
 const DEFAULT_ROWS: TDSRowConfig[] = [
@@ -111,53 +134,116 @@ export default function TDSLayoutDesigner() {
     }
   });
 
+  // Helper to ensure letterhead has all new fields
+  const normalizeLetterhead = (lh: any): TDSLetterhead => {
+    return {
+      ...DEFAULT_LETTERHEAD,
+      ...lh,
+      header: { ...DEFAULT_LETTERHEAD.header, ...(lh?.header || {}) },
+      footer: { ...DEFAULT_LETTERHEAD.footer, ...(lh?.footer || {}) }
+    };
+  };
+
   const currentLayout = layouts[selectedStandard] || { 
     standard: selectedStandard, 
     rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
-    letterhead: { ...DEFAULT_LETTERHEAD }
+    letterhead: normalizeLetterhead({})
   };
 
   const saveLayout = (newRows: TDSRowConfig[], newLetterhead?: TDSLetterhead) => {
-    const updated = { 
-      ...layouts, 
-      [selectedStandard]: { 
+    setLayouts(prev => {
+      const existing = prev[selectedStandard] || { 
         standard: selectedStandard, 
-        rows: newRows,
-        letterhead: newLetterhead || currentLayout.letterhead || { ...DEFAULT_LETTERHEAD }
-      } 
-    };
-    setLayouts(updated);
-    safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+        rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
+        letterhead: normalizeLetterhead({}) 
+      };
+      const updated = { 
+        ...prev, 
+        [selectedStandard]: { 
+          standard: selectedStandard, 
+          rows: newRows,
+          letterhead: normalizeLetterhead(newLetterhead || existing.letterhead)
+        } 
+      };
+      safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const addRow = () => {
-    const newRow: TDSRowConfig = {
-      id: Math.random().toString(36).substr(2, 9),
-      index: (currentLayout.rows.length + 1).toString(),
-      label: 'New Row',
-      unit: '-',
-      valueKey: 'params.size',
-      colSpan: 1
-    };
-    saveLayout([...currentLayout.rows, newRow]);
+    setLayouts(prev => {
+      const existing = prev[selectedStandard] || { 
+        standard: selectedStandard, 
+        rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)),
+        letterhead: normalizeLetterhead({}) 
+      };
+      
+      const newRow: TDSRowConfig = {
+        id: `row-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        index: (existing.rows.length + 1).toString(),
+        label: 'New Row',
+        unit: '-',
+        valueKey: 'params.size',
+        colSpan: 1
+      };
+      
+      const updated = {
+        ...prev,
+        [selectedStandard]: {
+          ...existing,
+          rows: [...existing.rows, newRow] // Ensure it's at the VERY end
+        }
+      };
+      safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const updateRow = (id: string, updates: Partial<TDSRowConfig>) => {
-    const newRows = currentLayout.rows.map(r => r.id === id ? { ...r, ...updates } : r);
-    saveLayout(newRows);
+    setLayouts(prev => {
+      const existing = prev[selectedStandard];
+      if (!existing) return prev;
+      const newRows = existing.rows.map(r => r.id === id ? { ...r, ...updates } : r);
+      const updated = {
+        ...prev,
+        [selectedStandard]: { ...existing, rows: newRows }
+      };
+      safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const deleteRow = (id: string) => {
-    saveLayout(currentLayout.rows.filter(r => r.id !== id));
+    setLayouts(prev => {
+      const existing = prev[selectedStandard];
+      if (!existing) return prev;
+      const newRows = existing.rows.filter(r => r.id !== id);
+      const updated = {
+        ...prev,
+        [selectedStandard]: { ...existing, rows: newRows }
+      };
+      safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const moveRow = (index: number, direction: 'up' | 'down') => {
-    const newRows = [...currentLayout.rows];
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target >= 0 && target < newRows.length) {
-      [newRows[index], newRows[target]] = [newRows[target], newRows[index]];
-      saveLayout(newRows);
-    }
+    setLayouts(prev => {
+      const existing = prev[selectedStandard];
+      if (!existing) return prev;
+      const newRows = [...existing.rows];
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target >= 0 && target < newRows.length) {
+        [newRows[index], newRows[target]] = [newRows[target], newRows[index]];
+        const updated = {
+          ...prev,
+          [selectedStandard]: { ...existing, rows: newRows }
+        };
+        safeLocalStorage.setItem('tds_layouts', JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
+    });
   };
 
   const exportToDisk = () => {
@@ -198,6 +284,25 @@ export default function TDSLayoutDesigner() {
 
   const updateLetterhead = (updates: Partial<TDSLetterhead>) => {
     saveLayout(currentLayout.rows, { ...currentLayout.letterhead, ...updates });
+  };
+
+  const handleImageUpload = (section: 'header' | 'footer', pos: 'left' | 'center' | 'right', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      const lh = { ...currentLayout.letterhead };
+      lh[section] = { ...lh[section], [pos]: { ...lh[section][pos], image: base64 } };
+      updateLetterhead(lh);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const updateSectionText = (section: 'header' | 'footer', pos: 'left' | 'center' | 'right', text: string) => {
+    const lh = { ...currentLayout.letterhead };
+    lh[section] = { ...lh[section], [pos]: { ...lh[section][pos], text } };
+    updateLetterhead(lh);
   };
 
   return (
@@ -277,34 +382,79 @@ export default function TDSLayoutDesigner() {
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <FileJson className="w-3 h-3" />
-                Kop Surat
+                Configuration
               </h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block">COMPANY NAME</label>
-                  <input 
-                    type="text" 
-                    value={currentLayout.letterhead?.companyName || ''} 
-                    onChange={(e) => updateLetterhead({ companyName: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs font-bold"
-                  />
+              <div className="space-y-4">
+                {/* Header Management */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">HEADER SECTIONS</h4>
+                  {['left', 'center', 'right'].map((pos) => (
+                    <div key={pos} className="mb-3 last:mb-0">
+                      <label className="text-[9px] font-bold text-indigo-600 uppercase mb-1 block">{pos}</label>
+                      <textarea
+                        value={currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.text || ''}
+                        onChange={(e) => updateSectionText('header', pos as 'left'|'center'|'right', e.target.value)}
+                        placeholder={`Header ${pos} text...`}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-12 mb-1"
+                      />
+                      <div className="flex items-center gap-2">
+                        <label className="px-2 py-1 bg-white border border-slate-200 rounded text-[8px] font-bold cursor-pointer hover:bg-slate-50">
+                          {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image ? 'Change Img' : 'Add Img'}
+                          <input type="file" accept="image/*" onChange={(e) => handleImageUpload('header', pos as 'left'|'center'|'right', e)} className="hidden" />
+                        </label>
+                        {currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right']?.image && (
+                          <button 
+                            onClick={() => {
+                              const lh = { ...currentLayout.letterhead };
+                              if (lh.header?.[pos as 'left'|'center'|'right']) lh.header[pos as 'left'|'center'|'right'].image = undefined;
+                              updateLetterhead(lh);
+                            }}
+                            className="text-[8px] text-rose-500 font-bold"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block">ADDRESS</label>
-                  <textarea 
-                    value={currentLayout.letterhead?.address || ''} 
-                    onChange={(e) => updateLetterhead({ address: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-[10px] font-bold h-20"
-                  />
+
+                {/* Main Labels Compatibility */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">TABLE LABELS</h4>
+                  <div className="space-y-2">
+                    <input 
+                      type="text" 
+                      value={currentLayout.letterhead?.title || ''} 
+                      onChange={(e) => updateLetterhead({ title: e.target.value })}
+                      placeholder="Main Title (e.g. TDS)"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold"
+                    />
+                    <input 
+                      type="text" 
+                      value={currentLayout.letterhead?.subtitle || ''} 
+                      onChange={(e) => updateLetterhead({ subtitle: e.target.value })}
+                      placeholder="Subtitle"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block">TITLE</label>
-                  <input 
-                    type="text" 
-                    value={currentLayout.letterhead?.title || ''} 
-                    onChange={(e) => updateLetterhead({ title: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs font-bold"
-                  />
+
+                {/* Footer Management */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">FOOTER SECTIONS</h4>
+                  {['left', 'center', 'right'].map((pos) => (
+                    <div key={pos} className="mb-3 last:mb-0">
+                      <label className="text-[9px] font-bold text-indigo-600 uppercase mb-1 block">{pos}</label>
+                      <textarea
+                        value={currentLayout.letterhead?.footer?.[pos as 'left'|'center'|'right']?.text || ''}
+                        onChange={(e) => updateSectionText('footer', pos as 'left'|'center'|'right', e.target.value)}
+                        placeholder={`Footer ${pos} text...`}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold h-12 mb-1"
+                      />
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload('footer', pos as 'left'|'center'|'right', e)} className="text-[8px] block w-full" />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -484,22 +634,21 @@ export default function TDSLayoutDesigner() {
               
               <div className="border border-slate-300 p-6 rounded shadow-sm bg-white overflow-hidden text-[9px]">
                 {/* Header Mockup */}
-                <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-800">
-                  <div className="w-12 h-12 bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 rounded">
-                    Logo
-                  </div>
-                  <div className="text-center flex-1">
-                    <h2 className="font-black text-xs">{currentLayout.letterhead?.companyName}</h2>
-                    <p className="text-[7px] text-slate-500 whitespace-pre-line">{currentLayout.letterhead?.address}</p>
-                  </div>
-                  <div className="w-12 text-right">
-                    Rev. 1
-                  </div>
+                <div className="grid grid-cols-3 gap-2 pb-4 border-b-2 border-slate-800 mb-4 items-start">
+                  {['left', 'center', 'right'].map((pos) => {
+                    const section = currentLayout.letterhead?.header?.[pos as 'left'|'center'|'right'];
+                    return (
+                      <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
+                        {section?.image && <img src={section.image} alt={pos} className="max-h-12 w-auto mb-1" />}
+                        <p className="text-[7px] text-slate-800 whitespace-pre-line font-bold leading-tight">{section?.text}</p>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="text-center mb-4">
-                  <h3 className="font-black text-[10px] uppercase underline">{currentLayout.letterhead?.title}</h3>
-                  <p className="font-bold text-slate-600">{currentLayout.letterhead?.subtitle}</p>
+                  <h3 className="font-black text-[10px] uppercase underline decoration-1 underline-offset-2 tracking-wide">{currentLayout.letterhead?.title}</h3>
+                  <p className="font-bold text-slate-600 text-[8px]">{currentLayout.letterhead?.subtitle}</p>
                 </div>
 
                 <table className="w-full border-collapse border border-slate-800">
@@ -533,6 +682,19 @@ export default function TDSLayoutDesigner() {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Footer Mockup */}
+                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-200 mt-6 items-start">
+                  {['left', 'center', 'right'].map((pos) => {
+                    const section = currentLayout.letterhead?.footer?.[pos as 'left'|'center'|'right'];
+                    return (
+                      <div key={pos} className={`flex flex-col ${pos === 'center' ? 'items-center text-center' : pos === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
+                        {section?.image && <img src={section.image} alt={pos} className="max-h-12 w-auto mb-1" />}
+                        <p className="text-[7px] text-slate-600 whitespace-pre-line font-medium leading-tight">{section?.text}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="mt-6 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
