@@ -4467,9 +4467,9 @@ export default function CableDesigner() {
 
                       <div 
                         ref={scrollRef}
-                        className="flex flex-row flex-nowrap gap-6 pb-8 pt-2 items-stretch overflow-x-auto w-full snap-x custom-scrollbar snap-mandatory"
+                        className="flex flex-row flex-nowrap gap-4 md:gap-6 pb-8 pt-2 items-stretch overflow-x-auto w-full snap-x custom-scrollbar snap-mandatory px-6 md:px-0"
                       >
-                    <div id="design-step-0" className="w-[90vw] md:w-96 shrink-0 snap-start bg-blue-50/50 p-4 md:p-6 rounded-[1.5rem] border border-blue-100 shadow-sm hover:shadow-[0_0_40px_rgba(59,130,246,0.4)] hover:border-blue-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-0" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-blue-50/50 p-4 md:p-6 rounded-[1.5rem] border border-blue-100 shadow-sm hover:shadow-[0_0_40px_rgba(59,130,246,0.4)] hover:border-blue-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-blue-200/80">
                         <Settings className="w-4 h-4 text-indigo-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">GENERAL</h3>
@@ -4996,7 +4996,7 @@ export default function CableDesigner() {
 
                     </div>
                     
-                    <div id="design-step-bulk" className="w-[90vw] md:w-96 shrink-0 snap-start bg-slate-50/50 p-4 md:p-6 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-[0_0_40px_rgba(148,163,184,0.4)] hover:border-slate-400 transition-all duration-300 flex flex-col justify-start space-y-4 md:space-y-5">
+                    <div id="design-step-bulk" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-slate-50/50 p-4 md:p-6 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-[0_0_40px_rgba(148,163,184,0.4)] hover:border-slate-400 transition-all duration-300 flex flex-col justify-start space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-slate-300/80">
                         <List className="w-4 h-4 text-indigo-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">BULK CALCULATION</h3>
@@ -5167,7 +5167,7 @@ export default function CableDesigner() {
                       )}
                     </div>
 
-                    <div id="design-step-2" className="w-[90vw] md:w-96 shrink-0 snap-start bg-indigo-50/50 p-4 md:p-6 rounded-[1.5rem] border border-indigo-100 shadow-sm hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:border-indigo-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-2" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-indigo-50/50 p-4 md:p-6 rounded-[1.5rem] border border-indigo-100 shadow-sm hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:border-indigo-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-indigo-200/80">
                         <Layers className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">CONDUCTOR</h3>
@@ -5288,7 +5288,7 @@ export default function CableDesigner() {
 
                     </div>
                     
-                    <div id="design-step-earthing" className="w-[90vw] md:w-96 shrink-0 snap-start bg-emerald-50/50 p-4 md:p-6 rounded-[1.5rem] border border-emerald-100 shadow-sm hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:border-emerald-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-earthing" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-emerald-50/50 p-4 md:p-6 rounded-[1.5rem] border border-emerald-100 shadow-sm hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:border-emerald-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-emerald-300/80">
                         <Shield className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">EARTHING / MESSENGER</h3>
@@ -5608,7 +5608,7 @@ export default function CableDesigner() {
                     </div>
                 </div>
 
-                <div id="design-step-4" className="w-[90vw] md:w-96 shrink-0 snap-start bg-purple-50/50 p-4 md:p-6 rounded-[1.5rem] border border-purple-100 shadow-sm hover:shadow-[0_0_40px_rgba(168,85,247,0.4)] hover:border-purple-400 transition-all duration-300 space-y-4 md:space-y-5">
+                <div id="design-step-4" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-purple-50/50 p-4 md:p-6 rounded-[1.5rem] border border-purple-100 shadow-sm hover:shadow-[0_0_40px_rgba(168,85,247,0.4)] hover:border-purple-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-purple-300/80">
                         <Package className="w-4 h-4 text-purple-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">INSULATION</h3>
@@ -5683,7 +5683,7 @@ export default function CableDesigner() {
                     )}
                     </div>
 
-                    <div id="design-step-screen" className={`w-[90vw] md:w-96 shrink-0 snap-start bg-cyan-50/50 p-4 md:p-6 rounded-[1.5rem] border border-cyan-100 shadow-sm hover:shadow-[0_0_40px_rgba(6,182,212,0.4)] hover:border-cyan-400 transition-all duration-300 space-y-4 md:space-y-5 ${(params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') ? 'block' : 'hidden'}`}>
+                    <div id="design-step-screen" className={`w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-cyan-50/50 p-4 md:p-6 rounded-[1.5rem] border border-cyan-100 shadow-sm hover:shadow-[0_0_40px_rgba(6,182,212,0.4)] hover:border-cyan-400 transition-all duration-300 space-y-4 md:space-y-5 ${(params.standard === 'IEC 60502-2' && params.standard !== 'SPLN 41-6 : 1981 AAC' && params.standard !== 'SPLN 41-10 : 1991 (AAAC-S)') ? 'block' : 'hidden'}`}>
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-cyan-300/80">
                         <Layers className="w-4 h-4 text-orange-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">SCREEN</h3>
@@ -5773,7 +5773,7 @@ export default function CableDesigner() {
                     )}
                     </div>
 
-                    <div id="design-step-inner-sheath" className="w-[90vw] md:w-96 shrink-0 snap-start bg-rose-50/50 p-4 md:p-6 rounded-[1.5rem] border border-rose-100 shadow-sm hover:shadow-[0_0_40px_rgba(244,63,94,0.4)] hover:border-rose-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-inner-sheath" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-rose-50/50 p-4 md:p-6 rounded-[1.5rem] border border-rose-100 shadow-sm hover:shadow-[0_0_40px_rgba(244,63,94,0.4)] hover:border-rose-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-rose-300/80">
                         <Layers className="w-4 h-4 text-pink-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">INNER SHEATH</h3>
@@ -5905,7 +5905,7 @@ export default function CableDesigner() {
                     )}
                     </div>
 
-                    <div id="design-step-overall-screen" className={`w-[90vw] md:w-96 shrink-0 snap-start bg-sky-50/50 p-4 md:p-6 rounded-[1.5rem] border border-sky-100 shadow-sm hover:shadow-[0_0_40px_rgba(14,165,233,0.4)] hover:border-sky-400 transition-all duration-300 space-y-4 md:space-y-5`}>
+                    <div id="design-step-overall-screen" className={`w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-sky-50/50 p-4 md:p-6 rounded-[1.5rem] border border-sky-100 shadow-sm hover:shadow-[0_0_40px_rgba(14,165,233,0.4)] hover:border-sky-400 transition-all duration-300 space-y-4 md:space-y-5`}>
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-sky-300/80">
                         <Layers className="w-4 h-4 text-orange-400" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">OVERALL SCREEN</h3>
@@ -6012,7 +6012,7 @@ export default function CableDesigner() {
 
                     </div>
 
-                    <div id="design-step-5" className="w-[90vw] md:w-96 shrink-0 snap-start bg-orange-50/50 p-4 md:p-6 rounded-[1.5rem] border border-orange-100 shadow-sm hover:shadow-[0_0_40px_rgba(249,115,22,0.4)] hover:border-orange-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-5" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-orange-50/50 p-4 md:p-6 rounded-[1.5rem] border border-orange-100 shadow-sm hover:shadow-[0_0_40px_rgba(249,115,22,0.4)] hover:border-orange-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-orange-300/80">
                         <Layers className="w-4 h-4 text-blue-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">SEPARATOR</h3>
@@ -6089,7 +6089,7 @@ export default function CableDesigner() {
                     </div>
 
                     </div>
-                    <div id="design-step-6" className="w-[90vw] md:w-96 shrink-0 snap-start bg-amber-50/50 p-4 md:p-6 rounded-[1.5rem] border border-amber-100 shadow-sm hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:border-amber-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-6" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-amber-50/50 p-4 md:p-6 rounded-[1.5rem] border border-amber-100 shadow-sm hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:border-amber-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-amber-300/80">
                         <Package className="w-4 h-4 text-slate-800" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">ARMOUR</h3>
@@ -6309,7 +6309,7 @@ export default function CableDesigner() {
                   )}
 
                     </div>
-                    <div id="design-step-outer-sheath" className="w-[90vw] md:w-96 shrink-0 snap-start bg-lime-50/50 p-4 md:p-6 rounded-[1.5rem] border border-lime-100 shadow-sm hover:shadow-[0_0_40px_rgba(132,204,22,0.4)] hover:border-lime-400 transition-all duration-300 space-y-4 md:space-y-5">
+                    <div id="design-step-outer-sheath" className="w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-lime-50/50 p-4 md:p-6 rounded-[1.5rem] border border-lime-100 shadow-sm hover:shadow-[0_0_40px_rgba(132,204,22,0.4)] hover:border-lime-400 transition-all duration-300 space-y-4 md:space-y-5">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-lime-300/80">
                         <Package className="w-4 h-4 text-emerald-500" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">OUTER SHEATH</h3>
@@ -6413,7 +6413,7 @@ export default function CableDesigner() {
 
 
                     </div>
-                    <div id="design-step-advanced" className={`w-[90vw] md:w-96 shrink-0 snap-start bg-violet-50/50 p-4 md:p-6 rounded-[1.5rem] border border-violet-100 shadow-sm hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] hover:border-violet-400 transition-all duration-300 space-y-4 md:space-y-5 ${params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? 'hidden' : 'block'}`}>
+                    <div id="design-step-advanced" className={`w-[calc(100vw-3rem)] md:w-96 shrink-0 snap-center bg-violet-50/50 p-4 md:p-6 rounded-[1.5rem] border border-violet-100 shadow-sm hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] hover:border-violet-400 transition-all duration-300 space-y-4 md:space-y-5 ${params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)' ? 'hidden' : 'block'}`}>
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b-[3px] border-violet-300/80">
                         <Settings className="w-4 h-4 text-slate-800" />
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">ADVANCED / MANUAL</h3>
