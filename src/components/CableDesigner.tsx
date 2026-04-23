@@ -4543,6 +4543,15 @@ export default function CableDesigner() {
                       materialCategories={materialCategories}
                       materialDensities={materialDensities}
                       lmeParams={lmeParams}
+                      isBulkCalculationEnabled={isBulkCalculationEnabled}
+                      setIsBulkCalculationEnabled={setIsBulkCalculationEnabled}
+                      bulkItems={bulkItems}
+                      setBulkItems={setBulkItems}
+                      manualBulkCore={manualBulkCore}
+                      setManualBulkCore={setManualBulkCore}
+                      selectedBulkSizes={selectedBulkSizes}
+                      setSelectedBulkSizes={setSelectedBulkSizes}
+                      onAddToProject={addToProject}
                       onNew={() => {
                         setProjectId(null);
                         setProjectName('New Project');

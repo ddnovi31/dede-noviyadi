@@ -29,6 +29,15 @@ interface CableEditorModeProps {
   materialCategories: Record<string, string>;
   materialDensities: Record<string, number>;
   lmeParams: any;
+  isBulkCalculationEnabled: boolean;
+  setIsBulkCalculationEnabled: (val: boolean) => void;
+  bulkItems: { cores: number, size: number }[];
+  setBulkItems: (items: { cores: number, size: number }[]) => void;
+  manualBulkCore: number;
+  setManualBulkCore: (val: number) => void;
+  selectedBulkSizes: number[];
+  setSelectedBulkSizes: (sizes: number[]) => void;
+  onAddToProject: () => void;
 }
 
 export function CableEditorMode({
@@ -39,10 +48,19 @@ export function CableEditorMode({
   onSave,
   onOpen,
   onExport,
+  onAddToProject,
   activeLayer,
   setActiveLayer,
   materialPrices,
-  materialCategories
+  materialCategories,
+  isBulkCalculationEnabled,
+  setIsBulkCalculationEnabled,
+  bulkItems,
+  setBulkItems,
+  manualBulkCore,
+  setManualBulkCore,
+  selectedBulkSizes,
+  setSelectedBulkSizes,
 }: CableEditorModeProps) {
   const [mobileView, setMobileView] = React.useState<'preview' | 'editor' | 'steps'>('preview');
 
@@ -58,7 +76,7 @@ export function CableEditorMode({
 
     const steps = [
       { id: 'general', label: 'General', icon: Settings },
-      { id: 'bulk', label: 'Bulk Calculation', icon: List },
+      { id: 'bulk', label: `Bulk${bulkItems.length > 0 ? ` (${bulkItems.length})` : ''}`, icon: List },
       { id: 'conductor', label: 'Conductor', icon: Layers },
     ];
 
@@ -184,14 +202,104 @@ export function CableEditorMode({
 
       case 'bulk':
         return (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-8">
-             <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-100">
-                <List className="w-8 h-8 text-indigo-400" />
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                   <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">Bulk Calculation</span>
+                      <span className="text-[10px] text-slate-400 italic">Toggle multi-size design</span>
+                   </div>
+                   <Toggle 
+                      checked={isBulkCalculationEnabled} 
+                      onChange={(val) => setIsBulkCalculationEnabled(val)} 
+                   />
+                </div>
+
+                {isBulkCalculationEnabled && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <FormField label="Common Core Count">
+                       <input 
+                         type="number"
+                         min={1}
+                         value={manualBulkCore}
+                         onChange={(e) => setManualBulkCore(parseInt(e.target.value) || 1)}
+                         className="w-full p-2 bg-white border border-indigo-200 rounded-lg text-xs font-bold"
+                       />
+                    </FormField>
+
+                    <FormField label="Select Sizes">
+                       <div className="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto p-1 bg-white border border-indigo-100 rounded-lg custom-scrollbar">
+                          {CABLE_SIZES.map(s => (
+                            <button
+                              key={s}
+                              onClick={() => {
+                                if (selectedBulkSizes.includes(Number(s))) {
+                                  setSelectedBulkSizes(selectedBulkSizes.filter(size => size !== Number(s)));
+                                } else {
+                                  setSelectedBulkSizes([...selectedBulkSizes, Number(s)].sort((a,b) => a-b));
+                                }
+                              }}
+                              className={`p-1.5 rounded text-[9px] font-bold transition-all ${
+                                selectedBulkSizes.includes(Number(s)) 
+                                  ? 'bg-indigo-600 text-white' 
+                                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                              }`}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                       </div>
+                    </FormField>
+
+                    <button 
+                      onClick={() => {
+                        const newItems = selectedBulkSizes.map(size => ({ cores: manualBulkCore, size }));
+                        setBulkItems([...bulkItems, ...newItems]);
+                        setSelectedBulkSizes([]);
+                      }}
+                      disabled={selectedBulkSizes.length === 0}
+                      className="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md flex items-center justify-center gap-2"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Add {selectedBulkSizes.length > 0 ? `${selectedBulkSizes.length} Configs` : 'Config'}
+                    </button>
+                  </div>
+                )}
              </div>
-             <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Bulk Mode</h3>
-             <p className="text-[10px] text-slate-500 italic max-w-[200px] mx-auto leading-relaxed">
-                Bulk calculation input is optimized for the modern layout. Please use the modern view to enter multi-core/size data.
-             </p>
+
+             {isBulkCalculationEnabled && bulkItems.length > 0 && (
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between px-1">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Queue ({bulkItems.length})</h4>
+                      <button 
+                         onClick={() => setBulkItems([])}
+                         className="text-[9px] text-rose-500 font-bold hover:underline"
+                      >
+                         Clear All
+                      </button>
+                   </div>
+                   <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                      {bulkItems.map((item, idx) => (
+                         <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-xl group hover:border-indigo-300 transition-all">
+                            <span className="text-xs font-bold text-slate-600">{item.cores} x {item.size} mm²</span>
+                            <button 
+                               onClick={() => setBulkItems(bulkItems.filter((_, i) => i !== idx))}
+                               className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                               <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                         </div>
+                      ))}
+                   </div>
+                   <button 
+                      onClick={onAddToProject}
+                      className="w-full py-3 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                   >
+                      <Check className="w-4 h-4" />
+                      Bulk Add to Project
+                   </button>
+                </div>
+             )}
           </div>
         );
 
@@ -226,8 +334,9 @@ export function CableEditorMode({
                 onChange={(e) => onParamChange('conductorMaterial', e.target.value)}
                 className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
               >
-                <option value="Cu">Copper (CU)</option>
-                <option value="Al">Aluminium (AL)</option>
+                {Array.from(new Set(['Cu', 'Al', 'TCu', ...Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Conductor'))])).map(m => (
+                  <option key={m} value={m}>{m === 'Cu' ? 'Copper (CU)' : m === 'Al' ? 'Aluminium (AL)' : m}</option>
+                ))}
               </select>
             </FormField>
             <FormField label="Construction Type">
@@ -294,7 +403,7 @@ export function CableEditorMode({
                 onChange={(e) => onParamChange('insulationMaterial', e.target.value)}
                 className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
               >
-                {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Insulation')).map(m => (
+                {Array.from(new Set(['XLPE', 'XLPE MV', 'PVC', 'EPR', ...Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Insulation'))])).map(m => (
                   <option key={m} value={m}>{m}</option>
                 ))}
               </select>
@@ -407,7 +516,7 @@ export function CableEditorMode({
                             onChange={(e) => onParamChange('innerSheathMaterial', e.target.value)}
                             className="w-full p-2 bg-white border border-rose-200 rounded-lg text-xs font-bold"
                           >
-                            {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath') || materialCategories[m]?.includes('Filler')).map(m => (
+                            {Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', ...Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath') || materialCategories[m]?.includes('Filler'))])).map(m => (
                               <option key={m} value={m}>{m}</option>
                             ))}
                           </select>
@@ -443,7 +552,7 @@ export function CableEditorMode({
                            onChange={(e) => onParamChange('separatorMaterial', e.target.value)}
                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
                          >
-                           {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath')).map(m => (
+                           {Array.from(new Set(['PVC', 'Polyester Tape', ...Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath') || materialCategories[m]?.includes('Tape'))])).map(m => (
                              <option key={m} value={m}>{m}</option>
                            ))}
                          </select>
@@ -513,7 +622,7 @@ export function CableEditorMode({
                   onChange={(e) => onParamChange('sheathMaterial', e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
                 >
-                  {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath')).map(m => (
+                  {Array.from(new Set(['PVC', 'PE', 'LSZH', 'PVC-FR', ...Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath'))])).map(m => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
@@ -607,6 +716,11 @@ export function CableEditorMode({
           </ToolbarGroup>
           <div className="w-px h-8 bg-slate-200 mx-1" />
           <ToolbarGroup title="Actions">
+            <ToolbarButton 
+               icon={<PlusCircle className={`w-4 h-4 ${isBulkCalculationEnabled ? 'text-amber-500' : 'text-emerald-500'} animate-pulse`} />} 
+               onClick={onAddToProject} 
+               title={isBulkCalculationEnabled ? `Bulk Add (${bulkItems.length})` : "Add to Project"} 
+            />
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={onExport} title="Export to Excel" />
             <ToolbarButton icon={<LogOut className="w-4 h-4" />} onClick={() => {}} title="Return to home" />
           </ToolbarGroup>
