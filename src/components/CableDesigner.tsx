@@ -111,6 +111,33 @@ export default function CableDesigner() {
       });
   }, []);
 
+  useEffect(() => {
+    if (lmeData && lmeData.success) {
+      const updates: Partial<typeof lmeParams> = {};
+      if (lmeData.copper) updates.lmeCu = lmeData.copper;
+      if (lmeData.aluminium) updates.lmeAl = lmeData.aluminium;
+      if (lmeData.exchangeRate) updates.kurs = lmeData.exchangeRate;
+      
+      if (Object.keys(updates).length > 0) {
+        setLmeParams(prev => {
+          const newParams = { ...prev, ...updates };
+          
+          // Update material prices (LME + Premium is per MT, so divide by 1000 for per kg)
+          const cuPrice = Math.round(((newParams.lmeCu + newParams.premiumCu) / 1000) * newParams.kurs);
+          const alPrice = Math.round(((newParams.lmeAl + newParams.premiumAl) / 1000) * newParams.kurs);
+          
+          setMaterialPrices(matPrev => ({
+            ...matPrev,
+            Cu: cuPrice,
+            Al: alPrice
+          }));
+          
+          return newParams;
+        });
+      }
+    }
+  }, [lmeData]);
+
   const [activeTab, setActiveTab] = useState<'config' | 'prices' | 'drums' | 'settings'>('config');
   const [isConfigExpanded, setIsConfigExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -136,15 +163,15 @@ export default function CableDesigner() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [loadedProjectConfig, setLoadedProjectConfig] = useState<{lmeParams?: any, materialPrices?: any, exchangeRate?: number} | null>(null);
   const [projectName, setProjectName] = useState('New Project');
-  const [layoutMode, setLayoutMode] = useState<'modern' | 'classic'>(() => {
+  const [layoutMode, setLayoutMode] = useState<'calculation' | 'designer'>(() => {
     if (typeof window !== 'undefined') {
-      return (safeLocalStorage.getItem('cable_layout_mode') as 'modern' | 'classic') || 'modern';
+      return (safeLocalStorage.getItem('cable_layout_mode') as 'calculation' | 'designer') || 'calculation';
     }
-    return 'modern';
+    return 'calculation';
   });
   const [activeLayer, setActiveLayer] = useState('general');
 
-  const handleLayoutModeChange = (mode: 'modern' | 'classic') => {
+  const handleLayoutModeChange = (mode: 'calculation' | 'designer') => {
     setLayoutMode(mode);
     safeLocalStorage.setItem('cable_layout_mode', mode);
   };
@@ -4340,9 +4367,9 @@ export default function CableDesigner() {
                 <div className="flex items-center gap-4 relative z-10">
                   <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
                     <button
-                      onClick={() => handleLayoutModeChange('modern')}
+                      onClick={() => handleLayoutModeChange('calculation')}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                        layoutMode === 'modern'
+                        layoutMode === 'calculation'
                           ? 'bg-white text-indigo-600 shadow-sm'
                           : 'text-slate-400 hover:text-slate-600'
                       }`}
@@ -4351,9 +4378,9 @@ export default function CableDesigner() {
                       CALCULATION
                     </button>
                     <button
-                      onClick={() => handleLayoutModeChange('classic')}
+                      onClick={() => handleLayoutModeChange('designer')}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                        layoutMode === 'classic'
+                        layoutMode === 'designer'
                           ? 'bg-white text-indigo-600 shadow-sm'
                           : 'text-slate-400 hover:text-slate-600'
                       }`}
@@ -4505,7 +4532,7 @@ export default function CableDesigner() {
 
               <div className="p-4 md:p-6">
                 {activeTab === 'config' && result && (
-                  layoutMode === 'classic' ? (
+                  layoutMode === 'designer' ? (
                     <CableEditorMode
                       params={params}
                       result={result}

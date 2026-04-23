@@ -141,11 +141,30 @@ app.get("/api/lme-prices", async (req, res) => {
 
     const fetchExchangeRate = async () => {
       try {
+        // Try Google Finance first
+        const gResponse = await fetch('https://www.google.com/finance/quote/USD-IDR', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        if (gResponse.ok) {
+          const gHtml = await gResponse.text();
+          // Look for price in various Google Finance formats
+          const priceMatch = gHtml.match(/<div[^>]+class="[^"]*YMl3s[^"]*"[^>]+>([\d,.]+)</) || 
+                             gHtml.match(/data-last-price="([\d,.]+)"/) ||
+                             gHtml.match(/<meta itemprop="price" content="([\d,.]+)"/);
+          if (priceMatch) {
+            return parseFloat(priceMatch[1].replace(/,/g, ''));
+          }
+        }
+        
+        // Fallback to Open ER API
         const response = await fetch('https://open.er-api.com/v6/latest/USD');
         if (!response.ok) return null;
         const data = await response.json();
         return data.rates.IDR;
       } catch (e) {
+        console.error("Exchange rate fetch error:", e);
         return null;
       }
     };

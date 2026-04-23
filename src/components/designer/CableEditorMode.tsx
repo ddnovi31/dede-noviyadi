@@ -72,12 +72,12 @@ export function CableEditorMode({
       steps.push({ id: 'innerSheath', label: 'Inner Sheath', icon: Layers });
     }
 
-    // Screen (Always show if not AAC/NYA so user can enable it)
+    // Screen (Show for most cables so user can enable it)
     if (!isAAC && !isNYA) {
       steps.push({ id: 'screen', label: 'Screen', icon: Activity });
     }
     
-    if (!isAAC) {
+    if (!isAAC && !isNYA) {
       steps.push({ id: 'separator', label: 'Separator', icon: Layers });
     }
 
