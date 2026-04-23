@@ -72,9 +72,8 @@ export function CableEditorMode({
       steps.push({ id: 'innerSheath', label: 'Inner Sheath', icon: Layers });
     }
 
-    // Screen (Insulation Screen for MV, Overall Screen for others)
-    const hasScreen = params.standard === 'IEC 60502-2' || params.hasScreen || params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
-    if (hasScreen) {
+    // Screen (Always show if not AAC/NYA so user can enable it)
+    if (!isAAC && !isNYA) {
       steps.push({ id: 'screen', label: 'Screen', icon: Activity });
     }
     
