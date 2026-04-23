@@ -4348,7 +4348,7 @@ export default function CableDesigner() {
                       }`}
                     >
                       <Layout className="w-3.5 h-3.5" />
-                      MODERN
+                      CALCULATION
                     </button>
                     <button
                       onClick={() => handleLayoutModeChange('classic')}
@@ -4359,7 +4359,7 @@ export default function CableDesigner() {
                       }`}
                     >
                       <Layers className="w-3.5 h-3.5" />
-                      CLASSIC
+                      DESIGNER
                     </button>
                   </div>
                   <div className="w-px h-8 bg-slate-100 mx-2 hidden md:block"></div>
