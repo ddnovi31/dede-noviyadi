@@ -54,6 +54,7 @@ import { initDB, saveProjectToDB, getProjectsFromDB, deleteProjectFromDB, SavedP
 import * as XLSX from 'xlsx-js-style';
 import { MaterialSettingsInput, SpecRow, WeightFormulaRow, EditableCell } from './designer/CableDesignerComponents';
 import { ReviewSpecifications } from './designer/ReviewSpecifications';
+import { CableEditorMode } from './designer/CableEditorMode';
 
 export default function CableDesigner() {
   const [params, setParams] = useState<CableDesignParams>(() => {
@@ -135,6 +136,18 @@ export default function CableDesigner() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [loadedProjectConfig, setLoadedProjectConfig] = useState<{lmeParams?: any, materialPrices?: any, exchangeRate?: number} | null>(null);
   const [projectName, setProjectName] = useState('New Project');
+  const [layoutMode, setLayoutMode] = useState<'modern' | 'classic'>(() => {
+    if (typeof window !== 'undefined') {
+      return (safeLocalStorage.getItem('cable_layout_mode') as 'modern' | 'classic') || 'modern';
+    }
+    return 'modern';
+  });
+  const [activeLayer, setActiveLayer] = useState('conductor');
+
+  const handleLayoutModeChange = (mode: 'modern' | 'classic') => {
+    setLayoutMode(mode);
+    safeLocalStorage.setItem('cable_layout_mode', mode);
+  };
   const [projectNumber, setProjectNumber] = useState('');
   const [showStandardPopup, setShowStandardPopup] = useState(false);
   const [standardSearchQuery, setStandardSearchQuery] = useState('');
@@ -4288,7 +4301,32 @@ export default function CableDesigner() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 relative z-10">
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+                    <button
+                      onClick={() => handleLayoutModeChange('modern')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                        layoutMode === 'modern'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      <Layout className="w-3.5 h-3.5" />
+                      MODERN
+                    </button>
+                    <button
+                      onClick={() => handleLayoutModeChange('classic')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                        layoutMode === 'classic'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      CLASSIC
+                    </button>
+                  </div>
+                  <div className="w-px h-8 bg-slate-100 mx-2 hidden md:block"></div>
             <div className="hidden md:flex flex-col items-end pr-4 border-r border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Status</span>
               <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
@@ -4430,8 +4468,26 @@ export default function CableDesigner() {
               </div>
 
               <div className="p-4 md:p-6">
-                {activeTab === 'config' && (
-                  <div className="flex flex-col space-y-4 md:space-y-6">
+                {activeTab === 'config' && result && (
+                  layoutMode === 'classic' ? (
+                    <CableEditorMode
+                      params={params}
+                      result={result}
+                      onParamChange={handleParamChange}
+                      activeLayer={activeLayer}
+                      setActiveLayer={setActiveLayer}
+                      onNew={() => {
+                        setProjectId(null);
+                        setProjectName('New Project');
+                        setProjectNumber('');
+                        setProjectItems([]);
+                      }}
+                      onSave={handleSaveProject}
+                      onOpen={handleLoadProjects}
+                      onExport={handleExportExcel}
+                    />
+                  ) : (
+                    <div className="flex flex-col space-y-4 md:space-y-6">
                     {/* Horizontal Steps Header */}
                     <div className="hidden items-center gap-2 overflow-x-auto pb-4 custom-scrollbar snap-x border-b border-slate-200">
                       {[
@@ -6605,7 +6661,8 @@ export default function CableDesigner() {
                       </button>
                     </div>
                   </div>
-                )}
+                )
+              )}
 
                 {activeTab === 'prices' && (
                   <div className="space-y-4 animate-in fade-in duration-300">
