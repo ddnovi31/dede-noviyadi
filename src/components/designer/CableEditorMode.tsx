@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   FilePlus, Save, FolderOpen, LogOut, Check, X, 
   Settings, ChevronRight, Download, Trash2, Edit3, 
-  Layers, Database, Search, PlusCircle, Monitor
+  Layers, Database, Search, PlusCircle, Monitor,
+  Zap, Package, List, TrendingUp, Shield, Activity,
+  Maximize2
 } from 'lucide-react';
-import { CableDesignParams, CalculationResult } from '../../utils/cableCalculations';
+import { 
+  CableDesignParams, 
+  CalculationResult, 
+  CABLE_SIZES,
+  CableStandard
+} from '../../utils/cableCalculations';
+import { CABLE_STANDARDS } from '../../utils/designerData';
 import { CableCrossSection } from './CableCrossSection';
 
 interface CableEditorModeProps {
@@ -17,20 +25,11 @@ interface CableEditorModeProps {
   onExport: () => void;
   activeLayer: string;
   setActiveLayer: (layer: string) => void;
+  materialPrices: Record<string, number>;
+  materialCategories: Record<string, string>;
+  materialDensities: Record<string, number>;
+  lmeParams: any;
 }
-
-const LAYERS = [
-  { id: 'conductor', label: 'Conductor' },
-  { id: 'conductor_shield', label: 'Conductor shield' },
-  { id: 'insulation', label: 'Insulation' },
-  { id: 'insulation_screen', label: 'Insulation screen' },
-  { id: 'sheath', label: 'Sheath' },
-  { id: 'sheath_tape', label: 'Sheath reinforcing tape' },
-  { id: 'neutral', label: 'Concentric neutral' },
-  { id: 'bedding', label: 'Armour bedding' },
-  { id: 'armour', label: 'Armour' },
-  { id: 'jacket', label: 'Jacket/Serving' },
-];
 
 export function CableEditorMode({
   params,
@@ -41,231 +40,537 @@ export function CableEditorMode({
   onOpen,
   onExport,
   activeLayer,
-  setActiveLayer
+  setActiveLayer,
+  materialPrices,
+  materialCategories
 }: CableEditorModeProps) {
-  
-  const isLayerActive = (id: string) => {
-    switch (id) {
-      case 'conductor': return true;
-      case 'conductor_shield': return !!result.spec.conductorScreenThickness;
-      case 'insulation': return true;
-      case 'insulation_screen': return !!result.spec.insulationScreenThickness;
-      case 'sheath': return params.hasInnerSheath;
-      case 'sheath_tape': return false; // Not implemented yet
-      case 'neutral': return params.hasScreen;
-      case 'bedding': return params.armorType !== 'Unarmored' && result.spec.innerCoveringThickness > 0;
-      case 'armour': return params.armorType !== 'Unarmored';
-      case 'jacket': return params.hasOuterSheath !== false;
-      default: return false;
+
+  const activeStep = activeLayer;
+  const setActiveStep = setActiveLayer;
+
+  const getSteps = () => {
+    const steps = [
+      { id: 'general', label: 'GENERAL', icon: Settings },
+      { id: 'properties', label: 'PROPERTIES', icon: Zap },
+      { id: 'conductor', label: 'CONDUCTOR', icon: Layers },
+    ];
+
+    const isAAC = params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)';
+    const isNYA = params.standard.includes('(NYAF)') || params.standard.includes('(NYA)');
+
+    if (!isAAC && !isNYA) {
+      steps.push({ id: 'earthing', label: 'EARTHING', icon: Shield });
     }
+
+    steps.push({ id: 'insulation', label: 'INSULATION', icon: Package });
+
+    if (params.standard === 'IEC 60502-2') {
+      steps.push({ id: 'screen', label: 'INSULATION SCREEN', icon: Activity });
+    }
+
+    if (params.standard !== 'IEC 60092-353' && !isAAC && !isNYA) {
+      steps.push({ id: 'innerCovering', label: 'INNER COVERING', icon: Layers });
+    }
+
+    if (params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen)) {
+        steps.push({ id: 'overallScreen', label: 'OVERALL SCREEN', icon: Shield });
+    }
+
+    steps.push({ id: 'innerLayers', label: 'INNER LAYERS', icon: Database });
+    steps.push({ id: 'outerLayers', label: 'OUTER LAYERS', icon: Package });
+
+    steps.push({ id: 'advanced', label: 'ADVANCED', icon: Maximize2 });
+
+    return steps;
   };
 
-  const toggleLayer = (id: string) => {
-    switch (id) {
-      case 'conductor_shield': 
-        // Logic for screens varies, this is just a mockup toggle
-        break;
-      case 'insulation_screen':
-        break;
-      case 'sheath':
-        onParamChange('hasInnerSheath', !params.hasInnerSheath);
-        break;
-      case 'neutral':
-        onParamChange('hasScreen', !params.hasScreen);
-        break;
-      case 'armour':
-        onParamChange('armorType', params.armorType === 'Unarmored' ? 'SWA' : 'Unarmored');
-        break;
-      case 'jacket':
-        onParamChange('hasOuterSheath', params.hasOuterSheath === false);
-        break;
+  const steps = getSteps();
+
+  const FormField = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div className="space-y-1.5">
+      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</label>
+      {children}
+    </div>
+  );
+
+  const renderEditor = () => {
+    switch (activeStep) {
+      case 'general':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <FormField label="Standard Reference">
+              <select
+                value={params.standard}
+                onChange={(e) => onParamChange('standard', e.target.value as CableStandard)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                {CABLE_STANDARDS.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Voltage Rating (Uo/U)">
+              <select
+                value={params.voltage}
+                onChange={(e) => onParamChange('voltage', e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                 <option value="0.6/1 kV">0.6/1 kV</option>
+                 <option value="300/500 V">300/500 V</option>
+                 <option value="450/750 V">450/750 V</option>
+                 <option value="3.6/6 kV">3.6/6 kV</option>
+                 <option value="6/10 kV">6/10 kV</option>
+                 <option value="8.7/15 kV">8.7/15 kV</option>
+                 <option value="12/20 kV">12/20 kV</option>
+                 <option value="18/30 kV">18/30 kV</option>
+              </select>
+            </FormField>
+            <FormField label="Design Mode">
+              <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => onParamChange('mode', 'standard')}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                    params.mode === 'standard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  onClick={() => onParamChange('mode', 'advance')}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                    params.mode === 'advance' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Advance
+                </button>
+              </div>
+            </FormField>
+          </div>
+        );
+
+      case 'properties':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-4">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700">Fireguard</span>
+                  <span className="text-[10px] text-slate-400 italic">Mica Glass Tape</span>
+                </div>
+                <Toggle checked={params.fireguard || false} onChange={(val) => onParamChange('fireguard', val)} />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700">Stopfire</span>
+                  <span className="text-[10px] text-slate-400 italic">FR Compound</span>
+                </div>
+                <Toggle checked={params.stopfire || false} onChange={(val) => onParamChange('stopfire', val)} color="bg-red-500" />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700">Auto Switch to RGB</span>
+                  <span className="text-[10px] text-slate-400 italic">Small Size Optimization</span>
+                </div>
+                <Toggle checked={params.autoSwitchSfaToRgb || false} onChange={(val) => onParamChange('autoSwitchSfaToRgb', val)} />
+              </label>
+            </div>
+          </div>
+        );
+
+      case 'conductor':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Number of Cores">
+                <input 
+                  type="number"
+                  value={params.cores}
+                  min={1}
+                  onChange={(e) => onParamChange('cores', Number(e.target.value))}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
+                />
+              </FormField>
+              <FormField label="Size (mm²)">
+                <select
+                  value={params.size}
+                  onChange={(e) => onParamChange('size', Number(e.target.value))}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                >
+                  {CABLE_SIZES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+            <FormField label="Conductor Material">
+              <select
+                value={params.conductorMaterial}
+                onChange={(e) => onParamChange('conductorMaterial', e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="Cu">Copper (CU)</option>
+                <option value="Al">Aluminium (AL)</option>
+              </select>
+            </FormField>
+            <FormField label="Construction Type">
+              <select
+                value={params.conductorType}
+                onChange={(e) => onParamChange('conductorType', e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                <option value="rm">rm (Round Stranded)</option>
+                <option value="re">re (Round Solid)</option>
+                <option value="sm">sm (Sector Stranded)</option>
+                <option value="f">f (Flexible Class 5)</option>
+                <option value="cm">cm (Compact Stranded)</option>
+              </select>
+            </FormField>
+          </div>
+        );
+
+      case 'earthing':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 space-y-4">
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-widest">Use Earthing Core</span>
+                  <Toggle checked={params.hasEarthing || false} onChange={(val) => onParamChange('hasEarthing', val)} color="bg-emerald-500" />
+                </label>
+                
+                {params.hasEarthing && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <FormField label="E. Core Count">
+                       <select 
+                         value={params.earthingCores || 0}
+                         onChange={(e) => onParamChange('earthingCores', Number(e.target.value))}
+                         className="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700"
+                       >
+                         <option value={1}>1 Core</option>
+                         <option value={2}>2 Cores</option>
+                         <option value={3}>3 Cores</option>
+                       </select>
+                    </FormField>
+                    <FormField label="E. Core Size (mm²)">
+                       <select 
+                         value={params.earthingSize || 0}
+                         onChange={(e) => onParamChange('earthingSize', Number(e.target.value))}
+                         className="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700"
+                       >
+                         {CABLE_SIZES.map(s => (
+                           <option key={s} value={s}>{s} mm²</option>
+                         ))}
+                       </select>
+                    </FormField>
+                  </div>
+                )}
+             </div>
+          </div>
+        );
+
+      case 'insulation':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <FormField label="Material">
+              <select
+                value={params.insulationMaterial}
+                onChange={(e) => onParamChange('insulationMaterial', e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Insulation')).map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </FormField>
+            <div className="p-5 border-2 border-orange-400 bg-orange-50/30 rounded-2xl relative space-y-4">
+                <div className="absolute -top-3 left-4 bg-white px-2 ring-1 ring-orange-400 rounded-full">
+                   <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.1em]">Calculated Data</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <FormField label="Thickness (mm)">
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="number"
+                        step={0.1}
+                        value={params.manualInsulationThickness || (result.spec.phaseCore?.insulationThickness || 0).toFixed(2)}
+                        onChange={(e) => onParamChange('manualInsulationThickness', Number(e.target.value))}
+                        className="w-full p-2 bg-white border border-orange-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm"
+                      />
+                    </div>
+                  </FormField>
+                  <FormField label="Core Dia (mm)">
+                    <div className="p-2 bg-slate-100/50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 text-center">
+                       {(result.spec.phaseCore?.coreDiameter || 0).toFixed(2)}
+                    </div>
+                  </FormField>
+                </div>
+            </div>
+          </div>
+        );
+
+      case 'screen':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <FormField label="MV Screen Type">
+                <select
+                  value={params.mvScreenType || 'None'}
+                  onChange={(e) => onParamChange('mvScreenType', e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="None">None</option>
+                  <option value="CTS">CTS (Copper Tape)</option>
+                  <option value="CWS">CWS (Copper Wire)</option>
+                </select>
+             </FormField>
+             {params.mvScreenType !== 'None' && (
+               <FormField label="Screen Area (mm²)">
+                  <select
+                    value={params.mvScreenSize || 16}
+                    onChange={(e) => onParamChange('mvScreenSize', Number(e.target.value))}
+                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700"
+                  >
+                    {[16, 25, 35, 50, 70, 95].map(s => (
+                      <option key={s} value={s}>{s} mm²</option>
+                    ))}
+                  </select>
+               </FormField>
+             )}
+          </div>
+        );
+
+      case 'outerLayers':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+             <FormField label="Armor Type">
+               <select
+                 value={params.armorType}
+                 onChange={(e) => onParamChange('armorType', e.target.value)}
+                 className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+               >
+                 <option value="Unarmored">Unarmored</option>
+                 <option value="SWA">SWA (Steel Wire)</option>
+                 <option value="STA">STA (Steel Tape)</option>
+                 <option value="AWA">AWA (Alum Wire)</option>
+                 <option value="SFA">SFA (Steel Flat)</option>
+                 <option value="RGB">RGB (Round Galv. Bead)</option>
+               </select>
+             </FormField>
+             <FormField label="Outer Sheath material">
+                <select
+                  value={params.sheathMaterial}
+                  onChange={(e) => onParamChange('sheathMaterial', e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                >
+                  {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath')).map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+             </FormField>
+             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <label className="flex items-center justify-between cursor-pointer">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Use Separator Tape</span>
+                      <span className="text-[9px] text-slate-400 italic">Between armor and sheath</span>
+                   </div>
+                   <Toggle checked={params.hasSeparator || false} onChange={(val) => onParamChange('hasSeparator', val)} color="bg-slate-500" />
+                </label>
+             </div>
+          </div>
+        );
+
+      case 'advanced':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                   <Maximize2 className="w-4 h-4 text-amber-600" />
+                   <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Manual Overrides</h4>
+                </div>
+                <FormField label="Target Diameter (mm)">
+                   <input 
+                     type="number"
+                     placeholder={result.spec.overallDiameter.toFixed(1)}
+                     className="w-full p-2 bg-white border border-amber-200 rounded-lg text-xs font-bold text-amber-900"
+                   />
+                </FormField>
+                <div className="pt-2">
+                   <p className="text-[9px] text-amber-600 italic">Note: Advanced manual overrides for specific layer thicknesses can be found in the modern mode's footer section.</p>
+                </div>
+             </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="p-12 text-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 animate-in zoom-in duration-500">
+             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                <Activity className="w-8 h-8 text-slate-200" />
+             </div>
+             <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] mb-2">Editor Ready</h4>
+             <p className="text-[10px] font-medium text-slate-400 italic max-w-[200px] mx-auto leading-relaxed">
+                This design step is being optimized. You can configure it using the modern interface or standard parameters.
+             </p>
+          </div>
+        );
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#f3f4f6] text-slate-700 font-sans overflow-hidden border border-slate-300 shadow-2xl rounded-lg">
-      {/* OS Bar Title */}
-      <div className="h-8 bg-[#e5e7eb] flex items-center px-3 justify-between border-b border-slate-300 select-none">
+    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-700 font-sans overflow-hidden">
+      {/* Header Bar */}
+      <div className="h-8 bg-slate-100 flex items-center px-4 justify-between border-b border-slate-200 select-none">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-indigo-600 rounded flex items-center justify-center">
+          <div className="w-4 h-4 bg-indigo-600 rounded-md flex items-center justify-center shadow-lg shadow-indigo-100">
             <Layers className="w-3 h-3 text-white" />
           </div>
-          <span className="text-[11px] font-bold text-slate-600">Cable Editor</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Cable Designer Pro</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-6 h-6 hover:bg-slate-200 flex items-center justify-center rounded transition-colors cursor-pointer group">
-            <X className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">
+             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{layoutModeLabel(params)}</span>
           </div>
+          <div className="w-px h-3 bg-slate-300"></div>
+          <button className="hover:text-rose-500 transition-colors" onClick={() => window.location.reload()}>
+            <X className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="h-14 bg-[#f9fafb] border-b border-slate-200 flex items-center px-4 gap-1">
-        <ToolbarButton icon={<FilePlus className="w-5 h-5" />} onClick={onNew} title="New project" />
-        <ToolbarButton icon={<Save className="w-5 h-5" />} onClick={onSave} title="Save" />
-        <ToolbarButton icon={<FolderOpen className="w-5 h-5" />} onClick={onOpen} title="Open" />
-        <div className="w-px h-8 bg-slate-300 mx-2" />
-        <ToolbarButton icon={<LogOut className="w-5 h-5" />} onClick={onExport} title="Exit/Export" />
+      <div className="h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-2 shadow-sm relative z-20">
+        <ToolbarGroup title="Project">
+          <ToolbarButton icon={<FilePlus className="w-4 h-4" />} onClick={onNew} title="New project" />
+          <ToolbarButton icon={<FolderOpen className="w-4 h-4" />} onClick={onOpen} title="Open" />
+          <ToolbarButton icon={<Save className="w-4 h-4" />} onClick={onSave} title="Save project" />
+        </ToolbarGroup>
+        <div className="w-px h-8 bg-slate-200 mx-1" />
+        <ToolbarGroup title="Actions">
+          <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={onExport} title="Export to Excel" />
+          <ToolbarButton icon={<LogOut className="w-4 h-4" />} onClick={() => {}} title="Return to home" />
+        </ToolbarGroup>
+        <div className="flex-1"></div>
+        <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-200">
+           <div className="flex flex-col text-right">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Overall Dia</span>
+              <span className="text-lg font-black text-indigo-600 leading-none">{result.spec.overallDiameter.toFixed(1)}<span className="text-[10px] ml-0.5">mm</span></span>
+           </div>
+           <div className="w-px h-8 bg-slate-200"></div>
+           <div className="flex flex-col text-right">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Net Weight</span>
+              <span className="text-lg font-black text-indigo-600 leading-none">{Math.round(result.bom.totalWeight)}<span className="text-[10px] ml-0.5">kg</span></span>
+           </div>
+        </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        
-        {/* Left Panel: Layers Selection */}
-        <div className="w-64 bg-white border-r border-slate-200 flex flex-col p-4">
-          <h3 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-4">Select cable layers:</h3>
-          <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-2">
-            {LAYERS.map(layer => (
+        {/* Left Panel: Dynamic Steps */}
+        <div className="w-72 bg-white border-r border-slate-200 flex flex-col p-5 shadow-[4px_0_20px_rgba(0,0,0,0.02)] relative z-10">
+          <div className="mb-6">
+             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Design Path</h3>
+             <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+          </div>
+          <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 flex-1 pb-4">
+            {steps.map(step => (
               <div 
-                key={layer.id}
-                onClick={() => setActiveLayer(layer.id)}
-                className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border ${
-                  activeLayer === layer.id 
-                    ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
-                    : 'border-transparent hover:bg-slate-50'
+                key={step.id}
+                onClick={() => setActiveStep(step.id)}
+                className={`flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all border group relative ${
+                  activeStep === step.id 
+                    ? 'bg-indigo-600 border-indigo-700 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.4)] scale-[1.02]' 
+                    : 'border-transparent hover:bg-slate-50 hover:border-slate-100'
                 }`}
               >
-                <div onClick={(e) => { e.stopPropagation(); toggleLayer(layer.id); }} className="cursor-pointer">
-                  {isLayerActive(layer.id) ? (
-                    <div className="w-5 h-5 bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
-                       <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 bg-red-50 border border-red-200 rounded flex items-center justify-center">
-                       <X className="w-3.5 h-3.5 text-red-600 stroke-[3]" />
-                    </div>
-                  )}
+                <div className={`p-2 rounded-xl transition-all ${activeStep === step.id ? 'bg-indigo-500 text-white rotate-6' : 'bg-slate-50 text-slate-400 group-hover:text-indigo-500 group-hover:scale-110'}`}>
+                   <step.icon className="w-4 h-4" />
                 </div>
-                <span className={`text-xs font-semibold ${isLayerActive(layer.id) ? 'text-slate-700' : 'text-slate-400'}`}>
-                  {layer.label}
-                </span>
+                <div className="flex flex-col">
+                  <span className={`text-[10px] font-black tracking-[0.15em] border-b-2 transition-colors duration-300 ${activeStep === step.id ? 'text-white border-indigo-400' : 'text-slate-500 border-transparent'}`}>
+                    {step.label}
+                  </span>
+                </div>
+                {activeStep === step.id && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Middle Panel: Cable Preview */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden p-6 gap-4">
-           {/* General Settings Link */}
-           <div className="flex justify-center">
-              <button className="text-[11px] font-bold text-indigo-600 underline hover:text-indigo-800 transition-colors">
-                General Settings
-              </button>
+        {/* Middle Panel: Visualizer */}
+        <div className="flex-1 flex flex-col bg-slate-50 relative p-12 overflow-hidden">
+           {/* Grid Pattern Background */}
+           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
+                style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
            </div>
            
-           <div className="flex-1 border border-slate-100 rounded-xl bg-slate-50 relative overflow-hidden group">
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
-              <CableCrossSection params={params} result={result} />
-           </div>
-
-           {/* Click to change ordering */}
-           <div className="flex flex-col items-center gap-2">
-              <div className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center bg-white cursor-pointer hover:border-indigo-500 transition-colors">
-                 <Monitor className="w-4 h-4 text-slate-400" />
+           <div className="flex-1 flex flex-col items-center justify-center relative">
+              {/* Outer Glow Circle */}
+              <div className="absolute w-[600px] h-[600px] bg-indigo-500/5 blur-[100px] rounded-full animate-pulse pointer-events-none"></div>
+              
+              <div className="relative w-full max-w-lg aspect-square bg-white rounded-[3rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1),inset_0_-2px_20px_rgba(0,0,0,0.05)] border border-white p-12 flex items-center justify-center group overflow-hidden animate-in zoom-in duration-700">
+                 <div className="absolute inset-0 bg-gradient-to-tr from-slate-50/80 to-white/50 pointer-events-none"></div>
+                 
+                 <div className="relative z-10 w-full h-full transform hover:scale-[1.03] transition-transform duration-500 cursor-zoom-in">
+                    <CableCrossSection params={params} result={result} />
+                 </div>
+                 
+                 {/* Corner Accents */}
+                 <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-slate-200 rounded-tl-xl opacity-50"></div>
+                 <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-slate-200 rounded-tr-xl opacity-50"></div>
+                 <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-slate-200 rounded-bl-xl opacity-50"></div>
+                 <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-slate-200 rounded-br-xl opacity-50"></div>
               </div>
-              <button className="text-[10px] font-bold text-indigo-600 underline hover:text-indigo-800 transition-colors">
-                Click to change ordering
-              </button>
+           </div>
+           
+           <div className="mt-12 flex justify-center gap-3">
+              <ActionButton icon={<Monitor className="w-4 h-4" />} label="Reset View" />
+              <ActionButton icon={<Maximize2 className="w-4 h-4" />} label="Actual Size" />
            </div>
         </div>
 
-        {/* Right Panel: Layer Details */}
-        <div className="w-80 bg-white border-l border-slate-200 flex flex-col">
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-             <h2 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em]">{activeLayer.replace('_', ' ')}</h2>
+        {/* Right Panel: Step Editor */}
+        <div className="w-80 bg-white border-l border-slate-200 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.02)] relative z-10">
+          <div className="p-6 border-b border-slate-100/50 bg-slate-50/30">
+             <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em]">Configuration</span>
+                <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                   <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+                </div>
+             </div>
+             <h2 className="text-base font-black text-slate-800 uppercase tracking-wider">
+               {steps.find(s => s.id === activeStep)?.label}
+             </h2>
           </div>
           
-          <div className="p-6 flex flex-col gap-6">
-             {/* Material Selection */}
-             <div className="space-y-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Material</label>
-                <select 
-                  value={activeLayer === 'conductor' ? params.conductorMaterial : (activeLayer === 'insulation' ? params.insulationMaterial : (activeLayer === 'jacket' ? params.sheathMaterial : ''))}
-                  onChange={(e) => {
-                    const val = (e.target as HTMLSelectElement).value;
-                    if (activeLayer === 'conductor') onParamChange('conductorMaterial', val);
-                    if (activeLayer === 'insulation') onParamChange('insulationMaterial', val);
-                    if (activeLayer === 'jacket') onParamChange('sheathMaterial', val);
-                  }}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer"
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem' }}
-                >
-                  <option value="Copper">Copper</option>
-                  <option value="Aluminium">Aluminium</option>
-                  <option value="XLPE">XLPE_Unfilled_gre..</option>
-                  <option value="PVC">Polyethylene</option>
-                  <option value="HDPE">HDPE</option>
-                </select>
-             </div>
+          <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+             {renderEditor()}
+          </div>
 
-             {/* Dimensions */}
-             <div className="p-6 border-2 border-orange-400 rounded-xl relative space-y-4">
-                <div className="absolute -top-3 left-4 bg-white px-2">
-                   <span className="text-[11px] font-black text-slate-800">Dimensions</span>
+          <div className="p-6 bg-slate-50/80 border-t border-slate-100 backdrop-blur-sm">
+             <button
+               onClick={onSave}
+               className="w-full relative group overflow-hidden py-4 bg-slate-900 text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl transition-all hover:bg-black active:scale-[0.98]"
+             >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="flex items-center justify-center gap-2 relative z-10">
+                   <Save className="w-4 h-4" /> 
+                   <span>Sync & Save</span>
                 </div>
-                
-                <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-slate-500">Thickness (mm)</label>
-                   <div className="flex items-center gap-2">
-                      <input 
-                        type="number"
-                        className="w-24 p-1.5 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-700 focus:ring-1 focus:ring-indigo-500 outline-none"
-                        value={(() => {
-                           if (activeLayer === 'insulation') return result.spec.phaseCore.insulationThickness;
-                           if (activeLayer === 'jacket') return result.spec.sheathThickness;
-                           if (activeLayer === 'conductor_shield') return result.spec.conductorScreenThickness;
-                           if (activeLayer === 'insulation_screen') return result.spec.insulationScreenThickness;
-                           return 0;
-                        })()}
-                        onChange={(e) => {
-                           const val = parseFloat(e.target.value);
-                           if (activeLayer === 'insulation') onParamChange('manualInsulationThickness', val);
-                           if (activeLayer === 'jacket') onParamChange('manualSheathThickness', val);
-                           if (activeLayer === 'conductor_shield') onParamChange('manualConductorScreenThickness', val);
-                           if (activeLayer === 'insulation_screen') onParamChange('manualInsulationScreenThickness', val);
-                        }}
-                      />
-                      <div className="flex flex-col gap-0.5">
-                         <button className="w-5 h-3.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 flex items-center justify-center cursor-pointer rounded-sm">
-                            <PlusCircle className="w-2.5 h-2.5 text-slate-400" />
-                         </button>
-                         <button className="w-5 h-3.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 flex items-center justify-center cursor-pointer rounded-sm">
-                            <Trash2 className="w-2.5 h-2.5 text-slate-400" />
-                         </button>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-slate-500">Diameter (mm)</label>
-                   <div className="flex items-center gap-2">
-                      <input 
-                        type="number"
-                        className="w-24 p-1.5 bg-slate-100 border border-slate-300 rounded text-xs font-mono font-bold text-slate-400 outline-none"
-                        value={(() => {
-                           if (activeLayer === 'conductor') return result.spec.phaseCore.conductorDiameter;
-                           if (activeLayer === 'insulation') return result.spec.phaseCore.coreDiameter;
-                           if (activeLayer === 'jacket') return result.spec.overallDiameter;
-                           return 0;
-                        })()}
-                        readOnly
-                      />
-                   </div>
-                </div>
-             </div>
+             </button>
           </div>
         </div>
-
       </div>
+    </div>
+  );
+}
 
-      {/* Summary Footer Bar (Optional extra) */}
-      <div className="h-8 bg-[#e5e7eb] border-t border-slate-300 flex items-center px-4 justify-between">
-         <div className="flex gap-4">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Design: {params.cores}C x {params.size}mm²</span>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Voltage: {params.voltage}</span>
-         </div>
-         <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Ready</span>
-      </div>
+function ToolbarGroup({ title, children }: { title: string, children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 items-center">
+       <div className="flex gap-1">
+          {children}
+       </div>
+       <span className="text-[7px] font-black text-slate-400 uppercase tracking-[0.1em]">{title}</span>
     </div>
   );
 }
@@ -274,12 +579,38 @@ function ToolbarButton({ icon, onClick, title }: { icon: React.ReactNode, onClic
   return (
     <button 
       onClick={onClick}
-      className="w-10 h-10 flex items-center justify-center bg-white border border-slate-300 rounded shadow-sm hover:bg-slate-50 hover:shadow-md transition-all active:scale-95 group relative"
+      className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-lg hover:border-indigo-200 hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition-all active:scale-[0.85] group relative"
       title={title}
     >
-      <div className="text-slate-600 group-hover:text-indigo-600 transition-colors">
+      <div className="transition-transform group-hover:scale-110">
         {icon}
       </div>
     </button>
   );
+}
+
+function ActionButton({ icon, label }: { icon: React.ReactNode, label: string }) {
+  return (
+    <button className="px-5 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm text-[10px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-3 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all active:scale-95 group">
+       <div className="text-slate-400 group-hover:text-indigo-600 transition-colors">{icon}</div>
+       <span>{label}</span>
+    </button>
+  );
+}
+
+function Toggle({ checked, onChange, color = 'bg-indigo-600' }: { checked: boolean, onChange: (val: boolean) => void, color?: string }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${checked ? color : 'bg-slate-300'}`}
+    >
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-5.5' : 'translate-x-1'}`} />
+    </button>
+  );
+}
+
+function layoutModeLabel(p: CableDesignParams) {
+  if (p.standard === 'IEC 60502-2') return 'Medium Voltage System';
+  if (p.standard === 'BS EN 50288-7') return 'Instrumentation Mode';
+  return 'Standard Edition';
 }

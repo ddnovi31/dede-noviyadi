@@ -71,7 +71,7 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
       { id: 'conductor_shield', label: 'Conductor shield', value: `Th=${result.spec.conductorScreenThickness}, D=${result.spec.phaseCore.conductorDiameter + result.spec.conductorScreenThickness * 2} mm`, r: result.spec.phaseCore.conductorDiameter / 2 + result.spec.conductorScreenThickness, active: result.spec.conductorScreenThickness > 0 },
       { id: 'insulation', label: 'Insulation', material: params.insulationMaterial, value: `Th=${result.spec.phaseCore.insulationThickness}, D=${result.spec.phaseCore.coreDiameter} mm`, r: result.spec.phaseCore.coreDiameter / 2 },
       { id: 'insulation_screen', label: 'Insulation screen', value: `Th=${result.spec.insulationScreenThickness}, D=${result.spec.phaseCore.coreDiameter + result.spec.insulationScreenThickness * 2} mm`, r: result.spec.phaseCore.coreDiameter / 2 + result.spec.insulationScreenThickness, active: result.spec.insulationScreenThickness > 0 },
-      { id: 'neutral', label: 'Concentric neutral', material: 'Copper', value: `D=${result.spec.diameterOverScreen || result.spec.mvScreenDiameter} mm`, r: (result.spec.diameterOverScreen || result.spec.mvScreenDiameter) / 2, active: params.hasScreen },
+      { id: 'neutral', label: 'Concentric neutral', material: 'Copper', value: `D=${result.spec.mvScreenDiameter || 0} mm`, r: (result.spec.mvScreenDiameter || 0) / 2, active: params.hasScreen },
       { id: 'jacket', label: 'Jacket/Serving', material: params.sheathMaterial, value: `Th=${result.spec.sheathThickness.toFixed(2)}, D=${result.spec.overallDiameter.toFixed(1)} mm`, r: result.spec.overallDiameter / 2 },
     ].filter(l => l.active !== false && l.r > 0);
 

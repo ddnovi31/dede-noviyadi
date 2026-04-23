@@ -142,7 +142,7 @@ export default function CableDesigner() {
     }
     return 'modern';
   });
-  const [activeLayer, setActiveLayer] = useState('conductor');
+  const [activeLayer, setActiveLayer] = useState('general');
 
   const handleLayoutModeChange = (mode: 'modern' | 'classic') => {
     setLayoutMode(mode);
@@ -222,8 +222,13 @@ export default function CableDesigner() {
   const [dbFileHandle, setDbFileHandle] = useState<any>(null);
   const [sqlConfig, setSqlConfig] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = safeLocalStorage.getItem('cable_sql_config');
-      return saved ? JSON.parse(saved) : null;
+      try {
+        const saved = safeLocalStorage.getItem('cable_sql_config');
+        return saved ? JSON.parse(saved) : null;
+      } catch (e) {
+        console.error("Failed to parse sqlConfig:", e);
+        return null;
+      }
     }
     return null;
   });
@@ -1697,14 +1702,25 @@ export default function CableDesigner() {
   };
 
   const [lmeParams, setLmeParams] = useState(() => {
-    const saved = safeLocalStorage.getItem('cable_lme_params');
-    return saved ? JSON.parse(saved) : {
-      lmeCu: 0,
-      premiumCu: 0,
-      lmeAl: 0,
-      premiumAl: 0,
-      kurs: 16000
-    };
+    try {
+      const saved = safeLocalStorage.getItem('cable_lme_params');
+      return saved ? JSON.parse(saved) : {
+        lmeCu: 0,
+        premiumCu: 0,
+        lmeAl: 0,
+        premiumAl: 0,
+        kurs: 16000
+      };
+    } catch (e) {
+      console.error("Failed to parse lmeParams:", e);
+      return {
+        lmeCu: 0,
+        premiumCu: 0,
+        lmeAl: 0,
+        premiumAl: 0,
+        kurs: 16000
+      };
+    }
   });
 
   useEffect(() => {
@@ -1712,44 +1728,64 @@ export default function CableDesigner() {
   }, [lmeParams]);
 
   const [materialPrices, setMaterialPrices] = useState<Record<string, number>>(() => {
-    const saved = safeLocalStorage.getItem('cable_material_prices');
-    const prices = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_PRICES };
-    // Merge with defaults to ensure new materials are added
-    Object.keys(DEFAULT_MATERIAL_PRICES).forEach(key => {
-      if (prices[key] === undefined) {
-        prices[key] = DEFAULT_MATERIAL_PRICES[key as keyof typeof DEFAULT_MATERIAL_PRICES];
-      }
-    });
-    return prices;
+    try {
+      const saved = safeLocalStorage.getItem('cable_material_prices');
+      const prices = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_PRICES };
+      // Merge with defaults to ensure new materials are added
+      Object.keys(DEFAULT_MATERIAL_PRICES).forEach(key => {
+        if (prices[key] === undefined) {
+          prices[key] = DEFAULT_MATERIAL_PRICES[key as keyof typeof DEFAULT_MATERIAL_PRICES];
+        }
+      });
+      return prices;
+    } catch (e) {
+      console.error("Failed to parse materialPrices:", e);
+      return { ...DEFAULT_MATERIAL_PRICES };
+    }
   });
 
   const [materialDensities, setMaterialDensities] = useState<any>(() => {
-    const saved = safeLocalStorage.getItem('cable_material_densities');
-    const densities = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_DENSITIES };
-    // Merge with defaults to ensure new materials are added
-    Object.keys(DEFAULT_MATERIAL_DENSITIES).forEach(key => {
-      if (densities[key as any] === undefined) {
-        densities[key as any] = DEFAULT_MATERIAL_DENSITIES[key as keyof typeof DEFAULT_MATERIAL_DENSITIES];
-      }
-    });
-    return densities;
+    try {
+      const saved = safeLocalStorage.getItem('cable_material_densities');
+      const densities = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_DENSITIES };
+      // Merge with defaults to ensure new materials are added
+      Object.keys(DEFAULT_MATERIAL_DENSITIES).forEach(key => {
+        if (densities[key as any] === undefined) {
+          densities[key as any] = DEFAULT_MATERIAL_DENSITIES[key as keyof typeof DEFAULT_MATERIAL_DENSITIES];
+        }
+      });
+      return densities;
+    } catch (e) {
+      console.error("Failed to parse materialDensities:", e);
+      return { ...DEFAULT_MATERIAL_DENSITIES };
+    }
   });
 
   const [materialScrap, setMaterialScrap] = useState<Record<string, number>>(() => {
-    const saved = safeLocalStorage.getItem('cable_material_scrap');
-    const scrap = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_SCRAP };
-    // Merge with defaults to ensure new materials are added
-    Object.keys(DEFAULT_MATERIAL_SCRAP).forEach(key => {
-      if (scrap[key] === undefined) {
-        scrap[key] = DEFAULT_MATERIAL_SCRAP[key as keyof typeof DEFAULT_MATERIAL_SCRAP];
-      }
-    });
-    return scrap;
+    try {
+      const saved = safeLocalStorage.getItem('cable_material_scrap');
+      const scrap = saved ? JSON.parse(saved) : { ...DEFAULT_MATERIAL_SCRAP };
+      // Merge with defaults to ensure new materials are added
+      Object.keys(DEFAULT_MATERIAL_SCRAP).forEach(key => {
+        if (scrap[key] === undefined) {
+          scrap[key] = DEFAULT_MATERIAL_SCRAP[key as keyof typeof DEFAULT_MATERIAL_SCRAP];
+        }
+      });
+      return scrap;
+    } catch (e) {
+      console.error("Failed to parse materialScrap:", e);
+      return { ...DEFAULT_MATERIAL_SCRAP };
+    }
   });
 
   const [materialCategories, setMaterialCategories] = useState<Record<string, string>>(() => {
-    const saved = safeLocalStorage.getItem('cable_material_categories');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = safeLocalStorage.getItem('cable_material_categories');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.error("Failed to parse materialCategories:", e);
+      return {};
+    }
   });
 
   const resetToDefaults = () => {
@@ -4476,6 +4512,10 @@ export default function CableDesigner() {
                       onParamChange={handleParamChange}
                       activeLayer={activeLayer}
                       setActiveLayer={setActiveLayer}
+                      materialPrices={materialPrices}
+                      materialCategories={materialCategories}
+                      materialDensities={materialDensities}
+                      lmeParams={lmeParams}
                       onNew={() => {
                         setProjectId(null);
                         setProjectName('New Project');
