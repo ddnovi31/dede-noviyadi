@@ -44,9 +44,13 @@ export function CableEditorMode({
   materialPrices,
   materialCategories
 }: CableEditorModeProps) {
+  const [mobileView, setMobileView] = React.useState<'preview' | 'editor' | 'steps'>('preview');
 
   const activeStep = activeLayer;
-  const setActiveStep = setActiveLayer;
+  const setActiveStep = (step: string) => {
+    setActiveLayer(step);
+    setMobileView('editor');
+  };
 
   const getSteps = () => {
     const isAAC = params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)';
@@ -595,37 +599,48 @@ export function CableEditorMode({
       </div>
 
       {/* Toolbar */}
-      <div className="h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-2 shadow-sm relative z-20">
-        <ToolbarGroup title="Project">
-          <ToolbarButton icon={<FilePlus className="w-4 h-4" />} onClick={onNew} title="New project" />
-          <ToolbarButton icon={<FolderOpen className="w-4 h-4" />} onClick={onOpen} title="Open" />
-          <ToolbarButton icon={<Save className="w-4 h-4" />} onClick={onSave} title="Save project" />
-        </ToolbarGroup>
-        <div className="w-px h-8 bg-slate-200 mx-1" />
-        <ToolbarGroup title="Actions">
-          <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={onExport} title="Export to Excel" />
-          <ToolbarButton icon={<LogOut className="w-4 h-4" />} onClick={() => {}} title="Return to home" />
-        </ToolbarGroup>
-        <div className="flex-1"></div>
-        <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-200">
+      <div className="h-16 bg-white border-b border-slate-200 flex items-center px-4 md:px-6 gap-2 shadow-sm relative z-20 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 min-w-max">
+          <ToolbarGroup title="Project">
+            <ToolbarButton icon={<FilePlus className="w-4 h-4" />} onClick={onNew} title="New project" />
+            <ToolbarButton icon={<FolderOpen className="w-4 h-4" />} onClick={onOpen} title="Open" />
+            <ToolbarButton icon={<Save className="w-4 h-4" />} onClick={onSave} title="Save project" />
+          </ToolbarGroup>
+          <div className="w-px h-8 bg-slate-200 mx-1" />
+          <ToolbarGroup title="Actions">
+            <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={onExport} title="Export to Excel" />
+            <ToolbarButton icon={<LogOut className="w-4 h-4" />} onClick={() => {}} title="Return to home" />
+          </ToolbarGroup>
+        </div>
+        <div className="flex-1 md:block hidden"></div>
+        <div className="flex items-center gap-2 md:gap-4 px-3 md:px-4 py-1.5 md:py-2 bg-slate-50 rounded-2xl border border-slate-200 min-w-max ml-auto">
            <div className="flex flex-col text-right">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Overall Dia</span>
-              <span className="text-lg font-black text-indigo-600 leading-none">{result.spec.overallDiameter.toFixed(1)}<span className="text-[10px] ml-0.5">mm</span></span>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Overall Dia</span>
+              <span className="text-sm md:text-lg font-black text-indigo-600 leading-none">{result.spec.overallDiameter.toFixed(1)}<span className="text-[10px] ml-0.5">mm</span></span>
            </div>
            <div className="w-px h-8 bg-slate-200"></div>
            <div className="flex flex-col text-right">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Net Weight</span>
-              <span className="text-lg font-black text-indigo-600 leading-none">{Math.round(result.bom.totalWeight)}<span className="text-[10px] ml-0.5">kg</span></span>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Net Weight</span>
+              <span className="text-sm md:text-lg font-black text-indigo-600 leading-none">{Math.round(result.bom.totalWeight)}<span className="text-[10px] ml-0.5">kg</span></span>
            </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Left Panel: Dynamic Steps */}
-        <div className="w-72 bg-white border-r border-slate-200 flex flex-col p-5 shadow-[4px_0_20px_rgba(0,0,0,0.02)] relative z-10">
-          <div className="mb-6">
-             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Design Path</h3>
-             <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+        <div className={`
+          ${mobileView === 'steps' ? 'flex w-full absolute inset-0 z-50 bg-white' : 'hidden'} 
+          md:relative md:flex md:w-72 md:z-10
+          bg-white border-r border-slate-200 flex-col p-5 shadow-[4px_0_20px_rgba(0,0,0,0.02)]
+        `}>
+          <div className="mb-6 flex justify-between items-center">
+             <div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Design Path</h3>
+                <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+             </div>
+             <button className="md:hidden p-2 text-slate-400" onClick={() => setMobileView('preview')}>
+                <X className="w-5 h-5" />
+             </button>
           </div>
           <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 flex-1 pb-4">
             {steps.map(step => (
@@ -655,7 +670,10 @@ export function CableEditorMode({
         </div>
 
         {/* Middle Panel: Visualizer */}
-        <div className="flex-1 flex flex-col bg-slate-50 relative p-12 overflow-hidden">
+        <div className={`
+          ${mobileView === 'preview' ? 'flex' : 'hidden md:flex'} 
+          flex-1 flex-col bg-slate-50 relative p-4 md:p-12 overflow-hidden
+        `}>
            {/* Grid Pattern Background */}
            <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                 style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
@@ -663,9 +681,9 @@ export function CableEditorMode({
            
            <div className="flex-1 flex flex-col items-center justify-center relative">
               {/* Outer Glow Circle */}
-              <div className="absolute w-[600px] h-[600px] bg-indigo-500/5 blur-[100px] rounded-full animate-pulse pointer-events-none"></div>
+              <div className="absolute w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-indigo-500/5 blur-[50px] md:blur-[100px] rounded-full animate-pulse pointer-events-none"></div>
               
-              <div className="relative w-full max-w-lg aspect-square bg-white rounded-[3rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1),inset_0_-2px_20px_rgba(0,0,0,0.05)] border border-white p-12 flex items-center justify-center group overflow-hidden animate-in zoom-in duration-700">
+              <div className="relative w-full max-w-[280px] md:max-w-lg aspect-square bg-white rounded-[2rem] md:rounded-[3rem] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] md:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1),inset_0_-2px_20px_rgba(0,0,0,0.05)] border border-white p-6 md:p-12 flex items-center justify-center group overflow-hidden animate-in zoom-in duration-700">
                  <div className="absolute inset-0 bg-gradient-to-tr from-slate-50/80 to-white/50 pointer-events-none"></div>
                  
                  <div className="relative z-10 w-full h-full transform hover:scale-[1.03] transition-transform duration-500 cursor-zoom-in">
@@ -673,41 +691,50 @@ export function CableEditorMode({
                  </div>
                  
                  {/* Corner Accents */}
-                 <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-slate-200 rounded-tl-xl opacity-50"></div>
-                 <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-slate-200 rounded-tr-xl opacity-50"></div>
-                 <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-slate-200 rounded-bl-xl opacity-50"></div>
-                 <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-slate-200 rounded-br-xl opacity-50"></div>
+                 <div className="absolute top-4 md:top-8 left-4 md:left-8 w-6 md:w-8 h-6 md:h-8 border-t-2 border-l-2 border-slate-200 rounded-tl-lg md:rounded-tl-xl opacity-50"></div>
+                 <div className="absolute top-4 md:top-8 right-4 md:right-8 w-6 md:w-8 h-6 md:h-8 border-t-2 border-r-2 border-slate-200 rounded-tr-lg md:rounded-tr-xl opacity-50"></div>
+                 <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 w-6 md:w-8 h-6 md:h-8 border-b-2 border-l-2 border-slate-200 rounded-bl-lg md:rounded-bl-xl opacity-50"></div>
+                 <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 w-6 md:w-8 h-6 md:h-8 border-b-2 border-r-2 border-slate-200 rounded-br-lg md:rounded-br-xl opacity-50"></div>
               </div>
            </div>
            
-           <div className="mt-12 flex justify-center gap-3">
-              <ActionButton icon={<Monitor className="w-4 h-4" />} label="Reset View" />
-              <ActionButton icon={<Maximize2 className="w-4 h-4" />} label="Actual Size" />
+           <div className="mt-6 md:mt-12 flex justify-center gap-2 md:gap-3">
+              <ActionButton icon={<Monitor className="w-4 h-4" />} label="Reset" />
+              <ActionButton icon={<Maximize2 className="w-4 h-4" />} label="Full" />
            </div>
         </div>
 
         {/* Right Panel: Step Editor */}
-        <div className="w-80 bg-white border-l border-slate-200 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.02)] relative z-10">
-          <div className="p-6 border-b border-slate-100/50 bg-slate-50/30">
-             <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em]">Configuration</span>
-                <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-                   <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+        <div className={`
+          ${mobileView === 'editor' ? 'flex w-full absolute inset-0 z-50 bg-white' : 'hidden'} 
+          md:relative md:flex md:w-80 md:z-10
+          bg-white border-l border-slate-200 flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.02)]
+        `}>
+          <div className="p-4 md:p-6 border-b border-slate-100/50 bg-slate-50/30 flex items-center justify-between">
+             <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                   <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em]">Configuration</span>
+                   <div className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                      <Edit3 className="w-3 h-3 text-indigo-600" />
+                   </div>
                 </div>
+                <h2 className="text-sm md:text-base font-black text-slate-800 uppercase tracking-wider">
+                  {steps.find(s => s.id === activeStep)?.label}
+                </h2>
              </div>
-             <h2 className="text-base font-black text-slate-800 uppercase tracking-wider">
-               {steps.find(s => s.id === activeStep)?.label}
-             </h2>
+             <button className="md:hidden p-2 text-slate-400" onClick={() => setMobileView('preview')}>
+                <X className="w-5 h-5" />
+             </button>
           </div>
           
-          <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+          <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
              {renderEditor()}
           </div>
 
-          <div className="p-6 bg-slate-50/80 border-t border-slate-100 backdrop-blur-sm">
+          <div className="p-4 md:p-6 bg-slate-50/80 border-t border-slate-100 backdrop-blur-sm">
              <button
                onClick={onSave}
-               className="w-full relative group overflow-hidden py-4 bg-slate-900 text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl transition-all hover:bg-black active:scale-[0.98]"
+               className="w-full relative group overflow-hidden py-3 md:py-4 bg-slate-900 text-white rounded-xl md:rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl transition-all hover:bg-black active:scale-[0.98]"
              >
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="flex items-center justify-center gap-2 relative z-10">
@@ -716,6 +743,27 @@ export function CableEditorMode({
                 </div>
              </button>
           </div>
+        </div>
+
+        {/* Mobile Navbar */}
+        <div className="md:hidden h-16 bg-white border-t border-slate-200 flex items-center justify-around px-4 fixed bottom-0 left-0 right-0 z-[60] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+           <button 
+             onClick={() => setMobileView('steps')}
+             className={`flex flex-col items-center gap-1 transition-colors ${mobileView === 'steps' ? 'text-indigo-600' : 'text-slate-400'}`}
+           >
+              <List className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase tracking-tighter">Path</span>
+           </button>
+           <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center -mt-8 shadow-xl shadow-indigo-200 border-4 border-white" onClick={() => setMobileView('preview')}>
+              <Monitor className={`w-6 h-6 text-white transition-transform ${mobileView === 'preview' ? 'scale-110' : 'scale-90 opacity-80'}`} />
+           </div>
+           <button 
+             onClick={() => setMobileView('editor')}
+             className={`flex flex-col items-center gap-1 transition-colors ${mobileView === 'editor' ? 'text-indigo-600' : 'text-slate-400'}`}
+           >
+              <Edit3 className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase tracking-tighter">Edit</span>
+           </button>
         </div>
       </div>
     </div>
