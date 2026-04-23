@@ -11,9 +11,9 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
   const overallDiameter = result.spec.overallDiameter || 10;
   
   // Scaling
-  const viewBoxSize = 400;
+  const viewBoxSize = 500;
   const center = viewBoxSize / 2;
-  const scale = (viewBoxSize * 0.8) / overallDiameter;
+  const scale = (viewBoxSize * 0.55) / overallDiameter; // Reduced scale to leave more room for labels
   
   // Colors
   const conductorColor = params.conductorMaterial === 'Aluminium' ? '#cbd5e1' : '#ea580c';
@@ -79,10 +79,11 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
       <g>
         {labels.map((item, idx) => {
           const r = item.r * scale;
-          const yOffset = -120 + idx * 45;
-          const xStart = center + r * Math.cos(-Math.PI/6);
-          const yStart = center + r * Math.sin(-Math.PI/6);
-          const xEnd = center + 140;
+          const yOffset = -140 + idx * 50; // Increased spacing
+          const angle = -Math.PI / 8; // Steeper angle
+          const xStart = center + r * Math.cos(angle);
+          const yStart = center + r * Math.sin(angle);
+          const xEnd = center + 120;
           const yEnd = center + yOffset;
 
           return (
@@ -91,15 +92,16 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
                 x1={xStart} y1={yStart} 
                 x2={xEnd} y2={yEnd} 
                 stroke="#64748b" strokeWidth="0.5" 
+                strokeDasharray="2,2"
               />
               <circle cx={xStart} cy={yStart} r="1.5" fill="#64748b" />
               
-              <text x={xEnd + 5} y={yEnd} className="text-[10px] font-black fill-slate-800">
-                <tspan x={xEnd + 5} dy="0" className="fill-indigo-600 underline">{item.label}</tspan>
-                <tspan x={xEnd + 5} dy="12" className="font-normal fill-slate-500">
-                  {item.material ? `, ${item.material}` : ''}
+              <text x={xEnd + 5} y={yEnd} className="text-[9px] font-black fill-slate-800">
+                <tspan x={xEnd + 5} dy="0" className="fill-indigo-600 font-bold uppercase tracking-tighter">{item.label}</tspan>
+                <tspan x={xEnd + 5} dy="10" className="font-normal fill-slate-400 italic">
+                  {item.material ? `${item.material}` : ''}
                 </tspan>
-                <tspan x={xEnd + 5} dy="12" className="font-bold fill-slate-700">
+                <tspan x={xEnd + 5} dy="10" className="font-bold fill-slate-600">
                   {item.value}
                 </tspan>
               </text>
@@ -111,12 +113,12 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-4">
+    <div className="relative w-full h-full flex items-center justify-center p-2">
       <svg 
-        viewBox={`0 0 ${viewBoxSize + 200} ${viewBoxSize}`} 
-        className="max-w-full max-h-full drop-shadow-sm bg-white"
+        viewBox={`0 0 ${viewBoxSize + 250} ${viewBoxSize}`} 
+        className="max-w-full max-h-full drop-shadow-2xl"
       >
-        <g transform="translate(-80, 0)">
+        <g transform="translate(50, 0)">
           {/* Outer Sheath */}
           <circle 
             cx={center} 

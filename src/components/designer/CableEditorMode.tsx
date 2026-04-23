@@ -49,37 +49,42 @@ export function CableEditorMode({
   const setActiveStep = setActiveLayer;
 
   const getSteps = () => {
-    const steps = [
-      { id: 'general', label: 'GENERAL', icon: Settings },
-      { id: 'properties', label: 'PROPERTIES', icon: Zap },
-      { id: 'conductor', label: 'CONDUCTOR', icon: Layers },
-    ];
-
     const isAAC = params.standard === 'SPLN 41-6 : 1981 AAC' || params.standard === 'SPLN 41-10 : 1991 (AAAC-S)';
     const isNYA = params.standard.includes('(NYAF)') || params.standard.includes('(NYA)');
 
+    const steps = [
+      { id: 'general', label: 'General', icon: Settings },
+      { id: 'bulk', label: 'Bulk Calculation', icon: List },
+      { id: 'conductor', label: 'Conductor', icon: Layers },
+    ];
+
     if (!isAAC && !isNYA) {
-      steps.push({ id: 'earthing', label: 'EARTHING', icon: Shield });
+      steps.push({ id: 'earthing', label: 'Earthing', icon: Shield });
     }
 
-    steps.push({ id: 'insulation', label: 'INSULATION', icon: Package });
+    steps.push({ id: 'insulation', label: 'Insulation', icon: Package });
 
-    if (params.standard === 'IEC 60502-2') {
-      steps.push({ id: 'screen', label: 'INSULATION SCREEN', icon: Activity });
+    if (!isAAC && !isNYA && params.standard !== 'IEC 60092-353') {
+      steps.push({ id: 'innerSheath', label: 'Inner Sheath', icon: Layers });
     }
 
-    if (params.standard !== 'IEC 60092-353' && !isAAC && !isNYA) {
-      steps.push({ id: 'innerCovering', label: 'INNER COVERING', icon: Layers });
+    // Screen (Insulation Screen for MV, Overall Screen for others)
+    const hasScreen = params.standard === 'IEC 60502-2' || params.hasScreen || params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen);
+    if (hasScreen) {
+      steps.push({ id: 'screen', label: 'Screen', icon: Activity });
+    }
+    
+    if (!isAAC) {
+      steps.push({ id: 'separator', label: 'Separator', icon: Layers });
     }
 
-    if (params.standard === 'BS EN 50288-7' || (params.standard === 'Manufacturing Specification' && params.hasScreen)) {
-        steps.push({ id: 'overallScreen', label: 'OVERALL SCREEN', icon: Shield });
+    if (!isAAC && !isNYA) {
+      steps.push({ id: 'armour', label: 'Armour', icon: Shield });
     }
 
-    steps.push({ id: 'innerLayers', label: 'INNER LAYERS', icon: Database });
-    steps.push({ id: 'outerLayers', label: 'OUTER LAYERS', icon: Package });
-
-    steps.push({ id: 'advanced', label: 'ADVANCED', icon: Maximize2 });
+    if (!isAAC && !isNYA) {
+      steps.push({ id: 'outerSheath', label: 'Outer Sheath', icon: Package });
+    }
 
     return steps;
   };
@@ -145,35 +150,45 @@ export function CableEditorMode({
                 </button>
               </div>
             </FormField>
+            <div className="pt-4 border-t border-slate-100">
+               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Core Properties</h4>
+               <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4">
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">Fireguard</span>
+                      <span className="text-[10px] text-slate-400 italic">MGT Tape</span>
+                    </div>
+                    <Toggle checked={params.fireguard || false} onChange={(val) => onParamChange('fireguard', val)} />
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">Stopfire</span>
+                      <span className="text-[10px] text-slate-400 italic">FR Compound</span>
+                    </div>
+                    <Toggle checked={params.stopfire || false} onChange={(val) => onParamChange('stopfire', val)} color="bg-red-500" />
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">Auto Switch to RGB</span>
+                      <span className="text-[10px] text-slate-400 italic">Small Size Optimization</span>
+                    </div>
+                    <Toggle checked={params.autoSwitchSfaToRgb || false} onChange={(val) => onParamChange('autoSwitchSfaToRgb', val)} />
+                  </label>
+                </div>
+            </div>
           </div>
         );
 
-      case 'properties':
+      case 'bulk':
         return (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-4">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Fireguard</span>
-                  <span className="text-[10px] text-slate-400 italic">Mica Glass Tape</span>
-                </div>
-                <Toggle checked={params.fireguard || false} onChange={(val) => onParamChange('fireguard', val)} />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Stopfire</span>
-                  <span className="text-[10px] text-slate-400 italic">FR Compound</span>
-                </div>
-                <Toggle checked={params.stopfire || false} onChange={(val) => onParamChange('stopfire', val)} color="bg-red-500" />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Auto Switch to RGB</span>
-                  <span className="text-[10px] text-slate-400 italic">Small Size Optimization</span>
-                </div>
-                <Toggle checked={params.autoSwitchSfaToRgb || false} onChange={(val) => onParamChange('autoSwitchSfaToRgb', val)} />
-              </label>
-            </div>
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-8">
+             <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-100">
+                <List className="w-8 h-8 text-indigo-400" />
+             </div>
+             <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Bulk Mode</h3>
+             <p className="text-[10px] text-slate-500 italic max-w-[200px] mx-auto leading-relaxed">
+                Bulk calculation input is optimized for the modern layout. Please use the modern view to enter multi-core/size data.
+             </p>
           </div>
         );
 
@@ -310,37 +325,145 @@ export function CableEditorMode({
       case 'screen':
         return (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-             <FormField label="MV Screen Type">
-                <select
-                  value={params.mvScreenType || 'None'}
-                  onChange={(e) => onParamChange('mvScreenType', e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="None">None</option>
-                  <option value="CTS">CTS (Copper Tape)</option>
-                  <option value="CWS">CWS (Copper Wire)</option>
-                </select>
-             </FormField>
-             {params.mvScreenType !== 'None' && (
-               <FormField label="Screen Area (mm²)">
-                  <select
-                    value={params.mvScreenSize || 16}
-                    onChange={(e) => onParamChange('mvScreenSize', Number(e.target.value))}
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700"
-                  >
-                    {[16, 25, 35, 50, 70, 95].map(s => (
-                      <option key={s} value={s}>{s} mm²</option>
-                    ))}
-                  </select>
-               </FormField>
+             {params.standard === 'IEC 60502-2' ? (
+                <>
+                   <FormField label="MV Screen Type">
+                      <select
+                        value={params.mvScreenType || 'None'}
+                        onChange={(e) => onParamChange('mvScreenType', e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="None">None</option>
+                        <option value="CTS">CTS (Copper Tape)</option>
+                        <option value="CWS">CWS (Copper Wire)</option>
+                      </select>
+                   </FormField>
+                   {params.mvScreenType !== 'None' && (
+                     <FormField label="Screen Area (mm²)">
+                        <select
+                          value={params.mvScreenSize || 16}
+                          onChange={(e) => onParamChange('mvScreenSize', Number(e.target.value))}
+                          className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700"
+                        >
+                          {[16, 25, 35, 50, 70, 95].map(s => (
+                            <option key={s} value={s}>{s} mm²</option>
+                          ))}
+                        </select>
+                     </FormField>
+                   )}
+                </>
+             ) : (
+                <div className="p-4 bg-sky-50 rounded-2xl border border-sky-100 space-y-4">
+                   <label className="flex items-center justify-between cursor-pointer group">
+                      <span className="text-xs font-bold text-slate-700">Apply Screen</span>
+                      <Toggle checked={params.hasScreen || false} onChange={(val) => onParamChange('hasScreen', val)} color="bg-sky-500" />
+                   </label>
+                   {params.hasScreen && (
+                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                         <FormField label="Screen Type">
+                            <select
+                              value={params.screenType || 'CTS'}
+                              onChange={(e) => onParamChange('screenType', e.target.value)}
+                              className="w-full p-2 bg-white border border-sky-200 rounded-lg text-xs font-bold"
+                            >
+                               <option value="CTS">CTS (Copper Tape)</option>
+                               <option value="CWS">CWS (Copper Wire)</option>
+                            </select>
+                         </FormField>
+                         <FormField label="Screen Area (mm²)">
+                            <select
+                              value={params.screenSize || 16}
+                              onChange={(e) => onParamChange('screenSize', Number(e.target.value))}
+                              className="w-full p-2 bg-white border border-sky-200 rounded-lg text-xs font-bold"
+                            >
+                               {[1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70].map(s => (
+                                 <option key={s} value={s}>{s} mm²</option>
+                               ))}
+                            </select>
+                         </FormField>
+                      </div>
+                   )}
+                </div>
              )}
           </div>
         );
 
-      case 'outerLayers':
+      case 'innerSheath':
         return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-             <FormField label="Armor Type">
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 space-y-4">
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-xs font-bold text-slate-700">Apply Inner Sheath</span>
+                  <Toggle checked={params.hasInnerSheath !== false} onChange={(val) => onParamChange('hasInnerSheath', val)} color="bg-rose-500" />
+                </label>
+                {params.hasInnerSheath !== false && (
+                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                       <FormField label="Material">
+                          <select
+                            value={params.innerSheathMaterial || 'PVC'}
+                            onChange={(e) => onParamChange('innerSheathMaterial', e.target.value)}
+                            className="w-full p-2 bg-white border border-rose-200 rounded-lg text-xs font-bold"
+                          >
+                            {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath') || materialCategories[m]?.includes('Filler')).map(m => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                       </FormField>
+                       <FormField label="Thickness (mm)">
+                          <input 
+                            type="number"
+                            step={0.1}
+                            value={params.manualInnerSheathThickness || (result.spec.innerCoveringThickness || 0).toFixed(1)}
+                            onChange={(e) => onParamChange('manualInnerSheathThickness', Number(e.target.value))}
+                            className="w-full p-2 bg-white border border-rose-200 rounded-lg text-xs font-bold"
+                          />
+                       </FormField>
+                   </div>
+                )}
+             </div>
+          </div>
+        );
+
+      case 'separator':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-xs font-bold text-slate-700">Use Separator Tape</span>
+                  <Toggle checked={params.hasSeparator || false} onChange={(val) => onParamChange('hasSeparator', val)} color="bg-slate-500" />
+                </label>
+                {params.hasSeparator && (
+                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <FormField label="Material">
+                         <select
+                           value={params.separatorMaterial || 'PVC'}
+                           onChange={(e) => onParamChange('separatorMaterial', e.target.value)}
+                           className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                         >
+                           {Object.keys(materialPrices).filter(m => materialCategories[m]?.includes('Sheath')).map(m => (
+                             <option key={m} value={m}>{m}</option>
+                           ))}
+                         </select>
+                      </FormField>
+                      <FormField label="Thickness (mm)">
+                          <input 
+                            type="number"
+                            step={0.05}
+                            value={params.manualSeparatorThickness || (result.spec.separatorThickness || 0).toFixed(2)}
+                            onChange={(e) => onParamChange('manualSeparatorThickness', Number(e.target.value))}
+                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                          />
+                       </FormField>
+                   </div>
+                )}
+             </div>
+          </div>
+        );
+
+      case 'armour':
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <FormField label="Armour Type">
                <select
                  value={params.armorType}
                  onChange={(e) => onParamChange('armorType', e.target.value)}
@@ -352,9 +475,36 @@ export function CableEditorMode({
                  <option value="AWA">AWA (Alum Wire)</option>
                  <option value="SFA">SFA (Steel Flat)</option>
                  <option value="RGB">RGB (Round Galv. Bead)</option>
+                 <option value="GSWB">GSWB (Steel Braid)</option>
+                 <option value="TCWB">TCWB (Tin Copper Braid)</option>
                </select>
              </FormField>
-             <FormField label="Outer Sheath material">
+             {params.armorType !== 'Unarmored' && (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-4">
+                   <FormField label="Armor Wire/Tape Size (mm)">
+                      <input 
+                        type="number"
+                        step={0.01}
+                        value={params.manualArmorWireDiameter || params.manualArmorTapeThickness || (result.spec.armorWireDiameter || result.spec.armorTapeThickness || 0).toFixed(2)}
+                        onChange={(e) => {
+                           if (['SWA', 'AWA', 'RGB'].includes(params.armorType)) {
+                              onParamChange('manualArmorWireDiameter', Number(e.target.value));
+                           } else {
+                              onParamChange('manualArmorTapeThickness', Number(e.target.value));
+                           }
+                        }}
+                        className="w-full p-2 bg-white border border-amber-200 rounded-lg text-xs font-bold transition-all focus:ring-2 focus:ring-amber-500"
+                      />
+                   </FormField>
+                </div>
+             )}
+          </div>
+        );
+
+      case 'outerSheath':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+             <FormField label="Material">
                 <select
                   value={params.sheathMaterial}
                   onChange={(e) => onParamChange('sheathMaterial', e.target.value)}
@@ -365,13 +515,21 @@ export function CableEditorMode({
                   ))}
                 </select>
              </FormField>
-             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                <label className="flex items-center justify-between cursor-pointer">
+             <FormField label="Thickness (mm)">
+                <input 
+                  type="number"
+                  step={0.1}
+                  value={params.manualSheathThickness || (result.spec.sheathThickness || 0).toFixed(1)}
+                  onChange={(e) => onParamChange('manualSheathThickness', Number(e.target.value))}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 shadow-sm"
+                />
+             </FormField>
+             <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer group">
                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Use Separator Tape</span>
-                      <span className="text-[9px] text-slate-400 italic">Between armor and sheath</span>
+                      <span className="text-xs font-bold text-slate-700">Apply Outer Sheath</span>
                    </div>
-                   <Toggle checked={params.hasSeparator || false} onChange={(val) => onParamChange('hasSeparator', val)} color="bg-slate-500" />
+                   <Toggle checked={params.hasOuterSheath !== false} onChange={(val) => onParamChange('hasOuterSheath', val)} />
                 </label>
              </div>
           </div>
@@ -612,5 +770,6 @@ function Toggle({ checked, onChange, color = 'bg-indigo-600' }: { checked: boole
 function layoutModeLabel(p: CableDesignParams) {
   if (p.standard === 'IEC 60502-2') return 'Medium Voltage System';
   if (p.standard === 'BS EN 50288-7') return 'Instrumentation Mode';
+  if (!p.standard) return 'Unknown Standard';
   return 'Standard Edition';
 }
