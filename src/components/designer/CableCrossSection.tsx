@@ -22,7 +22,7 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
   const sheathColor = '#1e293b'; // Very dark slate
   const armorColor = '#94a3b8'; // Slate 400
   
-  const drawCore = (cx: number, cy: number, radius: number) => {
+  const drawCore = (cx: number, cy: number, radius: number, index: number = 0) => {
     const { phaseCore } = result.spec;
     const condRadius = (phaseCore.conductorDiameter / 2) * scale;
     const insulRadius = (phaseCore.coreDiameter / 2) * scale;
@@ -30,7 +30,7 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
     const insulScreenRadius = result.spec.insulationScreenThickness ? (phaseCore.coreDiameter / 2 + result.spec.insulationScreenThickness) * scale : insulRadius;
 
     return (
-      <g key={`core-${cx}-${cy}`}>
+      <g key={`core-group-${index}`}>
         {/* Insulation Screen */}
         {result.spec.insulationScreenThickness > 0 && (
           <circle cx={cx} cy={cy} r={insulScreenRadius} fill={screenColor} />
@@ -50,7 +50,7 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
   const renderCores = () => {
     const { laidUpDiameter, phaseCore } = result.spec;
     if (cores === 1) {
-      return drawCore(center, center, 0);
+      return drawCore(center, center, 0, 0);
     }
 
     const coreDia = phaseCore.coreDiameter;
@@ -61,7 +61,7 @@ export function CableCrossSection({ params, result }: CableCrossSectionProps) {
       const angle = (i * 2 * Math.PI) / cores - Math.PI / 2;
       const cx = center + distanceToCenter * Math.cos(angle);
       const cy = center + distanceToCenter * Math.sin(angle);
-      return drawCore(cx, cy, 0);
+      return drawCore(cx, cy, 0, i);
     });
   };
 
